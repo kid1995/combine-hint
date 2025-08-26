@@ -1,0 +1,172 @@
+buildscript {
+	repositories {
+		maven {
+			url 'https://m2repo.system.local/content/groups/full/'
+		}
+	}
+
+	dependencies {
+		// update requires scheme update in sda-dependencycheck.system.local
+		classpath 'org.postgresql:postgresql:42.7.7'// this is necessary for owasp dependency check
+	}
+}
+
+plugins {
+	id 'idea'
+	id 'jacoco'
+	id 'org.sonarqube' version '6.2.0.5505'
+	id 'org.owasp.dependencycheck' version '12.1.3'
+	id 'org.springframework.boot' version '3.5.5'
+	id 'io.spring.dependency-management' version '1.1.7'
+}
+
+ext {
+	set('springCloudVersion', "2025.0.0")
+	set('micrometerTracingVersion', "1.5.3")
+	set('jacksonVersion', "2.19.2")
+}
+
+allprojects {
+	group = 'de.signaliduna.elpa.hint'
+
+	repositories {
+		mavenLocal()
+		maven {
+			url "https://m2repo.system.local/content/groups/full/"
+		}
+	}
+}
+
+subprojects {
+	apply plugin: 'java'
+	apply plugin: 'idea'
+	apply plugin: 'jacoco'
+	apply plugin: 'org.owasp.dependencycheck'
+	apply plugin: 'org.springframework.boot'
+	apply plugin: 'io.spring.dependency-management'
+	apply plugin: 'org.sonarqube'
+
+	java {
+		withSourcesJar()
+		sourceCompatibility = JavaVersion.VERSION_21
+	}
+
+	test {
+		useJUnitPlatform()
+	}
+
+	jacoco {
+		toolVersion = "0.8.13"
+		reportsDirectory = layout.buildDirectory.dir("jacoco")
+	}
+
+	jacocoTestReport {
+		dependsOn test
+		getExecutionData().setFrom(fileTree(layout.buildDirectory).include("/jacoco/*.exec"))
+		reports {
+			xml.required = true
+			csv.required = false
+			html.required = false
+		}
+	}
+
+	jacocoTestCoverageVerification {
+		dependsOn jacocoTestReport
+		violationRules {
+			rule {
+				enabled = true
+				element = 'CLASS'
+				excludes = [
+					'de.signaliduna.elpa.hint.model.*',
+					'de.signaliduna.elpa.hint.adapter.database.model.*',
+				]
+				limit {
+					counter = 'BRANCH'
+					value = 'COVEREDRATIO'
+					minimum = 1.0
+				}
+			}
+		}
+	}
+
+	tasks.named('test') {
+		useJUnitPlatform()
+		finalizedBy jacocoTestReport
+		jvmArgs("-XX:+EnableDynamicAgentLoading")
+	}
+
+	tasks.withType(JavaCompile).configureEach {
+		options.compilerArgs += [
+			'-Amapstruct.defaultComponentModel=spring'
+		]
+	}
+
+	tasks.named('check') {
+		dependsOn jacocoTestCoverageVerification
+	}
+
+	dependencyCheck {
+		outputDirectory = layout.buildDirectory.asFile.get().path + "/reports/dependencycheck"
+		format = "XML"
+		autoUpdate = false
+		failOnError = false
+		suppressionFiles = ["https://git.system.local/projects/SDA/repos/global-cve-suppression/raw/global-suppressed-cves.xml?at=refs%2Fheads%2Fmaster"]
+		data {
+			connectionString = "jdbc:postgresql://vipsiae11p.system.local:5432/depchkp?currentSchema=v12"
+			driver = "org.postgresql.Driver"
+			username = "ZA-SVC-DEPCHK-P"
+			password = "QPmWX.CZ4hbJRtU"
+			directory = rootProject.layout.buildDirectory.dir("owasp-data").get()
+		}
+
+		analyzers {
+			centralEnabled = false
+			nexusEnabled = false
+		}
+	}
+}
+
+tasks.named('sonarqube') {
+	dependsOn jacocoTestCoverageVerification
+}
+
+sonarqube {
+	properties {
+		property "sonar.sourceEncoding", "UTF-8"
+		property "sonar.coverage.exclusions", ""
+	}
+}
+
+tasks.register('printVersion') {
+	println(version)
+}
+
+final String SNAPSHOT_SUFFIX = "-SNAPSHOT"
+final String GRADLE_PROPERTIES_FILE_NAME = "gradle.properties"
+
+tasks.register('removeSnapshot', WriteProperties) {
+	destinationFile = file(GRADLE_PROPERTIES_FILE_NAME)
+	def newVersion = version.toString().replace(SNAPSHOT_SUFFIX, "")
+	println('new version: $newVersion')
+	property('version', newVersion)
+}
+
+tasks.register('increasePatchVersion', WriteProperties) {
+	destinationFile = file(GRADLE_PROPERTIES_FILE_NAME)
+	println('old version: ' + version)
+	def versionStr = version as String
+	boolean isSnapshot = versionStr.endsWith(SNAPSHOT_SUFFIX)
+	def versionNo = (isSnapshot) ? versionStr.replace(SNAPSHOT_SUFFIX, "") : versionStr
+	def splitVersion = versionNo.split("\\.")
+	def patchVersion = Integer.valueOf(splitVersion[2]).intValue() + 1
+	def newVersion = String.format('%s.%s.%d', splitVersion[0], splitVersion[1], patchVersion) + ((isSnapshot)? SNAPSHOT_SUFFIX : "")
+	println('new version: ' + newVersion)
+	property('version', newVersion)
+}
+
+tasks.register('addSnapshot', WriteProperties) {
+	destinationFile = file(GRADLE_PROPERTIES_FILE_NAME)
+	def newVersion = version + SNAPSHOT_SUFFIX
+	println('new version: $newVersion')
+	property('version', newVersion)
+}

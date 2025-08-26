@@ -1,0 +1,57 @@
+apiVersion: backstage.io/v1alpha1
+kind: System
+metadata:
+  name: hint
+  description: Read and store Hints corresponding to a process
+spec:
+  owner: elpa
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: hint-service
+  description: performing reading or storing requests for hints
+  annotations:
+    sda.se/summary:
+      $text: ./summary.md
+    sonarqube.org/project-key: elpa_hint
+spec:
+  type: service
+  owner: elpa
+  lifecycle: production
+  system: hint
+  providesApis:
+    - hint-api
+    - hint-async-api
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: hint-api
+  description: synchron API for performing reading or storing requests for hints
+  annotations:
+    sda.se/summary:
+      $text: ./summary-syncApi.md
+spec:
+  type: openapi
+  owner: elpa
+  lifecycle: production
+  system: hint
+  definition:
+    $text: https://develop-hint-elpa-hint-tst.osot.system.local/api/api-docs
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: hint-async-api
+  description: asynchron API for performing reading or storing requests for hints
+  annotations:
+    sda.se/summary:
+      $text: ./summary-asyncApi.md
+spec:
+  type: asyncapi
+  owner: elpa
+  lifecycle: production
+  system: hint
+  definition:
+    $text: https://develop-hint-elpa-hint-tst.osot.system.local/api/springwolf/docs

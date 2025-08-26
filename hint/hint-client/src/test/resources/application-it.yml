@@ -1,0 +1,13 @@
+elpa:
+  hint:
+    client:
+      url: to-be-overridden-in-test
+      logLevel: full
+      connectionTimeout: 5000ms
+      readTimeout: 5000ms
+      followRedirects: false
+
+jwt:
+  url: https://localhost/dummy/auth/token
+  username: dummy-user
+  password: dummy-password

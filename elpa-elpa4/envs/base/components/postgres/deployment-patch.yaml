@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app
+spec:
+  template:
+    spec:
+      containers:
+        - name: app
+          env:
+            - name: FLYWAY_ENABLED
+              value: "true"
+            - name: FLYWAY_LOCATIONS
+              value: "db/migration"
+            - name: POSTGRES_SCHEMA_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: backend-cm
+                  key: POSTGRES_SCHEMA_NAME
+            - name: POSTGRES_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: backend-cm
+                  key: POSTGRES_URL
+            - name: POSTGRES_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: backend-cm
+                  key: POSTGRES_USER

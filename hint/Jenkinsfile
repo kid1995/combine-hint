@@ -1,0 +1,242 @@
+#!groovy
+@Library(['si-dp-shared-libs', 'elpa-shared-lib']) _
+import de.signaliduna.TargetSegment
+
+SERVICE_GROUP = "elpa"
+SERVICE_NAME = "hint"
+
+PROJECT_ROOT_FOLDER = "./"
+APP_BACKEND_NAME = "hint"
+APP_BACKEND_FOLDER = "hint-service/"
+JAVA_VERSION = "21"
+
+POSTGRES_SCHEMA_PREFIX = 'hin_'
+POSTGRES_DEFAULT_SCHEMA_NAME = 'hint'
+
+// Mongo (Legacy DB)
+DB_VERSION = "6.0"
+DB_BACKUP_COUNT = 3
+DB_BACKUP_SCHEDULE = "0 2 * * *"
+DB_SIZE = "S"
+
+
+BACKEND_DEPLOYMENT_PARAMS = [
+    (TargetSegment.tst): [
+        'NUM_REPLICAS': 1, // affects quotas
+        'REQUESTS_CPU': '20m', // affects quotas
+        'REQUESTS_MEMORY': '200Mi', // affects quotas
+        'LIMITS_CPU': '4000m',
+        'LIMITS_MEMORY': '500Mi',
+    ],
+    (TargetSegment.abn): [
+        'NUM_REPLICAS': 2, // affects quotas
+        'REQUESTS_CPU': '20m', // affects quotas
+        'REQUESTS_MEMORY': '200Mi', // affects quotas
+        'LIMITS_CPU': '4000m',
+        'LIMITS_MEMORY': '500Mi',
+    ],
+    (TargetSegment.prd): [
+        'NUM_REPLICAS': 2, // affects quotas
+        'REQUESTS_CPU': '20m', // affects quotas
+        'REQUESTS_MEMORY': '200Mi', // affects quotas
+        'LIMITS_CPU': '4000m',
+        'LIMITS_MEMORY': '500Mi',
+    ]
+]
+
+node {
+    properties([
+    	pipelineTriggers(createNightlyBuildTriggers()),
+			parameters([
+				booleanParam(name: 'Release', defaultValue: false, description: 'Release the libs 🚀')
+			])
+    ])
+
+    si_jenkins.notify createNotifyConfig(), {
+        si_git.checkoutBranch(env.BRANCH_NAME, createNotifyConfig())
+        si_java.version("21")
+
+        stage("Build backend") {
+        	buildAndRefreshDependenciesForLibrary(PROJECT_ROOT_FOLDER, JAVA_VERSION)
+        }
+        stage("Verify backend") {
+            si_java.check(PROJECT_ROOT_FOLDER)
+        }
+        stage("Analyze backend") {
+            si_java.staticAnalysis(PROJECT_ROOT_FOLDER)
+        }
+
+				if (!params.Release) {
+					stage("Publish Libraries") {
+						publish(PROJECT_ROOT_FOLDER, JAVA_VERSION)
+					}
+				} else if (si_git.isDevelop()) {
+					// Removes the "-SNAPSHOT" suffix from the `version` property in `gradle.properties` (if so), commits & pushes the change.
+					// The publishing is done via step 'Publish Libraries' in a subsequent run of this job (which is triggered by `git push`).
+					stage("Set release version") {
+						setReleaseVersion(PROJECT_ROOT_FOLDER, JAVA_VERSION)
+					}
+
+					// Increments the patch version of the `version` property in `gradle.properties`, adds "-SNAPSHOT" suffix commits & pushes the change.
+					// The publishing is done via step 'Publish Libraries' in a subsequent run of this job (which is triggered by `git push`).
+					stage("Set new snapshot version") {
+						setSnapshotVersion(PROJECT_ROOT_FOLDER, JAVA_VERSION)
+					}
+				}
+
+        if (si_git.isMaster()) {
+            deployPROD()
+        } else {
+            buildDeploy(TargetSegment.tst)
+            if (si_git.isDevelop()) {
+                buildDeploy(TargetSegment.abn)
+            }
+					deleteDeployedRenovateBranch()
+        }
+    }
+}
+
+def createNightlyBuildTriggers() {
+    if (si_git.isDevelop()) {
+        return [cron('H H(21-22) * * 1-5')]
+    } else {
+        return []
+    }
+}
+
+def createNotifyConfig() {
+    if (si_git.isDevelop() || si_git.isMaster()) {
+        return  [
+                Bitbucket: true,
+                RocketChat: [
+                        Channel: '#elpa-ae'
+                ]
+        ];
+    } else {
+        return [Bitbucket: true];
+    }
+}
+
+void buildAndRefreshDependenciesForLibrary(String appBackendFolder, String javaVersion) {
+	String versionScript = "use-jdk-" + javaVersion
+	dir(appBackendFolder) {
+		sh """
+			. ${versionScript}
+			./gradlew --refresh-dependencies build -x check
+			./gradlew installDist
+		"""
+	}
+}
+
+void publish(String appBackendFolder, String javaVersion) {
+	withCredentials([usernamePassword(credentialsId: 'jenkins_m2repo', passwordVariable: 'NEXUS_PASSWORD', usernameVariable: 'NEXUS_USERNAME')]) {
+		dir(appBackendFolder) {
+			sh '''
+				. use-jdk-''' + javaVersion + '''
+				./gradlew publishAllPublicationsToSILocalRepository -PNEXUS_USER=${NEXUS_USERNAME} -PNEXUS_PASSWORD=${NEXUS_PASSWORD}
+			'''
+		}
+	}
+}
+
+void setReleaseVersion(String appBackendFolder, String javaVersion) {
+	dir(appBackendFolder) {
+		sh '''
+			. use-jdk-''' + javaVersion + '''
+			./gradlew removeSnapshot
+			LIB_VERSION=$(./gradlew -q printVersion)
+			git add gradle.properties
+			git commit -m "Set release version ${LIB_VERSION}"
+			git tag "v${LIB_VERSION}"
+			git push
+			git push origin "v${LIB_VERSION}"
+		'''
+	}
+}
+
+void setSnapshotVersion(String appBackendFolder, String javaVersion) {
+	dir(appBackendFolder) {
+		sh '''
+			. use-jdk-''' + javaVersion + '''
+			./gradlew increasePatchVersion
+			./gradlew addSnapshot
+			LIB_VERSION=$(./gradlew -q printVersion)
+			git add gradle.properties
+			git commit -m "Set snapshot version ${LIB_VERSION}"
+			git push
+		'''
+	}
+}
+
+private void deployPROD() {
+    stage("Build container from ABN for PROD") {
+        si_docker.buildImage(APP_BACKEND_FOLDER, SERVICE_GROUP, SERVICE_NAME, APP_BACKEND_NAME, TargetSegment.abn)
+    }
+    stage("Workaround deploy ABN so PRD can get deployed") {
+        deployApplications(TargetSegment.abn);
+    }
+    stage("Deploy to PRD") {
+        si_docker.publishImageAbnToPrd(SERVICE_GROUP, SERVICE_NAME, APP_BACKEND_NAME)
+        si_its360.notifyReleaseDeployment(SERVICE_GROUP, SERVICE_NAME, {
+            deployApplications(TargetSegment.prd)
+        })
+    }
+}
+
+private void buildDeploy(TargetSegment targetSegment) {
+    stage("Build container for $targetSegment") {
+        si_docker.buildImage(APP_BACKEND_FOLDER, SERVICE_GROUP, SERVICE_NAME, APP_BACKEND_NAME, targetSegment)
+    }
+    stage("Deploy to $targetSegment") {
+        deployApplications(targetSegment)
+    }
+}
+
+void deployApplications(TargetSegment targetSegment) {
+	si_mongodb.deployDB(SERVICE_GROUP, SERVICE_NAME, targetSegment, DB_VERSION, DB_BACKUP_COUNT, DB_BACKUP_SCHEDULE, DB_SIZE)
+	def postgresCurrentSchema = TargetSegment.tst.equals(targetSegment)
+		? si_psql.normalizeSchemaName("${POSTGRES_SCHEMA_PREFIX}${si_git.branchName()}")
+		: POSTGRES_DEFAULT_SCHEMA_NAME
+
+	def additionalParams = [
+		'POSTGRES_SCHEMA_NAME' : postgresCurrentSchema
+	]
+	def projectUrl = si_openshift.getProjectUrl(SERVICE_GROUP, SERVICE_NAME, targetSegment)
+	withCredentials([
+		usernamePassword(credentialsId: "elpa-technical-user-password-$targetSegment", passwordVariable: 'AUTH_PASSWORD', usernameVariable: 'USERNAME'),
+		usernamePassword(credentialsId: "elpa4-postgres-$targetSegment", passwordVariable: 'POSTGRES_PASSWORD', usernameVariable: 'POSTGRES_USER')
+	]) {
+		additionalParams += [
+			'POSTGRES_USER' : POSTGRES_USER,
+			'POSTGRES_PASSWORD' : POSTGRES_PASSWORD
+		]
+
+		additionalParams += BACKEND_DEPLOYMENT_PARAMS[targetSegment]
+		additionalParams += ['SECRET_FILE_NAME' : SERVICE_GROUP + "-secrets", 'AUTH_PASSWORD' : AUTH_PASSWORD]
+		additionalParams += ['BASE_ROUTE_URL' : projectUrl]
+		if (targetSegment == TargetSegment.tst) {
+			elpa_psql.dropObsoleteSchemas(
+				SERVICE_GROUP,
+				POSTGRES_USER,
+				POSTGRES_PASSWORD,
+				'vipsiae11t.system-a.local',
+				5432,
+				'elpapgt',
+				POSTGRES_SCHEMA_PREFIX
+			)
+		}
+
+		si_openshift.deployApplication(SERVICE_GROUP, SERVICE_NAME, APP_BACKEND_NAME, targetSegment, additionalParams)
+  }
+}
+
+private void deleteDeployedRenovateBranch() {
+    echo "# env.BRANCH_NAME - Full Branch Name: $env.BRANCH_NAME"
+    BRANCH_NAME = si_openshift.filterBranchName(env.BRANCH_NAME)
+    echo "# filtered BRANCH_NAME: $BRANCH_NAME"
+    if(env.BRANCH_NAME.startsWith("renovate")) {
+        echo "Renovate Branch $BRANCH_NAME shall be deleted"
+        si_openshift.login(SERVICE_GROUP, SERVICE_NAME, TargetSegment.tst)
+        sh "oc delete configmaps,cronjobs,deployments,deploymentconfigs,horizontalpodautoscalers,jobs,persistentvolumeclaims,routes,services,statefulsets --selector 'branch=$BRANCH_NAME' --config cli-context"
+    }
+}

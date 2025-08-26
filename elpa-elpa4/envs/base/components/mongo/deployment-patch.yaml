@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app
+spec:
+  template:
+    spec:
+      containers:
+        - name: app
+          env:
+            # MongoDB
+            - name: MONGODB_DATABASE              
+              valueFrom:
+                configMapKeyRef:
+                  name: backend-cm
+                  key: MONGODB_HOSTS
+            - name: MONGODB_HOSTS
+              valueFrom:
+                configMapKeyRef:
+                  name: backend-cm
+                  key: MONGODB_HOSTS
+            - name: MONGODB_OPTIONS
+              valueFrom:
+                configMapKeyRef:
+                  name: backend-cm
+                  key: MONGODB_OPTIONS
+            - name: MONGODB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: dev-mongouser-secret
+                  key: PASSWORD
+            - name: MONGODB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: backend-cm
+                  key: MONGODB_PORT
+            - name: MONGODB_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: backend-cm
+                  key: MONGODB_USER

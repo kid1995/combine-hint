@@ -1,0 +1,46 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+nameSuffix: "-ppa"
+
+resources:
+  - ../../base
+
+components:
+  - ../../base/components/postgres
+  - ../components/postgres
+
+labels:
+  - pairs:
+      app: ppa
+      service: ppa-service
+
+images:
+  - name: ppa-image
+    newName: docker-registry-default.cloud.system.local/elpa-ppa-abn/ppa
+    newTag: 33909f4.1440
+
+configMapGenerator:
+  - name: backend-cm
+    behavior: merge
+    literals:
+      - SERVICE_NAME=ppa
+      - POSTGRES_SCHEMA=ppa
+      - AUTH_URL=https://employee.login.int.signal-iduna.org/
+
+patches:
+  - path: deployment-patch.yaml
+    target:
+      kind: Deployment
+      name: app
+  - path: service-app-patch.yaml
+    target: 
+      kind: Service
+      name: app
+  - path: service-metrics-patch.yaml
+    target: 
+      kind: Service
+      name: metrics
+
+      
+

@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: Template
+metadata:
+  name: ${RESOURCE_NAME}-template
+
+parameters:
+- description: Name of origin branch
+  displayName: Branch name
+  name: BRANCH_NAME
+  required: true
+- description: Unique Name of openshift resource.
+  displayName: Name of openshift resource.
+  name: RESOURCE_NAME
+  required: true
+
+objects:
+- apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    name: ${RESOURCE_NAME}
+    labels:
+      branch: ${BRANCH_NAME}
+  data:
+    LOG_LEVEL: "INFO"
+    LOG_LEVEL_SI: "DEBUG"
+    LOGBACK_FILE: "logback-json.xml"
+    AUTH_URL: "https://employee.login.int.signal-iduna.org/"
+    AUTH_USERS: S000325
+    KAFKA_BROKERS: "si-cluster-kafka-brokers.kafka-cluster-tst.svc.cluster.local:9093"
+    KAFKA_USER: "elpa-hint-tst"
+    KAFKA_CONSUMER_GROUP: "kafka-elpa-hint-${BRANCH_NAME}"
+    KAFKA_SASL_MECHANISM: SCRAM-SHA-512
+    KAFKA_PROTOCOL: SASL_SSL
+    SWAGGER_ENABLED: "true"
+    POSTGRES_HOST: "vipsiae11t.system-a.local"
+    POSTGRES_DB_NAME: "elpapgt"
+    FLYWAY_ENABLED: "true"
+    FLYWAY_LOCATIONS: "db/migration"
