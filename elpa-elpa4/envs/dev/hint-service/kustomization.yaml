@@ -27,7 +27,7 @@ configMapGenerator:
     behavior: merge
     literals:
       - SERVICE_NAME=hint
-      - POSTGRES_SCHEMA_NAME=hint
+      - POSTGRES_SCHEMA_NAME=hin_develop
       - AUTH_URL=https://employee.login.int.signal-iduna.org/
 
 patches:
@@ -39,10 +39,11 @@ patches:
     target: 
       kind: Service
       name: app
-  - path: service-metrics-patch.yaml
+  - patch: virtualservice-patch.yaml
     target: 
-      kind: Service
-      name: metrics
+      kind: VirtualService
+      name: virtualservice
 
       
+
 
