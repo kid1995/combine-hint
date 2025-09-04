@@ -35,12 +35,17 @@ encode_value() {
 #
 
 # Create a temporary YAML file with base64 encoded values
-cat > "/tmp/${ENV}-elpa-elpa4-secrets.yaml" << EOF
+cat > "/tmp/${ENV}-elpa-elpa4-mongo-cluster-secrets.yaml" << EOF
 apiVersion: v1
 kind: Secret
 metadata:
-  name: ${ENV}-elpa-elpa4-secrets
+  name: ${ENV}-elpa-elpa4-mongo-cluster-secrets
   namespace: ${NAMESPACE}
+  annotations:
+    sealedsecrets.bitnami.com/managed: "true"
+  labels:
+    database: mongo
+    environment: dev
 type: Opaque
 data:
   MONGODB_BACKUP_USER: $(encode_value "backup")
@@ -52,13 +57,14 @@ data:
   MONGODB_CLUSTER_MONITOR_USER: $(encode_value "clusterMonitor")
   MONGODB_CLUSTER_MONITOR_PASSWORD: $(encode_value "$CLUSTER_MONITOR_PW")
   MONGODB_USER_ADMIN_USER: $(encode_value "userAdmin")  
+  PMM_SERVER_API_KEY: $(encode_value "apikey")  
 EOF
 
 # Seal the secret
-kubeseal --format yaml --cert=public-key-nop < "/tmp/${ENV}-elpa-elpa4-secrets.yaml" > "${ENV}-elpa-elpa4-secrets.yaml"
+kubeseal --format yaml --cert=public-key-nop < "/tmp/${ENV}-elpa-elpa4-mongo-cluster-secrets.yaml" > "${ENV}-elpa-elpa4-mongo-cluster-secrets.yaml"
 
 # Clean up temporary file
-rm "/tmp/${ENV}-elpa-elpa4-secrets.yaml"
+rm "/tmp/${ENV}-elpa-elpa4-mongo-cluster-secrets.yaml"
 
 #
 # mongouser-secret
@@ -74,6 +80,11 @@ kind: Secret
 metadata:
   name: ${ENV}-mongouser-secret
   namespace: ${NAMESPACE}
+  annotations:
+    sealedsecrets.bitnami.com/managed: "true"
+  labels:
+    database: mongo
+    environment: dev
 type: Opaque
 data:
   PASSWORD: $(encode_value "$MONGOUSER_PW")
@@ -99,6 +110,8 @@ kind: Secret
 metadata:
   name: ${ENV}-postgresuser-secret
   namespace: ${NAMESPACE}
+  annotations:
+    sealedsecrets.bitnami.com/managed: "true"
 type: Opaque
 data:
   PASSWORD: $(encode_value "$POSTGRESUSER_PW")

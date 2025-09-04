@@ -7,7 +7,7 @@ configMapGenerator:
   behavior: merge
   literals:
     - POSTGRES_URL=jdbc:postgresql://vipsiae11t.system-a.local:5432/elpapgt
-    - POSTGRES_USER=ZA-SVC-ELPAG-T
+    - POSTGRES_USER=ZA-SVC-ELPAPG-T
 
 patches:
   - path: deployment-patch.yaml

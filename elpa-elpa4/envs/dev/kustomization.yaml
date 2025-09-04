@@ -4,3 +4,6 @@ namePrefix: "dev-"
 
 resources:
   - hint-service
+
+patches:
+  - path: deployment-patch.yaml

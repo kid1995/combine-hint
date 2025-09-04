@@ -5,6 +5,7 @@ resources:
   - dev  
   - policies
   - secrets
+  - mongo
 
 configurations:
   - nameReference.yaml
