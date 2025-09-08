@@ -9,3 +9,4 @@ resources:
   - netpol-allow-from-otelcollector.yaml
   - netpol-allow-to-apm-egress.yaml
   - netpol-allow-to-postgres.yaml
+  

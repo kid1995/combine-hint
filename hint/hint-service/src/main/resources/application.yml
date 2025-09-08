@@ -53,7 +53,7 @@ spring:
     baselineOnMigrate: true
     enabled: ${FLYWAY_ENABLED:true}
   datasource:
-    url: ${POSTGRES_URL:jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB_NAME:postgresql}}
+    url: ${POSTGRES_URL:jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB_NAME:hint_db}}
     username: ${POSTGRES_USER:db_user}
     password: ${POSTGRES_PASSWORD:db_password}
     hikari:
@@ -70,11 +70,14 @@ spring:
         default_schema: ${postgres.schema}
     database: postgresql
 
+
 postgres:
   schema: ${POSTGRES_SCHEMA_NAME:hint}
 
+
 topics:
-  hintCreated: elpa-hint-created
+  hintCreated: elpa-hint-created${KAFKA_TOPIC_SUFFIX:}
+
 
 com:
   c4-soft:
@@ -109,8 +112,10 @@ com:
         ops[0]:
           iss: ${AUTH_URL:https://employee.login.int.signal-iduna.org/}
 
+
 authorization:
   users: ${AUTH_USERS:S000325}
+
 
 management:
   tracing:
@@ -139,6 +144,7 @@ management:
       export:
         enabled: true
 
+
 server:
   servlet:
     context-path: /api
@@ -159,6 +165,7 @@ server:
   forward-headers-strategy: native
   server-header:
 
+
 springdoc:
   api-docs:
     path: /api-docs
@@ -167,6 +174,7 @@ springdoc:
     path: /docs/rest
     operations-sorter: method
   paths-to-match: /hints,/hints/**
+
 
 springwolf:
   enabled: true
@@ -186,7 +194,10 @@ logging:
       springframework:
         security: INFO
       apache:
-        kafka: ERROR
+        kafka: INFO
     de:
       signaliduna: ${LOG_LEVEL_SI:${logging.level.root}}
   config: classpath:${LOGBACK_FILE:logback-plain.xml}
+
+
+

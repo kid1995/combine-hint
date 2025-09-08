@@ -19,7 +19,7 @@ components:
 images:
   - name: app-image
     newName: dev.docker.system.local/elpa-hint-tst/hint
-    newTag: 80be53b.1463
+    newTag: aee6dd3.18
 
 configMapGenerator:
   - name: backend-cm

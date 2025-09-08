@@ -16,9 +16,9 @@ spec:
       containers:
         - name: app
           resources:
-            requests:
-              cpu: "100m"
-              memory: "200Mi"
             limits:
-              cpu: "4000m"
-              memory: "500Mi"      
+              cpu: 8000m
+              memory: 2Gi        
+            requests:
+              cpu: 400m          
+              memory: 1Gi      
