@@ -1,0 +1,24 @@
+# NetworkPolicy für den Workload-Pod (backend)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ .Values.prefix }}-egress-workload-mongodb # selber Namespace wie Mongodb
+spec:
+  podSelector:
+    matchLabels:
+      {{ .Values.labelName }}: {{ .Values.label }}
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+#    - namespaceSelector: # austauschen durch podSelector auf MonogDB Labels
+#        matchExpressions:
+#        - key: kubernetes.io/metadata.name
+#          operator: In
+#          values: ["aedbaexp-mongodb"]
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: percona-server-mongodb
+    ports:
+    - protocol: TCP
+      port: 27017

@@ -1,0 +1,245 @@
+{{/* Pruefung auf gueltige Werte fuer die Stage */}}
+
+{{- $validEnvs := list "nop" "prd" }}
+{{- $isValid := false }}
+{{- range $validEnvs }}
+  {{- if eq . $.Values.stage }}
+    {{- $isValid = true }}
+  {{- end }}
+{{- end }}
+{{- if not $isValid }}
+  {{- fail "Der Wert für 'stage' muss entweder 'nop' oder 'prd' sein." }}
+{{- end }}
+
+{{/* Pruefung auf gueltige Versionen fuer die Stage */}}
+
+{{- $stage := .Values.stage -}}
+{{- $chartVersion := .Chart.Version -}}
+
+{{- $allowedVersions := dict -}}
+{{- $_ := set $allowedVersions "nop" (list "0.3.0" "1.0.0" "1.2.0") -}}
+{{- $_ := set $allowedVersions "prd" (list "1.0.0" "1.2.0") -}}
+
+{{- $allowed := index $allowedVersions $stage -}}
+{{- if not (has $chartVersion $allowed) -}}
+{{- fail (printf "Für Stage %s ist Version %s nicht erlaubt. Erlaubte Versionen: %s" $stage $chartVersion $allowed) -}}
+{{- end -}}
+
+{{/* Pruefung ob mongouser Roles hinzugefuegt wurden, zugelassen nur fuer Test */}}
+
+{{- if and (eq .Values.stage "prd") (.Values.mongouserRoles) }}
+{{ fail "Zusaetzliche mongouser Rollen duerfen nur im Test genutzt werden" }}
+{{- end }}
+
+{{/* Pruefung auf gueltige Werte fuer die User Rechte */}}
+
+{{- $erlaubteRollen := list "read" "readWrite" -}}
+{{- $alleRollen := list }}
+
+{{- range $rolle := .Values.mongoUserRollen }}
+  {{- $alleRollen = append $alleRollen $rolle.name }}
+{{- end }}
+
+{{- range $user := .Values.users }}
+  {{- range $rolle := $user.roles }}
+    {{- $alleRollen = append $alleRollen $rolle.name }}
+  {{- end }}
+{{- end }}
+
+{{- range $rolle := $alleRollen }}
+  {{- if not (has $rolle $erlaubteRollen) }}
+    {{ fail (printf "Ungültiger Rollenname: %s. Erlaubte Rollennamen sind: read, readWrite" $rolle) }}
+  {{- end }}
+{{- end }}
+
+
+
+apiVersion: psmdb.percona.com/v1
+kind: PerconaServerMongoDB
+metadata:
+  name: {{ .Values.prefix }}-{{ .Values.namespace }}-mongodb
+  {{- if eq .Values.deletePvcOnDelete true }}
+    {{- if eq .Values.stage "prd" }}
+      {{ fail "Automatisches Loeschen der PVCs in Produktion nicht zugelassen" }}
+    {{- else }}
+  finalizers:
+    - percona.com/delete-psmdb-pvc
+    {{- end }}
+  {{- end }}
+spec:
+  allowUnsafeConfigurations: false
+  platform: openshift
+  pause: {{ .Values.pause }}
+  enableVolumeExpansion: {{ .Values.enableVolumeExpansion }}
+  crVersion: {{ .Values.image.crVersion }}
+  {{- if eq .Values.stage "prd" }}
+  image: "prod.docker.system.local/{{ .Values.image.name }}"
+  {{- else }}
+  image: "dev.docker.system.local/{{ .Values.image.name }}"
+  {{- end }}
+  imagePullPolicy: Always
+  updateStrategy: SmartUpdate
+  upgradeOptions:
+    apply: disabled
+    schedule: "0 2 * * *"
+    setFCV: false
+    versionServiceEndpoint: 'https://check.percona.com'
+
+  replsets:
+  - name: rs0
+    size: {{ .Values.replicaCount }}
+    configuration: |
+      systemLog:
+        verbosity: 0
+        quiet: true
+      storage:
+        dbPath: data/db
+      {{- if .Values.config }}
+      {{ toYaml .Values.config }}
+      {{- end }}
+    expose:
+      enabled: false
+      type: ClusterIP
+    labels:
+        sidecar.istio.io/inject: 'true'
+    resources:
+      limits:
+        cpu: {{ .Values.resources.limits.cpu }}
+        memory: {{ .Values.resources.limits.memory }}
+      requests:
+        cpu: {{ .Values.resources.requests.cpu }}
+        memory: {{ .Values.resources.requests.memory }}
+    podDisruptionBudget:
+      maxUnavailable: 1
+    readinessProbe:
+      exec:
+        command:
+          - stat
+          - /entrypoint.sh
+      initialDelaySeconds: 15
+      timeoutSeconds: 10
+      failureThreshold: 5
+      periodSeconds: 60
+      successThreshold: 1
+    livenessProbe:
+      exec:
+        command:
+          - mongosh
+          - --eval
+          - db.adminCommand('ping')
+      initialDelaySeconds: 15
+      timeoutSeconds: 10
+      failureThreshold: 10
+      periodSeconds: 10
+      successThreshold: 1
+    volumeSpec:
+      persistentVolumeClaim:
+        storageClassName: volume
+        resources:
+          requests:
+            {{- $storage := int .Values.resources.storage }}
+            {{- if and (ge $storage 10) (le $storage 400) }}
+            storage: {{ $storage }}Gi
+            {{- else }}
+            {{ fail "storage muss zwischen 10 und 400 liegen" }}
+            {{- end }}
+
+  secrets:
+    users: {{ .Values.secret.name }}
+    encryptionKey: my-cluster-name-mongodb-encryption-key
+
+  users:
+    - name: olly-receiver
+      db: admin
+      passwordSecretRef:
+        name: {{ .Values.prefix }}-olly-secret
+        key: PASSWORD
+      roles:
+        - name: clusterMonitor
+          db: admin
+    - name: mongouser
+      db: admin
+      passwordSecretRef:
+        name: {{ .Values.prefix }}-mongouser-secret
+        key: PASSWORD
+      roles:
+      - name: readWrite
+        db: mongodb
+      {{- range .Values.mongouserRoles }}
+      - name: {{ .name }}
+        db: {{ .db }}
+      {{- end }}  
+    {{- range .Values.users }}
+    - name: {{ .name }}
+      db: admin
+      passwordSecretRef:
+        name: {{ .passwordSecretRef.name }}
+        key: PASSWORD
+      roles:
+      {{- range .roles }}
+        - name: {{ .name }}
+          db: {{ .db }}
+      {{- end }}
+    {{- end }}
+
+  sharding:
+    enabled: false
+    configsvrReplSet:
+      size: 1
+      volumeSpec:
+        persistentVolumeClaim:
+          resources:
+            requests:
+              storage: 3Gi
+    mongos:
+      size: 1
+  
+  tls:
+    mode: disabled
+  unsafeFlags:
+    tls: true
+    {{- if and (eq .Values.stage "prd") (eq .Values.unsafeFlags.replsetSize true) }}
+    {{ fail "UnsafeFlags sind fuer das Produktionsumfeld nicht zugelassen." }}
+    {{- else }}
+    replsetSize: {{ .Values.unsafeFlags.replsetSize }}
+    {{- end }}
+
+  backup:
+    enabled: {{ .Values.backup.enabled }}
+    {{- if eq .Values.stage "prd" }}
+    image: "prod.docker.system.local/{{ .Values.image.backup }}"
+    {{- else }}
+    image: "dev.docker.system.local/{{ .Values.image.backup }}"
+    {{- end }}
+    resources:
+      limits:
+        cpu: 250m
+        memory: 500Mi
+      requests:
+        cpu: 125m
+        memory: 250Mi  
+    #  serviceAccountName: percona-server-mongodb-operator
+    #  storages:
+    #    s3-us-west:
+    #      type: s3
+    #      s3:
+    #        bucket: psmdb2-backup
+    #        credentialsSecret: my-cluster-name-backup-s3
+    #        endpointUrl: s3test.storage.system.local:10443
+    #        serviceAccountName: perconaTest
+    #        insecureSkipTLSVerify: true
+    #      pitr:
+    #    enabled: true
+    #    oplogOnly: false
+    #     oplogSpanMin: 10
+    #    compressionType: gzip
+    #    compressionLevel: 6
+    #  tasks:
+    #    - name: backup-test
+    #      enabled: true
+    #      schedule: "*/10 * * * *"
+    #      keep: 3
+    #      storageName: s3-us-west
+    #      compressionType: gzip
+    #      compressionLevel: 6
+    

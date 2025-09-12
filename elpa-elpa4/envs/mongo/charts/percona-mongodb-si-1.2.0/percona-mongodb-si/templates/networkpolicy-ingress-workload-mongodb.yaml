@@ -1,0 +1,19 @@
+# NetworkPolicy für das MongoDB StatefulSet
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ .Values.prefix }}-allow-ingress-workload-mongodb
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: percona-server-mongodb
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          {{ .Values.labelName }}: {{ .Values.label }}
+    ports:
+    - protocol: TCP
+      port: 27017
