@@ -17,7 +17,7 @@ spec:
         - name: app
           resources:
             limits:
-              cpu: 8000m
+              cpu: 4000m
               memory: 2Gi        
             requests:
               cpu: 400m          

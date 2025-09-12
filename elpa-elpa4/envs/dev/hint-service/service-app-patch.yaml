@@ -5,3 +5,11 @@ metadata:
 spec:
   selector:
     app: hint
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: metrics
+spec:
+  selector:
+    app: hint
