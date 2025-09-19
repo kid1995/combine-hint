@@ -1,0 +1,37 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+nameSuffix: "-<service-name>"
+
+resources:
+  - ../../base
+  - admin-virtualservice.yaml
+  - destination-rule.yaml
+
+components:
+  - ../../base/components/postgres
+  - ../components/postgres
+  - ../../base/components/mongo
+  - ../components/mongo
+  - ../../base/components/kafka
+  - ../components/kafka
+
+images:
+  - name: app-image
+    newName: <image-registry>/<project-name>/<image-name>
+    newTag: <image-tag>
+
+configMapGenerator:
+  - name: backend-cm
+    behavior: merge
+    literals:
+      - SERVICE_NAME=<service-name>-service
+      - POSTGRES_SCHEMA_NAME=hin_develop
+      - AUTH_URL=https://employee.login.int.signal-iduna.org/
+
+patches:
+  - path: virtualservice-patch.yaml
+  - path: service-app-patch.yaml
+  - path: deployment-patch.yaml
+
+
