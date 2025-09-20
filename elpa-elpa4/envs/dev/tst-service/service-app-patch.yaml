@@ -4,7 +4,7 @@ metadata:
   name: service
 spec:
   selector:
-    app: <service-name>
+    app: tst-service
 ---
 apiVersion: v1
 kind: Service
@@ -12,4 +12,4 @@ metadata:
   name: metrics
 spec:
   selector:
-    app: <service-name>
+    app: tst-service

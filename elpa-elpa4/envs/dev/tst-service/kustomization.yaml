@@ -1,7 +1,7 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-nameSuffix: "-<service-name>"
+nameSuffix: "-tst-service"
 
 resources:
   - ../../base
@@ -9,18 +9,18 @@ resources:
   - destination-rule.yaml
 
 components:
-  <components-list>
+    - ../../base/components/postgres\n  - ../components/postgres\n  - ../../base/components/kafka\n  - ../components/kafka
 
 images:
   - name: app-image
-    newName: <image-registry>/<project-name>/<image-name>
-    newTag: <image-tag>
+    newName: dev.docker.system.local/elpa-tst-service-tst/tst-image
+    newTag: dqwd.d
 
 configMapGenerator:
   - name: backend-cm
     behavior: merge
     literals:
-      - SERVICE_NAME=<service-name>
+      - SERVICE_NAME=tst-service
       - POSTGRES_SCHEMA_NAME=<postgres-schema-name>
 
 patches:

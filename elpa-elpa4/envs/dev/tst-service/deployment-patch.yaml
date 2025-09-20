@@ -3,15 +3,15 @@ kind: Deployment
 metadata:
   name: app
   labels:
-      app: <service-name>
+      app: tst-service
 spec:
   selector:
     matchLabels:
-      app: <service-name>
+      app: tst-service
   template:
     metadata:
       labels:
-        app: <service-name>
+        app: tst-service
     spec:
       containers:
         # Resources quotas soll anhand der anforderung von dem Service angepasst werden.

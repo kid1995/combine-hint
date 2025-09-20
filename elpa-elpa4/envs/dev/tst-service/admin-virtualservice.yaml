@@ -1,17 +1,17 @@
 apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:
-  name: <service-name>-admin
+  name: tst-service-admin
 spec:
   hosts:
-    - "<env>-<service-name>-admin-elpa-elpa4.copsinop.de"           # extern FQDN
-    - "<env>-<service-name>-admin.elpa-elpa4.svc.cluster.local"     # intern FQDN
+    - "dev-tst-service-admin-elpa-elpa4.copsinop.de"           # extern FQDN
+    - "dev-tst-service-admin.elpa-elpa4.svc.cluster.local"     # intern FQDN
   gateways:
     - istio-system/mesh-gateway
     - mesh
   http:
     - route:
         - destination:
-            host: <env>-<service-name>
+            host: dev-tst-service
             port:
               number: 8081
