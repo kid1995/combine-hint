@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app
+  labels:
+      app: wef
+spec:
+  selector:
+    matchLabels:
+      app: wef
+  template:
+    metadata:
+      labels:
+        app: wef
+    spec:
+      containers:
+        # Resources quotas soll anhand der anforderung von dem Service angepasst werden.
+        - name: app
+          resources:
+            limits:
+              cpu: 4000m
+              memory: 2Gi        
+            requests:
+              cpu: 400m          
+              memory: 1Gi      

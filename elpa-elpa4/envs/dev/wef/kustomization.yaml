@@ -9,12 +9,15 @@ resources:
   - destination-rule.yaml
 
 components:
-    - ../../base/components/postgres\n  - ../components/postgres\n  - ../../base/components/kafka\n  - ../components/kafka
+  - ../../base/components/postgres
+  - ../components/postgres
+  - ../../base/components/kafka
+  - ../components/kafka
 
 images:
   - name: app-image
-    newName: dev.docker.system.local/elpa-tst-service-tst/tst-image
-    newTag: dqwd.d
+    newName: <image-registry>/<project-name>/sasd
+    newTag: qwdq
 
 configMapGenerator:
   - name: backend-cm

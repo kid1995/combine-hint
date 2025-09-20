@@ -1,0 +1,17 @@
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: wef-admin
+spec:
+  hosts:
+    - "dev-wef-admin-elpa-elpa4.copsinop.de"           # extern FQDN
+    - "dev-wef-admin.elpa-elpa4.svc.cluster.local"     # intern FQDN
+  gateways:
+    - istio-system/mesh-gateway
+    - mesh
+  http:
+    - route:
+        - destination:
+            host: dev-wef
+            port:
+              number: 8081
