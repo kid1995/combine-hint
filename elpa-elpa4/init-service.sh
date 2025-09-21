@@ -131,7 +131,7 @@ if [[ -f "$BLUEPRINT_DIR/kustomization.yaml" ]]; then
   mv "$temp_file" "$BLUEPRINT_DIR/kustomization.yaml"
   
   # Handle image registry placeholder
-  sed -i "s|<image-registry>/<project-name>|dev.docker.system.local/elpa-$service_name-tst|g" "$BLUEPRINT_DIR/kustomization.yaml"
+  sed -i "s|<image-name>|$image_name|g" "$BLUEPRINT_DIR/kustomization.yaml"
 fi
 
 # Clean up any remaining backup files

@@ -13,15 +13,14 @@ components:
 
 images:
   - name: app-image
-    newName: <image-registry>/<project-name>/<image-name>
+    newName: <image-name>
     newTag: <image-tag>
 
 configMapGenerator:
   - name: backend-cm
     behavior: merge
     literals:
-      - SERVICE_NAME=<service-name>
-      - POSTGRES_SCHEMA_NAME=<postgres-schema-name>
+      - SERVICE_NAME=<service-name>      
 
 patches:
   - path: virtualservice-patch.yaml
