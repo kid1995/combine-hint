@@ -1,7 +1,7 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-nameSuffix: "-<service-name>"
+nameSuffix: "-beispiel-service"
 
 resources:
   - ../../base
@@ -9,18 +9,21 @@ resources:
   - destination-rule.yaml
 
 components:
-  <components-list>
+  - ../../base/components/postgres
+  - ../components/postgres
 
 images:
   - name: app-image
-    newName: <image-name>
-    newTag: <image-tag>
+    newName: dev.docker.system.local/elpa-beispiel-service-tst
+    newTag: v1.0.0
 
 configMapGenerator:
   - name: backend-cm
     behavior: merge
     literals:
-      <literals-list>
+      - SERVICE_NAME=beispiel-service
+      - POSTGRES_SCHEMA_NAME=beispiel_schema
+      - AUTH_URL=https://auth.example.com
 
 patches:
   - path: virtualservice-patch.yaml

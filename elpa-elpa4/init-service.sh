@@ -29,6 +29,19 @@ if [[ "$use_auth_url" =~ ^(ja|j)$ ]]; then
   read -p "Bitte geben Sie die AUTH_URL ein (leer lassen für Platzhalter): " auth_url
 fi
 
+
+# env=dev  # For testing purposes, you can set a default value here
+# use_postgres=ja  # For testing purposes, you can set a default value here
+# use_kafka=ja  # For testing purposes, you can set a default value here
+# use_mongodb=nein  # For testing purposes, you can set a default value here
+# use_auth_url=ja  # For testing purposes, you can set a default value here
+# service_name="beispiel-service"  # For testing purposes, you can set a default value here
+# image_name="dev.docker.system.local/elpa-beispiel-service-tst"  # For testing purposes, you can set a default value here
+# image_tag="v1.0.0"  # For testing purposes, you can set a default value here
+# postgres_schema_name="beispiel_schema"  # For testing purposes, you can set a default value here
+# auth_url="https://auth.example.com"  # For testing purposes, you can set a default value here
+
+
 BLUEPRINT_DIR="blueprint_temp"
 cp -r blueprint "$BLUEPRINT_DIR"
 
@@ -93,6 +106,8 @@ if [[ "$use_postgres" =~ ^(ja|j)$ ]]; then
   fi
 fi
 
+echo "after POSTGRES_SCHEMA_NAME $LITERALS_LIST"
+
 if [[ "$use_auth_url" =~ ^(ja|j)$ ]]; then
   if [[ -n "$auth_url" ]]; then
     LITERALS_LIST="$LITERALS_LIST
@@ -102,6 +117,8 @@ if [[ "$use_auth_url" =~ ^(ja|j)$ ]]; then
       - AUTH_URL=<auth-url>"
   fi
 fi
+
+echo "after auth_url $LITERALS_LIST"
 
 # Process kustomization.yaml with proper YAML formatting
 if [[ -f "$BLUEPRINT_DIR/kustomization.yaml" ]]; then
@@ -118,9 +135,13 @@ if [[ -f "$BLUEPRINT_DIR/kustomization.yaml" ]]; then
         # If no components, skip this line (remove the placeholder)
         continue
       fi
-    elif [[ "$line" == *"- SERVICE_NAME=<service-name>"* ]]; then
-      # Replace the entire literals section
-      echo "$LITERALS_LIST"
+    elif [[ "$line" == *"<literals-list>"* ]]; then
+      if [[ -n "$LITERALS_LIST" ]]; then
+        echo "$LITERALS_LIST"
+      else
+        # If no literals, skip this line (remove the placeholder)
+        continue
+      fi
     else
       # Keep the line as-is
       echo "$line"
