@@ -11,6 +11,8 @@ resources:
 components:
   - ../../base/components/postgres
   - ../components/postgres
+  - ../../base/components/kafka
+  - ../components/kafka
 
 images:
   - name: app-image

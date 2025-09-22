@@ -1,0 +1,15 @@
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: virtualservice
+spec:
+  hosts:
+    - "dev-tst-service-elpa-elpa4.copsinop.de"
+    - "dev-tst-service.elpa-elpa4.svc.cluster.local"
+  http:
+    - name: dev-route
+      route:
+        - destination:
+            host: dev-tst-service
+            port:
+              number: 8080

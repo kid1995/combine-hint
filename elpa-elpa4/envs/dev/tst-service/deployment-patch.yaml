@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app
+  labels:
+      app: tst-service
+spec:
+  selector:
+    matchLabels:
+      app: tst-service
+  template:
+    metadata:
+      labels:
+        app: tst-service
+    spec:
+      containers:
+        # Resources quotas soll anhand der anforderung von dem Service angepasst werden.
+        - name: app
+          resources:
+            limits:
+              cpu: 4000m
+              memory: 2Gi        
+            requests:
+              cpu: 400m          
+              memory: 1Gi      
