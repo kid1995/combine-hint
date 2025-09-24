@@ -19,7 +19,7 @@ dependencyManagement {
 dependencies {
 	api project(":hint-model")
 	api 'org.springframework.cloud:spring-cloud-starter-openfeign'
-	api 'de.signaliduna.elpa:jwt-adapter:2.3.0'
+	api 'de.signaliduna.elpa:jwt-adapter:2.2.1'
 	implementation("com.fasterxml.jackson.core:jackson-annotations:${jacksonVersion}")
 	implementation 'jakarta.validation:jakarta.validation-api:3.1.1'
 

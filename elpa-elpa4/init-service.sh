@@ -65,6 +65,12 @@ gather_requirements() {
     prompt_yes_no "Wird Kafka verwendet?" && use_kafka=true || use_kafka=false
     prompt_yes_no "Wird MongoDB verwendet?" && use_mongodb=true || use_mongodb=false
     prompt_yes_no "Wird eine AUTH_URL benötigt?" && use_auth_url=true || use_auth_url=false
+
+    #debug
+    # use_postgres=true
+    # use_kafka=true
+    # use_mongodb=false
+    # use_auth_url=true
 }
 
 gather_service_details() {
@@ -80,6 +86,13 @@ gather_service_details() {
     if $use_auth_url; then
         prompt_value "Bitte geben Sie die AUTH_URL ein (leer lassen für Platzhalter): " auth_url "<auth-url>"
     fi
+
+    # Debug
+    # service_name=test-service
+    # image_name=my-docker-image
+    # image_tag=v1.0.0
+    # postgres_schema_name=my_schema
+    # auth_url=https://auth.example.com
 }
 
 prepare_blueprint() {

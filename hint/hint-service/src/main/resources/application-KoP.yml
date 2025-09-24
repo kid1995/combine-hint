@@ -3,18 +3,20 @@ spring:
     stream:
       kafka:
         binder:
-          brokers: ${KAFKA_BROKERS:bootstrap-nop.kafka.svc.cluster.local:9443}
+          brokers: ${KAFKA_BROKERS:localhost:9092}
           enableObservation: true
           configuration:
-            client.id: ${KAFKA_CLIENT_ID:}
-            security.protocol: SASL_PLAINTEXT
-            sasl.mechanism: OAUTHBEARER
-            sasl.login.callback.handler.class: org.apache.kafka.common.security.oauthbearer.secured.OAuthBearerLoginCallbackHandler
-            sasl.jaas.enabled: ${KAFKA_JAAS_ENABLED:true}
-            sasl.jaas.config: org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginModule required clientId="${KAFKA_OAUTH_CLIENT_ID:workload-client}" clientSecret="${KAFKA_OAUTH_CLIENT_SECRET:workload-secret}";
-            sasl.oauthbearer.token.endpoint.url: ${KAFKA_OAUTH_TOKEN_ENDPOINT_URL:http://idp-nop.kafka.svc.cluster.local:9443/token}
-          consumerProperties:
-            auto-offset-reset: earliest
-
-
-
+            security:
+              protocol: ${KAFKA_SECURITY_PROTOCOL:SASL_PLAINTEXT}
+            sasl:
+              mechanism: ${KAFKA_SASL_MECHANISM:OAUTHBEARER}
+              jaas:
+                config: org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginModule required clientId="${KAFKA_OAUTH_CLIENT_ID:workload-client}" clientSecret="${KAFKA_OAUTH_CLIENT_SECRET:workload-secret}";
+              login:
+                callback:
+                  handler:
+                    class: org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginCallbackHandler
+              oauthbearer:
+                token:
+                  endpoint:
+                    url: ${KAFKA_OAUTH_TOKEN_ENDPOINT_URL}

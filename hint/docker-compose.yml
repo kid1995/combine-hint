@@ -39,7 +39,7 @@ services:
       - .mongo/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
 
   postgres:
-    image: hub.docker.system.local/postgres:17.5
+    image: hub.docker.system.local/postgres:17.6
     container_name: postgres.local
     environment:
       POSTGRES_USER: db_user
