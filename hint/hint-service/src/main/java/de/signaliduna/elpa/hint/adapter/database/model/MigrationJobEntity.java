@@ -3,6 +3,8 @@ package de.signaliduna.elpa.hint.adapter.database.model;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity(name = "migration_job")
 public class MigrationJobEntity {
@@ -13,9 +15,6 @@ public class MigrationJobEntity {
 
 	@Column(name = "message")
 	private String message;
-
-	@Column(name = "mongo_uuid")
-	private  String lastMergedPoint;
 
 	@Column(name = "data_set_start_date")
 	private LocalDateTime dataSetStartDate;
@@ -32,17 +31,19 @@ public class MigrationJobEntity {
 	@Enumerated(value=EnumType.STRING)
 	private MigrationJobEntity.STATE state;
 
+	@OneToMany(mappedBy = "jobID", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+	private List<MigrationErrorEntity> errors = new ArrayList<>();
+
 	protected MigrationJobEntity() {
 
 	}
 
 	public enum STATE{
-		RUNNING, FAILED, SUCCESS
+		RUNNING, BROKEN, COMPLETED
 	}
 
-	public MigrationJobEntity(String message, String lastMergedPoint, LocalDateTime creationDate, LocalDateTime finishingDate, STATE state) {
+	public MigrationJobEntity(String message, LocalDateTime creationDate, LocalDateTime finishingDate, STATE state) {
 		this.message = message;
-		this.lastMergedPoint = lastMergedPoint;
 		this.creationDate = creationDate;
 		this.finishingDate = finishingDate;
 		this.state = state;
@@ -62,14 +63,6 @@ public class MigrationJobEntity {
 
 	public void setMessage(String message) {
 		this.message = message;
-	}
-
-	public String getLastMergedPoint() {
-		return lastMergedPoint;
-	}
-
-	public void setLastMergedPoint(String lastMergedPoint) {
-		this.lastMergedPoint = lastMergedPoint;
 	}
 
 	public LocalDateTime getCreationDate() {
@@ -110,5 +103,76 @@ public class MigrationJobEntity {
 
 	public void setDataSetStopDate(LocalDateTime dataSetStopDate) {
 		this.dataSetStopDate = dataSetStopDate;
+	}
+
+	public List<MigrationErrorEntity> getErrors() {
+		return errors;
+	}
+	public void setErrors(List<MigrationErrorEntity> errors) {
+		this.errors = errors;
+	}
+
+	public static Builder builder() {
+		return new Builder();
+	}
+
+	public static final class Builder {
+		private String message;
+		private LocalDateTime dataSetStartDate;
+		private LocalDateTime dataSetStopDate;
+		private LocalDateTime creationDate;
+		private LocalDateTime finishingDate;
+		private STATE state;
+		private List<MigrationErrorEntity> errors = new ArrayList<>();
+
+
+		private Builder() {}
+
+		public Builder message(String message) {
+			this.message = message;
+			return this;
+		}
+
+		public Builder dataSetStartDate(LocalDateTime dataSetStartDate) {
+			this.dataSetStartDate = dataSetStartDate;
+			return this;
+		}
+
+		public Builder dataSetStopDate(LocalDateTime dataSetStopDate) {
+			this.dataSetStopDate = dataSetStopDate;
+			return this;
+		}
+
+		public Builder creationDate(LocalDateTime creationDate) {
+			this.creationDate = creationDate;
+			return this;
+		}
+
+		public Builder finishingDate(LocalDateTime finishingDate) {
+			this.finishingDate = finishingDate;
+			return this;
+		}
+
+		public Builder state(STATE state) {
+			this.state = state;
+			return this;
+		}
+
+		public Builder errors(List<MigrationErrorEntity> errors) {
+			this.errors = errors;
+			return this;
+		}
+
+		public MigrationJobEntity build() {
+			MigrationJobEntity migrationJobEntity = new MigrationJobEntity();
+			migrationJobEntity.setMessage(message);
+			migrationJobEntity.setDataSetStartDate(dataSetStartDate);
+			migrationJobEntity.setDataSetStopDate(dataSetStopDate);
+			migrationJobEntity.setCreationDate(creationDate);
+			migrationJobEntity.setFinishingDate(finishingDate);
+			migrationJobEntity.setState(state);
+			migrationJobEntity.setErrors(errors);
+			return migrationJobEntity;
+		}
 	}
 }

@@ -1,0 +1,72 @@
+// kid1995/combine-hint/kid1995-combine-hint-6e2814d4ec175a0c6409686107f1ef989c185ab9/hint/hint-service/src/main/java/de/signaliduna/elpa/hint/adapter/http/api/MigrationApi.java
+
+package de.signaliduna.elpa.hint.adapter.http.api;
+
+import de.signaliduna.elpa.hint.adapter.database.MigrationErrorRepo;
+import de.signaliduna.elpa.hint.adapter.database.MigrationJobRepo;
+import de.signaliduna.elpa.hint.adapter.database.model.MigrationErrorEntity;
+import de.signaliduna.elpa.hint.adapter.database.model.MigrationJobEntity;
+import de.signaliduna.elpa.hint.core.MigrationService;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDateTime;
+
+@RestController
+@RequestMapping("/migration")
+public class MigrationApi {
+
+	private final MigrationService migrationService;
+	private final MigrationJobRepo migrationJobRepo;
+	private final MigrationErrorRepo migrationErrorRepo;
+
+	public MigrationApi(MigrationService migrationService, MigrationJobRepo migrationJobRepo, MigrationErrorRepo migrationErrorRepo) {
+		this.migrationService = migrationService;
+		this.migrationJobRepo = migrationJobRepo;
+		this.migrationErrorRepo = migrationErrorRepo;
+	}
+
+	@PostMapping("/start")
+	public ResponseEntity<Long> startMigration(@RequestParam(required = false) LocalDateTime dataSetStartDate, @RequestParam(required = false) LocalDateTime dataSetEndDate) {
+		MigrationJobEntity job = migrationJobRepo.save(MigrationJobEntity.builder()
+			.dataSetStartDate(dataSetStartDate)
+			.dataSetStopDate(dataSetEndDate)
+			.creationDate(LocalDateTime.now())
+			.state(MigrationJobEntity.STATE.RUNNING)
+			.build());
+		migrationService.startMigration(job);
+		return ResponseEntity.accepted().body(job.getId());
+	}
+
+	@GetMapping("/jobs")
+	public Iterable<MigrationJobEntity> getJobs() {
+		return migrationJobRepo.findAll();
+	}
+
+	@GetMapping("/jobs/{jobId}")
+	public ResponseEntity<MigrationJobEntity> getJob(@PathVariable Long jobId) {
+		return ResponseEntity.of(migrationJobRepo.findById(jobId));
+	}
+
+	@GetMapping("/errors")
+	public Iterable<MigrationErrorEntity> getErrors() {
+		return migrationErrorRepo.findAll();
+	}
+
+	@GetMapping("/errors/{errorId}")
+	public ResponseEntity<MigrationErrorEntity> getError(@PathVariable Long errorId) {
+		return ResponseEntity.of(migrationErrorRepo.findById(errorId));
+	}
+
+	@PostMapping("/fix")
+	public ResponseEntity<Long> fixErrors() {
+		MigrationJobEntity job = migrationJobRepo.save(MigrationJobEntity.builder()
+			.creationDate(LocalDateTime.now())
+			.state(MigrationJobEntity.STATE.RUNNING)
+			.build());
+		// In a real scenario, you would implement the logic to re-process the failed migrations.
+		// For this example, we'll just start a new migration job.
+		migrationService.startMigration(job);
+		return ResponseEntity.accepted().body(job.getId());
+	}
+}

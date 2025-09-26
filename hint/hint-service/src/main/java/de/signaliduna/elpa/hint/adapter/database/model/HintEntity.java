@@ -27,6 +27,8 @@ public class HintEntity {
 	private String processVersion;
 	@Column(name ="resource_id")
 	private String resourceId;
+	@Column(name ="mongo_uuid")
+	private String mongoUUID;
 
 	protected HintEntity(){}
 
@@ -101,6 +103,12 @@ public class HintEntity {
 	public void setResourceId(String resourceId) {
 		this.resourceId = resourceId;
 	}
+
+	public String getMongoUUID() {
+		return mongoUUID;
+	}
+
+	public void setMongoUUID(String mongoUUID) {}
 
 	/* BUILDER */
 	public static Builder builder() {
