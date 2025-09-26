@@ -58,15 +58,13 @@ public class MigrationApi {
 		return ResponseEntity.of(migrationErrorRepo.findById(errorId));
 	}
 
-	@PostMapping("/fix")
-	public ResponseEntity<Long> fixErrors() {
+	@PostMapping("/fix/{jobId}")
+	public ResponseEntity<Long> fixErrors(@PathVariable Long jobId) {
 		MigrationJobEntity job = migrationJobRepo.save(MigrationJobEntity.builder()
 			.creationDate(LocalDateTime.now())
 			.state(MigrationJobEntity.STATE.RUNNING)
 			.build());
-		// In a real scenario, you would implement the logic to re-process the failed migrations.
-		// For this example, we'll just start a new migration job.
-		migrationService.startMigration(job);
+		migrationService.fixUnresolvedErrors(job, jobId);
 		return ResponseEntity.accepted().body(job.getId());
 	}
 }

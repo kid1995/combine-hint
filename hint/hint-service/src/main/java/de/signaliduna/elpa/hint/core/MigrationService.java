@@ -7,6 +7,7 @@ import de.signaliduna.elpa.hint.adapter.database.model.MigrationErrorEntity;
 import de.signaliduna.elpa.hint.adapter.database.model.HintEntity;
 import de.signaliduna.elpa.hint.adapter.database.model.MigrationJobEntity;
 import de.signaliduna.elpa.hint.adapter.mapper.HintMapper;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -24,7 +25,6 @@ import java.util.concurrent.CompletableFuture;
 
 
 public class MigrationService {
-
 	private final MongoTemplate mongoTemplate;
 	private final HintRepository hintRepository;
 	private final MigrationJobRepo migrationJobRepo;
@@ -59,6 +59,47 @@ public class MigrationService {
 		CompletableFuture.completedFuture(job.getId());
 	}
 
+	@Async
+	public void fixUnresolvedErrors(MigrationJobEntity newJob, Long oldJobId) {
+		List<MigrationErrorEntity> unresolvedErrors = migrationErrorRepo.findByJobIDAndResolved(oldJobId, false);
+
+		for (MigrationErrorEntity error : unresolvedErrors) {
+			try {
+				Query query = new Query(Criteria.where("_id").is(error.getMongoUUID()));
+				HintDao hintDao = mongoTemplate.findOne(query, HintDao.class);
+
+				if (hintDao != null) {
+					if (hintRepository.existsByMongoUUID(hintDao.id())) {
+						error.setResolved(true);
+						migrationErrorRepo.save(error);
+						continue;
+					}
+
+					HintEntity hintEntity = hintMapper.dtoToEntity(hintMapper.daoToDto(hintDao));
+					hintEntity.setMongoUUID(hintDao.id());
+					hintRepository.save(hintEntity);
+
+					error.setResolved(true);
+					migrationErrorRepo.save(error);
+				}
+			}
+
+			catch (Exception e) {
+				String serializedMessage = trySerialize(objectMapper, error, e.getMessage());
+				migrationErrorRepo.save(MigrationErrorEntity.builder()
+					.message(serializedMessage)
+					.mongoUUID(error.getMongoUUID())
+					.resolved(false)
+					.jobID(newJob)
+					.build());
+			}
+		}
+
+		newJob.setState(MigrationJobEntity.STATE.COMPLETED);
+		newJob.setFinishingDate(LocalDateTime.now());
+		migrationJobRepo.save(newJob);
+	}
+
 	private void processPage(MigrationJobEntity job, Pageable pageable) {
 		Query query = new Query().with(pageable);
 		if (job.getDataSetStartDate() != null && job.getDataSetStopDate() != null) {
@@ -72,14 +113,29 @@ public class MigrationService {
 
 		for (HintDao hintDao : page.getContent()) {
 			try {
+				if (hintRepository.existsByMongoUUID(hintDao.id())) {
+					continue;
+				}
+
 				HintEntity hintEntity = hintMapper.dtoToEntity(hintMapper.daoToDto(hintDao));
 				hintEntity.setMongoUUID(hintDao.id());
 				hintRepository.save(hintEntity);
+
+			} catch (DataIntegrityViolationException e) {
+				String serializedMessage = trySerialize(objectMapper, hintDao, "Data integrity violation: " + e.getMessage());
+				migrationErrorRepo.save(MigrationErrorEntity.builder()
+					.message(serializedMessage)
+					.mongoUUID(hintDao.id())
+					.resolved(false)
+					.jobID(job)
+					.build());
 			} catch (Exception e) {
 				String serializedMessage = trySerialize(objectMapper, hintDao, e.getMessage());
 				migrationErrorRepo.save(MigrationErrorEntity.builder()
 					.message(serializedMessage)
 					.mongoUUID(hintDao.id())
+					.resolved(false)
+					.jobID(job)
 					.build());
 			}
 		}

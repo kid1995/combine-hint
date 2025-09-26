@@ -1,5 +1,6 @@
 package de.signaliduna.elpa.hint.adapter.database;
 
+import de.signaliduna.elpa.hint.adapter.database.model.MigrationErrorEntity;
 import de.signaliduna.elpa.hint.adapter.database.model.MigrationJobEntity;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.stereotype.Repository;
