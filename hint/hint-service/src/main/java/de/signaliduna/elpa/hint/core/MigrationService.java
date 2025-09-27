@@ -60,35 +60,36 @@ public class MigrationService {
 	}
 
 	@Async
-	public void fixUnresolvedErrors(MigrationJobEntity newJob, Long oldJobId) {
-		List<MigrationErrorEntity> unresolvedErrors = migrationErrorRepo.findByJobIDAndResolved(oldJobId, false);
+	public void fixUnresolvedErrors(MigrationJobEntity newJob, Long jobID) {
+		List<MigrationErrorEntity> unresolvedErrors = migrationErrorRepo.findByJobIDAndResolved(jobID, false);
 
-		for (MigrationErrorEntity error : unresolvedErrors) {
+		for (MigrationErrorEntity migrationError : unresolvedErrors) {
 			try {
-				Query query = new Query(Criteria.where("_id").is(error.getMongoUUID()));
+				Query query = new Query(Criteria.where("_id").is(migrationError.getMongoUUID()));
 				HintDao hintDao = mongoTemplate.findOne(query, HintDao.class);
 
 				if (hintDao != null) {
 					if (hintRepository.existsByMongoUUID(hintDao.id())) {
-						error.setResolved(true);
-						migrationErrorRepo.save(error);
+						migrationError.setResolved(true);
+						migrationErrorRepo.save(migrationError);
 						continue;
 					}
+					HintDao fixedHintDao = tryToFixMigrationError(hintDao, migrationError);
 
-					HintEntity hintEntity = hintMapper.dtoToEntity(hintMapper.daoToDto(hintDao));
-					hintEntity.setMongoUUID(hintDao.id());
+					HintEntity hintEntity = hintMapper.dtoToEntity(hintMapper.daoToDto(fixedHintDao));
+					hintEntity.setMongoUUID(fixedHintDao.id());
 					hintRepository.save(hintEntity);
 
-					error.setResolved(true);
-					migrationErrorRepo.save(error);
+					migrationError.setResolved(true);
+					migrationErrorRepo.save(migrationError);
 				}
 			}
 
 			catch (Exception e) {
-				String serializedMessage = trySerialize(objectMapper, error, e.getMessage());
+				String serializedMessage = trySerialize(objectMapper, migrationError, e.getMessage());
 				migrationErrorRepo.save(MigrationErrorEntity.builder()
 					.message(serializedMessage)
-					.mongoUUID(error.getMongoUUID())
+					.mongoUUID(migrationError.getMongoUUID())
 					.resolved(false)
 					.jobID(newJob)
 					.build());
@@ -152,6 +153,11 @@ public class MigrationService {
 		} catch (Exception ignored) {
 			return fallback;
 		}
+	}
+
+	private HintDao tryToFixMigrationError(HintDao hintDao, MigrationErrorEntity migrationErrorEntity) {
+		// not implemented yet, after every failed migration, this function will be extended
+		return hintDao;
 	}
 
 }
