@@ -111,6 +111,7 @@ com:
 
 authorization:
   users: ${AUTH_USERS:S000325}
+  migration_users: ${MIGRATION_USERS:S000325}
 
 management:
   tracing:

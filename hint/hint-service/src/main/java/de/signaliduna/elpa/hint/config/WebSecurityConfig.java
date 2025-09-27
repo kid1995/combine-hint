@@ -15,25 +15,34 @@ import java.util.List;
 @EnableMethodSecurity
 public class WebSecurityConfig {
 	private final String[] authorizedUsers;
+	private final String [] authorizedMigrationUsers;
 
-	public WebSecurityConfig(@Value("${authorization.users}") String[] authorizedUsers) {
+	public WebSecurityConfig(@Value("${authorization.users}") String[] authorizedUsers, @Value("${authorization.migration_users}")String[] authorizedMigrationUsers) {
 		this.authorizedUsers = authorizedUsers;
+		this.authorizedMigrationUsers = authorizedMigrationUsers;
 	}
 
 	@Bean
 	public MethodSecurityExpressionHandler methodSecurityExpressionHandler() {
-		return new SpringAddonsMethodSecurityExpressionHandler(() -> new CustomMethodSecurityExpressionRoot(Arrays.asList(authorizedUsers)));
+		return new SpringAddonsMethodSecurityExpressionHandler(() -> new CustomMethodSecurityExpressionRoot(Arrays.asList(authorizedUsers), Arrays.asList(authorizedMigrationUsers)));
 	}
 
 	private static final class CustomMethodSecurityExpressionRoot extends SpringAddonsMethodSecurityExpressionRoot {
 		private final List<String> authorizedUsers;
+		private final List<String> authorizedMigrationUsers;
 
-		public CustomMethodSecurityExpressionRoot(List<String> authorizedUsers) {
+		public CustomMethodSecurityExpressionRoot(List<String> authorizedUsers, List<String> authorizedMigrationUsers) {
 			this.authorizedUsers = authorizedUsers;
+			this.authorizedMigrationUsers = authorizedMigrationUsers;
 		}
 
 		public boolean isAuthorizedUser() {
 			return this.authorizedUsers.contains(getAuthentication().getName());
 		}
+
+		public boolean isAuthorizedMigrationUser() {
+			return this.authorizedMigrationUsers.contains(getAuthentication().getName());
+		}
+
 	}
 }

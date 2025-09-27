@@ -8,12 +8,14 @@ import de.signaliduna.elpa.hint.adapter.database.model.MigrationErrorEntity;
 import de.signaliduna.elpa.hint.adapter.database.model.MigrationJobEntity;
 import de.signaliduna.elpa.hint.core.MigrationService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 
 @RestController
 @RequestMapping("/migration")
+@PreAuthorize("isAuthenticated() and isAuthorizedMigrationUser()")
 public class MigrationApi {
 
 	private final MigrationService migrationService;
