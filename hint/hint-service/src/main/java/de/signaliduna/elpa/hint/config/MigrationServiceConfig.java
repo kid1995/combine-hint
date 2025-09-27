@@ -1,6 +1,5 @@
 package de.signaliduna.elpa.hint.config;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import de.signaliduna.elpa.hint.adapter.database.HintRepository;
 import de.signaliduna.elpa.hint.adapter.database.MigrationErrorRepo;
 import de.signaliduna.elpa.hint.adapter.database.MigrationJobRepo;
@@ -20,15 +19,14 @@ public class MigrationServiceConfig {
 		HintRepository hintRepository,
 		MigrationJobRepo migrationJobRepo,
 		MigrationErrorRepo migrationErrorRepo,
-		HintMapper hintMapper,
-		ObjectMapper objectMapper
+		HintMapper hintMapper
 	) {
 		return new MigrationService(
 			mongoTemplate,
 			hintRepository,
 			migrationJobRepo,
 			migrationErrorRepo,
-			hintMapper,
-			objectMapper);
+			hintMapper
+		);
 	}
 }

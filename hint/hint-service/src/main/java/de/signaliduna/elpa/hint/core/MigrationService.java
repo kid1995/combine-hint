@@ -1,163 +1,140 @@
 package de.signaliduna.elpa.hint.core;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import de.signaliduna.elpa.hint.adapter.database.HintRepository;
 import de.signaliduna.elpa.hint.adapter.database.MigrationErrorRepo;
 import de.signaliduna.elpa.hint.adapter.database.MigrationJobRepo;
-import de.signaliduna.elpa.hint.adapter.database.model.MigrationErrorEntity;
+import de.signaliduna.elpa.hint.adapter.database.legacy.model.HintDao;
 import de.signaliduna.elpa.hint.adapter.database.model.HintEntity;
+import de.signaliduna.elpa.hint.adapter.database.model.MigrationErrorEntity;
 import de.signaliduna.elpa.hint.adapter.database.model.MigrationJobEntity;
 import de.signaliduna.elpa.hint.adapter.mapper.HintMapper;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
-import de.signaliduna.elpa.hint.adapter.database.legacy.model.HintDao;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
-
+@Service
 public class MigrationService {
+
+	private static final int BATCH_SIZE = 100;
+
 	private final MongoTemplate mongoTemplate;
 	private final HintRepository hintRepository;
 	private final MigrationJobRepo migrationJobRepo;
 	private final MigrationErrorRepo migrationErrorRepo;
 	private final HintMapper hintMapper;
-	private final ObjectMapper objectMapper;
 
-
-	public MigrationService(MongoTemplate mongoTemplate, HintRepository hintRepository, MigrationJobRepo migrationJobRepo, MigrationErrorRepo migrationErrorRepo, HintMapper hintMapper, ObjectMapper objectMapper) {
+	public MigrationService(MongoTemplate mongoTemplate, HintRepository hintRepository, MigrationJobRepo migrationJobRepo,
+													MigrationErrorRepo migrationErrorRepo, HintMapper hintMapper, ObjectMapper objectMapper) {
 		this.mongoTemplate = mongoTemplate;
 		this.hintRepository = hintRepository;
 		this.migrationJobRepo = migrationJobRepo;
 		this.migrationErrorRepo = migrationErrorRepo;
 		this.hintMapper = hintMapper;
-		this.objectMapper = objectMapper;
 	}
 
 	@Async
-	public void startMigration(MigrationJobEntity job) {
-		try {
-			int BATCH_SIZE = 100;
-			Pageable initialPageable = PageRequest.of(0, BATCH_SIZE);
-			processPage(job, initialPageable);
-			job.setState(MigrationJobEntity.STATE.COMPLETED);
-		} catch (Exception e) {
-			job.setState(MigrationJobEntity.STATE.BROKEN);
-			job.setMessage(e.getMessage());
-		} finally {
-			job.setFinishingDate(LocalDateTime.now());
-			migrationJobRepo.save(job);
-		}
-		CompletableFuture.completedFuture(job.getId());
-	}
-
-	@Async
-	public void fixUnresolvedErrors(MigrationJobEntity newJob, Long jobID) {
-		List<MigrationErrorEntity> unresolvedErrors = migrationErrorRepo.findByJobIDAndResolved(jobID, false);
-
-		for (MigrationErrorEntity migrationError : unresolvedErrors) {
+	public CompletableFuture<Long> startMigration(MigrationJobEntity job) {
+		return CompletableFuture.supplyAsync(() -> {
 			try {
-				Query query = new Query(Criteria.where("_id").is(migrationError.getMongoUUID()));
-				HintDao hintDao = mongoTemplate.findOne(query, HintDao.class);
-
-				if (hintDao != null) {
-					if (hintRepository.existsByMongoUUID(hintDao.id())) {
-						migrationError.setResolved(true);
-						migrationErrorRepo.save(migrationError);
-						continue;
-					}
-					HintDao fixedHintDao = tryToFixMigrationError(hintDao, migrationError);
-
-					HintEntity hintEntity = hintMapper.dtoToEntity(hintMapper.daoToDto(fixedHintDao));
-					hintEntity.setMongoUUID(fixedHintDao.id());
-					hintRepository.save(hintEntity);
-
-					migrationError.setResolved(true);
-					migrationErrorRepo.save(migrationError);
-				}
+				processPages(job, PageRequest.of(0, BATCH_SIZE));
+				updateJobState(job, MigrationJobEntity.STATE.COMPLETED, "Migration completed successfully.");
+			} catch (Exception e) {
+				updateJobState(job, MigrationJobEntity.STATE.BROKEN, e.getMessage());
 			}
-
-			catch (Exception e) {
-				String serializedMessage = trySerialize(objectMapper, migrationError, e.getMessage());
-				migrationErrorRepo.save(MigrationErrorEntity.builder()
-					.message(serializedMessage)
-					.mongoUUID(migrationError.getMongoUUID())
-					.resolved(false)
-					.jobID(newJob)
-					.build());
-			}
-		}
-
-		newJob.setState(MigrationJobEntity.STATE.COMPLETED);
-		newJob.setFinishingDate(LocalDateTime.now());
-		migrationJobRepo.save(newJob);
+			return job.getId();
+		});
 	}
 
-	private void processPage(MigrationJobEntity job, Pageable pageable) {
+	@Async
+	public void fixUnresolvedErrors(MigrationJobEntity newJob, Long oldJobId) {
+		try {
+			List<MigrationErrorEntity> unresolvedErrors = migrationErrorRepo.findByJobIDAndResolved(oldJobId, false);
+			for (MigrationErrorEntity error : unresolvedErrors) {
+				processSingleHint(newJob, error.getMongoUUID(), Optional.empty(), Optional.of(error));
+			}
+			updateJobState(newJob, MigrationJobEntity.STATE.COMPLETED, "Fix job completed.");
+		} catch (Exception e) {
+			updateJobState(newJob, MigrationJobEntity.STATE.BROKEN, e.getMessage());
+		}
+	}
+
+	private void processPages(MigrationJobEntity job, Pageable pageable) {
 		Query query = new Query().with(pageable);
 		if (job.getDataSetStartDate() != null && job.getDataSetStopDate() != null) {
-			query.addCriteria(Criteria.where("creationDate")
-				.gte(job.getDataSetStartDate())
-				.lt(job.getDataSetStopDate()));
+			query.addCriteria(Criteria.where("creationDate").gte(job.getDataSetStartDate()).lt(job.getDataSetStopDate()));
 		}
 
 		List<HintDao> hints = mongoTemplate.find(query, HintDao.class);
 		Page<HintDao> page = new PageImpl<>(hints, pageable, mongoTemplate.count(query, HintDao.class));
 
 		for (HintDao hintDao : page.getContent()) {
-			try {
-				if (hintRepository.existsByMongoUUID(hintDao.id())) {
-					continue;
-				}
-
-				HintEntity hintEntity = hintMapper.dtoToEntity(hintMapper.daoToDto(hintDao));
-				hintEntity.setMongoUUID(hintDao.id());
-				hintRepository.save(hintEntity);
-
-			} catch (DataIntegrityViolationException e) {
-				String serializedMessage = trySerialize(objectMapper, hintDao, "Data integrity violation: " + e.getMessage());
-				migrationErrorRepo.save(MigrationErrorEntity.builder()
-					.message(serializedMessage)
-					.mongoUUID(hintDao.id())
-					.resolved(false)
-					.jobID(job)
-					.build());
-			} catch (Exception e) {
-				String serializedMessage = trySerialize(objectMapper, hintDao, e.getMessage());
-				migrationErrorRepo.save(MigrationErrorEntity.builder()
-					.message(serializedMessage)
-					.mongoUUID(hintDao.id())
-					.resolved(false)
-					.jobID(job)
-					.build());
-			}
+			processSingleHint(job, hintDao.id(), Optional.of(hintDao), Optional.empty());
 		}
 
 		if (page.hasNext()) {
-			// recursive call
-			processPage(job, pageable.next());
+			processPages(job, pageable.next());
 		}
 	}
 
-	private String trySerialize(ObjectMapper objectMapper, Object value, String fallback) {
+	private void processSingleHint(MigrationJobEntity job, String mongoId, Optional<HintDao> optionalHintDao, Optional<MigrationErrorEntity> existingError) {
 		try {
-			return objectMapper.writeValueAsString(value);
-		} catch (Exception ignored) {
-			return fallback;
+			if (hintRepository.existsByMongoUUID(mongoId)) {
+				existingError.ifPresent(this::resolveError);
+				return;
+			}
+
+			HintDao hintDao = optionalHintDao.orElseGet(() -> mongoTemplate.findById(mongoId, HintDao.class));
+
+			if (hintDao == null) {
+				logAndSaveError(job, "Hint with mongoUUID " + mongoId + " not found in MongoDB.", mongoId);
+				return;
+			}
+
+			HintEntity hintEntity = hintMapper.dtoToEntity(hintMapper.daoToDto(hintDao));
+			hintEntity.setMongoUUID(hintDao.id());
+			hintRepository.save(hintEntity);
+
+			existingError.ifPresent(this::resolveError);
+
+		} catch (DataIntegrityViolationException e) {
+			logAndSaveError(job, "Data integrity violation: " + Objects.requireNonNull(e.getRootCause()).getMessage(), mongoId);
+		} catch (Exception e) {
+			logAndSaveError(job, e.getMessage(), mongoId);
 		}
 	}
 
-	private HintDao tryToFixMigrationError(HintDao hintDao, MigrationErrorEntity migrationErrorEntity) {
-		// not implemented yet, after every failed migration, this function will be extended
-		return hintDao;
+	private void logAndSaveError(MigrationJobEntity job, String message, String mongoId) {
+		migrationErrorRepo.save(MigrationErrorEntity.builder()
+			.message(message)
+			.mongoUUID(mongoId)
+			.resolved(false)
+			.jobID(job)
+			.build());
 	}
 
+	private void resolveError(MigrationErrorEntity error) {
+		error.setResolved(true);
+		migrationErrorRepo.save(error);
+	}
+
+	private void updateJobState(MigrationJobEntity job, MigrationJobEntity.STATE state, String message) {
+		job.setState(state);
+		job.setMessage(message);
+		job.setFinishingDate(LocalDateTime.now());
+		migrationJobRepo.save(job);
+	}
 }
