@@ -143,6 +143,13 @@ public class HintTestDataGenerator {
 		return hintMapper.dtoToDao(createBlockerHintDto());
 	}
 
+	public static HintDao createHintDaoWithId(String id) {
+		HintDto dto = createBlockerHintDto();
+		HintDao dao = hintMapper.dtoToDao(dto);
+		return new HintDao(id, dao.hintSource(), dao.hintTextOriginal(), dao.hintCategory(), dao.showToUser(),
+			dao.processId(), dao.creationDate(), dao.processVersion(), dao.resourceId());
+	}
+
 	public static List<HintEntity> createAllCategoryHintEntitys() {
 		return Arrays.asList(
 			createInfoHintEntity(),
@@ -173,6 +180,9 @@ public class HintTestDataGenerator {
 			hintEntity -> hintEntity.setProcessId(s)
 		).toList();
 	}
+
+
+
 }
 
 

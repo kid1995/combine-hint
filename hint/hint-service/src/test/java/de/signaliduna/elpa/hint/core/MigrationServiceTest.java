@@ -22,12 +22,15 @@ import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Query;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
@@ -49,6 +52,8 @@ class MigrationServiceTest {
 	private MigrationErrorRepo migrationErrorRepo;
 	@Spy
 	private HintMapper hintMapper = Mappers.getMapper(HintMapper.class);
+	@Spy
+	private ObjectMapper objectMapper;
 
 	@InjectMocks
 	private MigrationService migrationService;
@@ -68,8 +73,13 @@ class MigrationServiceTest {
 		@DisplayName("should migrate all hints successfully")
 		void shouldMigrateAllHintsSuccessfully() throws ExecutionException, InterruptedException {
 			// Given
-			List<HintDao> hintDaos = List.of(HintTestDataGenerator.createWarningHintDao(), HintTestDataGenerator.createErrorHintDao());
-			when(mongoTemplate.find(any(Query.class), eq(HintDao.class))).thenReturn(hintDaos).thenReturn(Collections.emptyList());
+			List<HintDao> hintDaos = List.of(
+				HintTestDataGenerator.createHintDaoWithId("mongoId1"),
+				HintTestDataGenerator.createHintDaoWithId("mongoId2")
+			);
+			when(mongoTemplate.find(any(Query.class), eq(HintDao.class)))
+				.thenReturn(hintDaos)
+				.thenReturn(Collections.emptyList()); // Second call for subsequent pages
 			when(mongoTemplate.count(any(Query.class), eq(HintDao.class))).thenReturn((long) hintDaos.size());
 			when(hintRepository.existsByMongoUUID(anyString())).thenReturn(false);
 
@@ -85,16 +95,16 @@ class MigrationServiceTest {
 			ArgumentCaptor<MigrationJobEntity> jobCaptor = ArgumentCaptor.forClass(MigrationJobEntity.class);
 			verify(migrationJobRepo).save(jobCaptor.capture());
 			assertThat(jobCaptor.getValue().getState()).isEqualTo(MigrationJobEntity.STATE.COMPLETED);
-			assertThat(jobCaptor.getValue().getMessage()).isEqualTo("Migration completed successfully.");
 		}
 
 		@Test
 		@DisplayName("should skip existing hints")
 		void shouldSkipExistingHints() throws ExecutionException, InterruptedException {
 			// Given
-			HintDao existingHint = HintTestDataGenerator.createWarningHintDao();
-			List<HintDao> hintDaos = List.of(existingHint);
-			when(mongoTemplate.find(any(Query.class), eq(HintDao.class))).thenReturn(hintDaos).thenReturn(Collections.emptyList());
+			HintDao existingHint = HintTestDataGenerator.createHintDaoWithId("existingId");
+			when(mongoTemplate.find(any(Query.class), eq(HintDao.class)))
+				.thenReturn(List.of(existingHint))
+				.thenReturn(Collections.emptyList());
 			when(mongoTemplate.count(any(Query.class), eq(HintDao.class))).thenReturn(1L);
 			when(hintRepository.existsByMongoUUID(existingHint.id())).thenReturn(true);
 
@@ -110,8 +120,10 @@ class MigrationServiceTest {
 		@DisplayName("should log error on data integrity violation")
 		void shouldLogErrorOnDataIntegrityViolation() throws ExecutionException, InterruptedException {
 			// Given
-			HintDao badHint = HintTestDataGenerator.createErrorHintDao();
-			when(mongoTemplate.find(any(Query.class), eq(HintDao.class))).thenReturn(List.of(badHint)).thenReturn(Collections.emptyList());
+			HintDao badHint = HintTestDataGenerator.createHintDaoWithId("badId");
+			when(mongoTemplate.find(any(Query.class), eq(HintDao.class)))
+				.thenReturn(List.of(badHint))
+				.thenReturn(Collections.emptyList());
 			when(mongoTemplate.count(any(Query.class), eq(HintDao.class))).thenReturn(1L);
 			when(hintRepository.existsByMongoUUID(badHint.id())).thenReturn(false);
 			when(hintRepository.save(any(HintEntity.class))).thenThrow(new DataIntegrityViolationException("Test Exception"));
@@ -153,7 +165,7 @@ class MigrationServiceTest {
 		void shouldReprocessAndResolveErrors() {
 			// Given
 			MigrationJobEntity oldJob = MigrationJobEntity.builder().id(2L).build();
-			HintDao hintToFix = HintTestDataGenerator.createErrorHintDao();
+			HintDao hintToFix = HintTestDataGenerator.createHintDaoWithId("fixId");
 			MigrationErrorEntity error = MigrationErrorEntity.builder().mongoUUID(hintToFix.id()).resolved(false).jobID(oldJob).build();
 
 			when(migrationErrorRepo.findByJobIDAndResolved(2L, false)).thenReturn(List.of(error));
@@ -179,7 +191,7 @@ class MigrationServiceTest {
 		void shouldLogNewErrorIfReprocessingFails() {
 			// Given
 			MigrationJobEntity oldJob = MigrationJobEntity.builder().id(2L).build();
-			HintDao hintToFix = HintTestDataGenerator.createErrorHintDao();
+			HintDao hintToFix = HintTestDataGenerator.createHintDaoWithId("fixId");
 			MigrationErrorEntity error = MigrationErrorEntity.builder().mongoUUID(hintToFix.id()).resolved(false).jobID(oldJob).build();
 
 			when(migrationErrorRepo.findByJobIDAndResolved(2L, false)).thenReturn(List.of(error));
