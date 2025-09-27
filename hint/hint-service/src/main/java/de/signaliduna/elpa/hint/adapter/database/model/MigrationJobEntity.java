@@ -117,6 +117,7 @@ public class MigrationJobEntity {
 	}
 
 	public static final class Builder {
+		private long id;
 		private String message;
 		private LocalDateTime dataSetStartDate;
 		private LocalDateTime dataSetStopDate;
@@ -127,6 +128,11 @@ public class MigrationJobEntity {
 
 
 		private Builder() {}
+
+		public Builder id(long id) {
+			this.id = id;
+			return this;
+		}
 
 		public Builder message(String message) {
 			this.message = message;

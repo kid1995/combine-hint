@@ -64,9 +64,18 @@ public class MigrationErrorEntity {
 		this.resolved = resolved;
 	}
 
+	public MigrationJobEntity getJobID() {
+		return jobID;
+	}
+
+	public void setJobID(MigrationJobEntity jobID) {
+		this.jobID = jobID;
+	}
+
 	public static Builder builder() {
 		return new Builder();
 	}
+
 
 	public static final class Builder {
 		private String message;
