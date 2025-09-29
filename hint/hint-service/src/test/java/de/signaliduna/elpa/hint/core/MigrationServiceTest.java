@@ -23,6 +23,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.TestPropertySource;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
@@ -36,6 +38,8 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("MigrationService Test")
+@ContextConfiguration
+@TestPropertySource(properties = {"migration.batch_size=2"})
 class MigrationServiceTest {
 
 	@Mock
@@ -151,7 +155,7 @@ class MigrationServiceTest {
 			assertThat(jobCaptor.getValue().getMessage()).isEqualTo("Mongo is down");
 		}
 
-        @Test
+		@Test
 		@DisplayName("should handle exception during migration and set job to broken")
 		void shouldHandleExceptionDuringMigration() throws ExecutionException, InterruptedException {
 			// Given
@@ -191,13 +195,15 @@ class MigrationServiceTest {
 		@DisplayName("should process multiple pages")
 		void shouldProcessMultiplePages() throws ExecutionException, InterruptedException {
 			// Given
-			List<HintDao> page1 = List.of(HintTestDataGenerator.createHintDaoWithId("mongoId1"));
-			List<HintDao> page2 = List.of(HintTestDataGenerator.createHintDaoWithId("mongoId2"));
+			List<HintDao> page1 = List.of(HintTestDataGenerator.createHintDaoWithId("mongoId1"), HintTestDataGenerator.createHintDaoWithId("mongoId2"));
+			List<HintDao> page2 = List.of(HintTestDataGenerator.createHintDaoWithId("mongoId3"));
+			long totalItems = page1.size() +page2.size();
+
 			when(mongoTemplate.find(any(Query.class), eq(HintDao.class)))
 				.thenReturn(page1)
 				.thenReturn(page2)
 				.thenReturn(Collections.emptyList());
-			when(mongoTemplate.count(any(Query.class), eq(HintDao.class))).thenReturn(2L).thenReturn(2L).thenReturn(0L);
+			when(mongoTemplate.count(any(Query.class), eq(HintDao.class))).thenReturn(totalItems).thenReturn(totalItems).thenReturn(0L);
 
 			// When
 			migrationService.startMigration(testJob).get();
@@ -300,20 +306,20 @@ class MigrationServiceTest {
 		}
 	}
 
-    @Test
-		@DisplayName("should handle exception during error fixing and set job to broken")
-		void shouldHandleExceptionDuringErrorFixing() {
-			// Given
-			when(migrationErrorRepo.findByJob_IdAndResolved(anyLong(), eq(false))).thenThrow(new RuntimeException("Test exception"));
+	@Test
+	@DisplayName("should handle exception during error fixing and set job to broken")
+	void shouldHandleExceptionDuringErrorFixing() {
+		// Given
+		when(migrationErrorRepo.findByJob_IdAndResolved(anyLong(), eq(false))).thenThrow(new RuntimeException("Test exception"));
 
-			// When
-			migrationService.fixUnresolvedErrors(testJob, 123L);
+		// When
+		migrationService.fixUnresolvedErrors(testJob, 123L);
 
-			// Then
-			ArgumentCaptor<MigrationJobEntity> jobCaptor = ArgumentCaptor.forClass(MigrationJobEntity.class);
-			verify(migrationJobRepo).save(jobCaptor.capture());
-			MigrationJobEntity captured = jobCaptor.getValue();
-			assertThat(captured.getState()).isEqualTo(MigrationJobEntity.STATE.BROKEN);
-			assertThat(captured.getMessage()).isEqualTo("Test exception");
-		}
+		// Then
+		ArgumentCaptor<MigrationJobEntity> jobCaptor = ArgumentCaptor.forClass(MigrationJobEntity.class);
+		verify(migrationJobRepo).save(jobCaptor.capture());
+		MigrationJobEntity captured = jobCaptor.getValue();
+		assertThat(captured.getState()).isEqualTo(MigrationJobEntity.STATE.BROKEN);
+		assertThat(captured.getMessage()).isEqualTo("Test exception");
+	}
 }

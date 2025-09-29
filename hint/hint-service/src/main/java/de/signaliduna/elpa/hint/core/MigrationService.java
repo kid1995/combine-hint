@@ -9,6 +9,7 @@ import de.signaliduna.elpa.hint.adapter.database.model.MigrationErrorEntity;
 import de.signaliduna.elpa.hint.adapter.database.model.MigrationJobEntity;
 import de.signaliduna.elpa.hint.adapter.mapper.HintMapper;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -28,7 +29,8 @@ import java.util.concurrent.CompletableFuture;
 @Service
 public class MigrationService {
 
-	private static final int BATCH_SIZE = 100;
+	@Value("${migration.batch_size:100}")
+	private int batchSize;
 
 	private final MongoTemplate mongoTemplate;
 	private final HintRepository hintRepository;
@@ -49,7 +51,7 @@ public class MigrationService {
 	public CompletableFuture<Long> startMigration(MigrationJobEntity job) {
 		return CompletableFuture.supplyAsync(() -> {
 			try {
-				processPages(job, PageRequest.of(0, BATCH_SIZE));
+				processPages(job, PageRequest.of(0, batchSize));
 				updateJobState(job, MigrationJobEntity.STATE.COMPLETED, "Migration completed successfully.");
 			} catch (Exception e) {
 				updateJobState(job, MigrationJobEntity.STATE.BROKEN, e.getMessage());
