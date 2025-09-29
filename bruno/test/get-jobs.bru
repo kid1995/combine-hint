@@ -1,0 +1,15 @@
+meta {
+  name: Get All Jobs
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{base_url}}/api/migration/jobs
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}

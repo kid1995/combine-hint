@@ -1,0 +1,252 @@
+{
+  "name": "test",
+  "version": "1",
+  "items": [
+    {
+      "type": "http",
+      "name": "Fix Errors for a Job",
+      "filename": "fix-errors.bru",
+      "seq": 7,
+      "settings": {},
+      "tags": [],
+      "request": {
+        "url": "{{base_url}}/api/migration/fix/1",
+        "method": "POST",
+        "headers": [],
+        "params": [],
+        "body": {
+          "mode": "none",
+          "formUrlEncoded": [],
+          "multipartForm": [],
+          "file": []
+        },
+        "script": {},
+        "vars": {},
+        "assertions": [],
+        "tests": "",
+        "docs": "",
+        "auth": {
+          "mode": "bearer",
+          "bearer": {
+            "token": "{{authToken}}"
+          }
+        }
+      }
+    },
+    {
+      "type": "http",
+      "name": "Get Error by ID",
+      "filename": "get-error-by-id.bru",
+      "seq": 6,
+      "settings": {},
+      "tags": [],
+      "request": {
+        "url": "{{base_url}}/api/migration/errors/1",
+        "method": "GET",
+        "headers": [],
+        "params": [],
+        "body": {
+          "mode": "none",
+          "formUrlEncoded": [],
+          "multipartForm": [],
+          "file": []
+        },
+        "script": {},
+        "vars": {},
+        "assertions": [],
+        "tests": "",
+        "docs": "",
+        "auth": {
+          "mode": "bearer",
+          "bearer": {
+            "token": "{{authToken}}"
+          }
+        }
+      }
+    },
+    {
+      "type": "http",
+      "name": "Get All Errors",
+      "filename": "get-errors.bru",
+      "seq": 5,
+      "settings": {},
+      "tags": [],
+      "request": {
+        "url": "{{base_url}}/api/migration/errors",
+        "method": "GET",
+        "headers": [],
+        "params": [],
+        "body": {
+          "mode": "none",
+          "formUrlEncoded": [],
+          "multipartForm": [],
+          "file": []
+        },
+        "script": {},
+        "vars": {},
+        "assertions": [],
+        "tests": "",
+        "docs": "",
+        "auth": {
+          "mode": "bearer",
+          "bearer": {
+            "token": "{{authToken}}"
+          }
+        }
+      }
+    },
+    {
+      "type": "http",
+      "name": "Get Job by ID",
+      "filename": "get-job-by-id.bru",
+      "seq": 4,
+      "settings": {},
+      "tags": [],
+      "request": {
+        "url": "{{base_url}}/api/migration/jobs/1",
+        "method": "GET",
+        "headers": [],
+        "params": [],
+        "body": {
+          "mode": "none",
+          "formUrlEncoded": [],
+          "multipartForm": [],
+          "file": []
+        },
+        "script": {},
+        "vars": {},
+        "assertions": [],
+        "tests": "",
+        "docs": "",
+        "auth": {
+          "mode": "bearer",
+          "bearer": {
+            "token": "{{authToken}}"
+          }
+        }
+      }
+    },
+    {
+      "type": "http",
+      "name": "Get All Jobs",
+      "filename": "get-jobs.bru",
+      "seq": 3,
+      "settings": {},
+      "tags": [],
+      "request": {
+        "url": "{{base_url}}/api/migration/jobs",
+        "method": "GET",
+        "headers": [],
+        "params": [],
+        "body": {
+          "mode": "none",
+          "formUrlEncoded": [],
+          "multipartForm": [],
+          "file": []
+        },
+        "script": {},
+        "vars": {},
+        "assertions": [],
+        "tests": "",
+        "docs": "",
+        "auth": {
+          "mode": "bearer",
+          "bearer": {
+            "token": "{{authToken}}"
+          }
+        }
+      }
+    },
+    {
+      "type": "http",
+      "name": "Start Migration",
+      "filename": "start-migration.bru",
+      "seq": 2,
+      "settings": {},
+      "tags": [],
+      "request": {
+        "url": "{{base_url}}/api/migration/start",
+        "method": "POST",
+        "headers": [],
+        "params": [
+          {
+            "name": "dataSetStartDate",
+            "value": "2024-01-01T00:00:00",
+            "type": "query",
+            "enabled": true
+          },
+          {
+            "name": "dataSetEndDate",
+            "value": "2024-01-31T23:59:59",
+            "type": "query",
+            "enabled": true
+          }
+        ],
+        "body": {
+          "mode": "none",
+          "formUrlEncoded": [],
+          "multipartForm": [],
+          "file": []
+        },
+        "script": {},
+        "vars": {},
+        "assertions": [],
+        "tests": "",
+        "docs": "",
+        "auth": {
+          "mode": "bearer",
+          "bearer": {
+            "token": "{{authToken}}"
+          }
+        }
+      }
+    }
+  ],
+  "activeEnvironmentUid": "SeE0Bv8F8tgxOdNARs5JJ",
+  "environments": [
+    {
+      "variables": [
+        {
+          "name": "username",
+          "value": "U167653",
+          "enabled": true,
+          "secret": false,
+          "type": "text"
+        },
+        {
+          "name": "auth_url",
+          "value": "https://employee.login.int.signal-iduna.org",
+          "enabled": true,
+          "secret": false,
+          "type": "text"
+        },
+        {
+          "name": "base_url",
+          "value": "http://localhost:8080",
+          "enabled": true,
+          "secret": false,
+          "type": "text"
+        },
+        {
+          "name": "password",
+          "value": "",
+          "enabled": true,
+          "secret": true,
+          "type": "text"
+        }
+      ],
+      "name": "test"
+    }
+  ],
+  "brunoConfig": {
+    "version": "1",
+    "name": "test",
+    "type": "collection",
+    "ignore": [
+      "node_modules",
+      ".git"
+    ],
+    "size": 0.0017681121826171875,
+    "filesCount": 8
+  }
+}

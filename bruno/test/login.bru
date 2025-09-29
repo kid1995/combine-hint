@@ -5,20 +5,19 @@ meta {
 }
 
 post {
-  url: https://employee.login.int.signal-iduna.org/auth/token/ccgjwt/60
+  url: {{auth_url}}/auth/token/ccgjwt/60
   body: formUrlEncoded
   auth: basic
 }
 
 auth:basic {
-  username: <username>
-  password: <password>
+  username: {{username}}
+  password: {{password}}
 }
 
 body:form-urlencoded {
   grant_type: client_credentials
 }
-
 
 script:post-response {
   const data = res.getBody();
