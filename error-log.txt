@@ -1,0 +1,10 @@
+when i try to run test in HintRepositoryIT, i have met these error.
+
+
+org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'migrationErrorRepo' defined in de.signaliduna.elpa.hint.adapter.database.MigrationErrorRepo defined in @EnableJpaRepositories declared on JpaRepositoriesRegistrar.EnableJpaRepositoriesConfiguration: Could not create query for public abstract java.util.List de.signaliduna.elpa.hint.adapter.database.MigrationErrorRepo.findByJobIDAndResolved(java.lang.Long,java.lang.Boolean); Reason: Failed to create query for method public abstract java.util.List de.signaliduna.elpa.hint.adapter.database.MigrationErrorRepo.findByJobIDAndResolved(java.lang.Long,java.lang.Boolean); Cannot compare left expression of type 'de.signaliduna.elpa.hint.adapter.database.model.MigrationJobEntity' with right expression of type 'java.lang.Long'
+
+Caused by: org.springframework.data.repository.query.QueryCreationException: Could not create query for public abstract java.util.List de.signaliduna.elpa.hint.adapter.database.MigrationErrorRepo.findByJobIDAndResolved(java.lang.Long,java.lang.Boolean); Reason: Failed to create query for method public abstract java.util.List de.signaliduna.elpa.hint.adapter.database.MigrationErrorRepo.findByJobIDAndResolved(java.lang.Long,java.lang.Boolean); Cannot compare left expression of type 'de.signaliduna.elpa.hint.adapter.database.model.MigrationJobEntity' with right expression of type 'java.lang.Long'
+
+
+should i change  MigrationJobEntity jobID -> Long jobID, does it break flyway schema ?
+any other change do i need to apply for my test data generator or other migration test ?
