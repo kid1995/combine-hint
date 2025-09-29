@@ -28,6 +28,12 @@ public class MigrationJobEntity {
 	@Column(name = "finishing_date")
 	private LocalDateTime finishingDate;
 
+	@Column(name = "total_items")
+	private Long totalItems;
+
+	@Column(name = "processed_items")
+	private Long processedItems;
+
 	@Enumerated(value=EnumType.STRING)
 	private MigrationJobEntity.STATE state;
 
@@ -40,13 +46,6 @@ public class MigrationJobEntity {
 
 	public enum STATE{
 		RUNNING, BROKEN, COMPLETED
-	}
-
-	public MigrationJobEntity(String message, LocalDateTime creationDate, LocalDateTime finishingDate, STATE state) {
-		this.message = message;
-		this.creationDate = creationDate;
-		this.finishingDate = finishingDate;
-		this.state = state;
 	}
 
 	public long getId() {
@@ -112,6 +111,22 @@ public class MigrationJobEntity {
 		this.errors = errors;
 	}
 
+	public Long getTotalItems() {
+		return totalItems;
+	}
+
+	public void setTotalItems(Long totalItems) {
+		this.totalItems = totalItems;
+	}
+
+	public Long getProcessedItems() {
+		return processedItems;
+	}
+
+	public void setProcessedItems(Long processedItems) {
+		this.processedItems = processedItems;
+	}
+
 	public static Builder builder() {
 		return new Builder();
 	}
@@ -125,7 +140,8 @@ public class MigrationJobEntity {
 		private LocalDateTime finishingDate;
 		private STATE state;
 		private List<MigrationErrorEntity> errors = new ArrayList<>();
-
+		private Long totalItems;
+		private Long processedItems;
 
 		private Builder() {}
 
@@ -164,6 +180,16 @@ public class MigrationJobEntity {
 			return this;
 		}
 
+		public Builder totalItems(Long totalItems) {
+			this.totalItems = totalItems;
+			return this;
+		}
+
+		public Builder processedItems(Long processedItems) {
+			this.processedItems = processedItems;
+			return this;
+		}
+
 		public Builder errors(List<MigrationErrorEntity> errors) {
 			this.errors = errors;
 			return this;
@@ -179,6 +205,8 @@ public class MigrationJobEntity {
 			migrationJobEntity.setFinishingDate(finishingDate);
 			migrationJobEntity.setState(state);
 			migrationJobEntity.setErrors(errors);
+			migrationJobEntity.setTotalItems(totalItems);
+			migrationJobEntity.setProcessedItems(processedItems);
 			return migrationJobEntity;
 		}
 	}

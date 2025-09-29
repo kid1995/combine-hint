@@ -8,7 +8,6 @@ import de.signaliduna.elpa.hint.adapter.database.model.MigrationJobEntity;
 import de.signaliduna.elpa.hint.config.WebSecurityConfig;
 import de.signaliduna.elpa.hint.core.MigrationService;
 import de.signaliduna.elpa.hint.util.MigrationTestDataGenerator;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -53,11 +52,6 @@ class MigrationApiTest {
 
 	private static final String MIGRATION_USER = "MIGRATION_USER";
 	private static final String REGULAR_USER = "HINT_USER";
-
-	@BeforeEach
-	void setUp() {
-
-	}
 
 	@Test
 	@DisplayName("POST /start - should be forbidden for regular user")

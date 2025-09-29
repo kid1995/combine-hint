@@ -51,6 +51,14 @@ public class MigrationService {
 	public CompletableFuture<Long> startMigration(MigrationJobEntity job) {
 		return CompletableFuture.supplyAsync(() -> {
 			try {
+				Query countQuery = new Query();
+				if (job.getDataSetStartDate() != null && job.getDataSetStopDate() != null) {
+					countQuery.addCriteria(Criteria.where("creationDate").gte(job.getDataSetStartDate()).lt(job.getDataSetStopDate()));
+				}
+				long totalItems = mongoTemplate.count(countQuery, HintDao.class);
+				job.setTotalItems(totalItems);
+				job.setProcessedItems(0L);
+				migrationJobRepo.save(job);
 				processPages(job, PageRequest.of(0, batchSize));
 				updateJobState(job, MigrationJobEntity.STATE.COMPLETED, "Migration completed successfully.");
 			} catch (Exception e) {
@@ -84,7 +92,9 @@ public class MigrationService {
 
 		for (HintDao hintDao : page.getContent()) {
 			processSingleHint(job, hintDao.id(), Optional.of(hintDao), Optional.empty());
+			job.setProcessedItems(job.getProcessedItems() + 1);
 		}
+		migrationJobRepo.save(job);
 
 		if (page.hasNext()) {
 			processPages(job, pageable.next());

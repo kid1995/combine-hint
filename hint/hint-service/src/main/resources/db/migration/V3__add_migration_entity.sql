@@ -11,7 +11,9 @@ create table if not exists migration_job
 	creation_date       timestamp                                       not null,
 	finishing_date      timestamp,
 	state               text                                            not null,
-	resolved						boolean default false														not null
+	resolved						boolean default false														not null,
+	total_items					bigint default 0,
+	processed_items			bigint default 0
 );
 
 create table if not exists migration_error
@@ -20,7 +22,7 @@ create table if not exists migration_error
 	message    					text,
 	mongo_uuid 					text,
 	resolved						boolean,
-	job							bigint																						not null
+	job							    bigint																						not null
 );
 
 alter table migration_error
