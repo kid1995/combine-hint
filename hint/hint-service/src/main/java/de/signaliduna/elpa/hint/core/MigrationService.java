@@ -61,7 +61,7 @@ public class MigrationService {
 	@Async
 	public void fixUnresolvedErrors(MigrationJobEntity newJob, Long oldJobId) {
 		try {
-			List<MigrationErrorEntity> unresolvedErrors = migrationErrorRepo.findByJobID_IdAndResolved(oldJobId, false);
+			List<MigrationErrorEntity> unresolvedErrors = migrationErrorRepo.findByJob_IdAndResolved(oldJobId, false);
 			for (MigrationErrorEntity error : unresolvedErrors) {
 				processSingleHint(newJob, error.getMongoUUID(), Optional.empty(), Optional.of(error));
 			}
@@ -122,7 +122,7 @@ public class MigrationService {
 			.message(message)
 			.mongoUUID(mongoId)
 			.resolved(false)
-			.jobID(job)
+			.job(job)
 			.build());
 	}
 

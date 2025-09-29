@@ -31,7 +31,7 @@ public class MigrationJobEntity {
 	@Enumerated(value=EnumType.STRING)
 	private MigrationJobEntity.STATE state;
 
-	@OneToMany(mappedBy = "jobID", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+	@OneToMany(mappedBy = "job", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
 	private List<MigrationErrorEntity> errors = new ArrayList<>();
 
 	protected MigrationJobEntity() {

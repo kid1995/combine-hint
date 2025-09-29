@@ -19,14 +19,14 @@ public class MigrationErrorEntity {
 	private Boolean resolved;
 
 	@ManyToOne
-	@JoinColumn(name = "job_id")
-	private MigrationJobEntity jobID;
+	@JoinColumn(name = "job")
+	private MigrationJobEntity job;
 
-	public MigrationErrorEntity(String message, String mongoUUID, Boolean resolved, MigrationJobEntity jobID) {
+	public MigrationErrorEntity(String message, String mongoUUID, Boolean resolved, MigrationJobEntity job) {
 		this.message = message;
 		this.mongoUUID = mongoUUID;
 		this.resolved = resolved;
-		this.jobID = jobID;
+		this.job = job;
 	}
 
 	protected MigrationErrorEntity() {
@@ -64,12 +64,12 @@ public class MigrationErrorEntity {
 		this.resolved = resolved;
 	}
 
-	public MigrationJobEntity getJobID() {
-		return jobID;
+	public MigrationJobEntity getJob() {
+		return job;
 	}
 
-	public void setJobID(MigrationJobEntity jobID) {
-		this.jobID = jobID;
+	public void setJob(MigrationJobEntity job) {
+		this.job = job;
 	}
 
 	public static Builder builder() {
@@ -81,7 +81,7 @@ public class MigrationErrorEntity {
 		private String message;
 		private String mongoUUID;
 		private Boolean resolved;
-		private MigrationJobEntity jobID;
+		private MigrationJobEntity job;
 
 		private Builder() {
 		}
@@ -101,13 +101,13 @@ public class MigrationErrorEntity {
 			return this;
 		}
 
-		public Builder jobID(MigrationJobEntity jobID) {
-			this.jobID = jobID;
+		public Builder job(MigrationJobEntity job) {
+			this.job = job;
 			return this;
 		}
 
 		public MigrationErrorEntity build() {
-			return new MigrationErrorEntity(message, mongoUUID, resolved, jobID);
+			return new MigrationErrorEntity(message, mongoUUID, resolved, job);
 		}
 	}
 }

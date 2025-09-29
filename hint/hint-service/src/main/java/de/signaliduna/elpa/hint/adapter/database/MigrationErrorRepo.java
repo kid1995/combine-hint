@@ -8,5 +8,5 @@ import java.util.List;
 
 @Repository
 public interface MigrationErrorRepo extends CrudRepository<MigrationErrorEntity, Long>{
-	List<MigrationErrorEntity> findByJobID_IdAndResolved(Long jobID, Boolean resolved);
+	List<MigrationErrorEntity> findByJob_IdAndResolved(Long jobID, Boolean resolved);
 }

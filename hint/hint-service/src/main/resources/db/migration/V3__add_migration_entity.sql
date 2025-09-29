@@ -20,9 +20,9 @@ create table if not exists migration_error
 	message    					text,
 	mongo_uuid 					text,
 	resolved						boolean,
-	job_id							bigint																						not null
+	job							bigint																						not null
 );
 
 alter table migration_error
 	add constraint fk_migration_job
-		foreign key (job_id) references migration_job (id);
+		foreign key (job) references migration_job (id);

@@ -76,7 +76,7 @@ public class MigrationTestDataGenerator {
 			.mongoUUID(generateMongoId())
 			.message("Failed to migrate hint: " + getRandomErrorMessage())
 			.resolved(false)
-			.jobID(job)
+			.job(job)
 			.build();
 	}
 
@@ -85,7 +85,7 @@ public class MigrationTestDataGenerator {
 			.mongoUUID(generateMongoId())
 			.message("Error resolved after retry")
 			.resolved(true)
-			.jobID(job)
+			.job(job)
 			.build();
 	}
 
@@ -94,7 +94,7 @@ public class MigrationTestDataGenerator {
 			.mongoUUID(mongoId)
 			.message("Migration error for document: " + mongoId)
 			.resolved(false)
-			.jobID(job)
+			.job(job)
 			.build();
 	}
 
@@ -103,7 +103,7 @@ public class MigrationTestDataGenerator {
 			.mongoUUID(mongoId)
 			.message("Data integrity violation: Duplicate key value")
 			.resolved(false)
-			.jobID(job)
+			.job(job)
 			.build();
 	}
 
