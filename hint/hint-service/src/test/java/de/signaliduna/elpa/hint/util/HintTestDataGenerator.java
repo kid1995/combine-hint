@@ -7,6 +7,7 @@ import de.signaliduna.elpa.hint.model.HintDto;
 import org.mapstruct.factory.Mappers;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
@@ -150,6 +151,14 @@ public class HintTestDataGenerator {
 			dao.processId(), dao.creationDate(), dao.processVersion(), dao.resourceId());
 	}
 
+	public static List<HintDao> createMultipleHintDao(int numberOfHintDao){
+		List<HintDao> hintDaos = new ArrayList<>(numberOfHintDao);
+		while (hintDaos.size() < numberOfHintDao){
+			hintDaos.add(HintTestDataGenerator.createHintDaoWithId(generateMongoId()));
+		}
+		return hintDaos;
+	}
+
 	public static List<HintEntity> createAllCategoryHintEntitys() {
 		return Arrays.asList(
 			createInfoHintEntity(),
@@ -181,7 +190,15 @@ public class HintTestDataGenerator {
 		).toList();
 	}
 
-
+	private static String generateMongoId() {
+		// Generate a realistic MongoDB ObjectId (24 hex characters)
+		StringBuilder sb = new StringBuilder();
+		String hexChars = "0123456789abcdef";
+		for (int i = 0; i < 24; i++) {
+			sb.append(hexChars.charAt(random.nextInt(hexChars.length())));
+		}
+		return sb.toString();
+	}
 
 }
 

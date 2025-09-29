@@ -114,7 +114,7 @@ authorization:
   migration_users: ${MIGRATION_USERS:S000325}
 
 migration:
-  batch_size: ${BATCH_SIZE:100}
+  batch_size: ${MIGRATION_BATCH_SIZE:100}
 
 management:
   tracing:

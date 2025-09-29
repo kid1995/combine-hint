@@ -30,7 +30,7 @@ import java.util.concurrent.CompletableFuture;
 public class MigrationService {
 
 	@Value("${migration.batch_size:100}")
-	private int batchSize;
+	private int batchSize = 100;
 
 	private final MongoTemplate mongoTemplate;
 	private final HintRepository hintRepository;

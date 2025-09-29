@@ -20,11 +20,11 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Query;
-import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.TestPropertySource;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
@@ -38,10 +38,7 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("MigrationService Test")
-@ContextConfiguration
-@TestPropertySource(properties = {"migration.batch_size=2"})
 class MigrationServiceTest {
-
 	@Mock
 	private MongoTemplate mongoTemplate;
 	@Mock
@@ -195,21 +192,20 @@ class MigrationServiceTest {
 		@DisplayName("should process multiple pages")
 		void shouldProcessMultiplePages() throws ExecutionException, InterruptedException {
 			// Given
-			List<HintDao> page1 = List.of(HintTestDataGenerator.createHintDaoWithId("mongoId1"), HintTestDataGenerator.createHintDaoWithId("mongoId2"));
-			List<HintDao> page2 = List.of(HintTestDataGenerator.createHintDaoWithId("mongoId3"));
-			long totalItems = page1.size() +page2.size();
-
+			List<HintDao> page1 = HintTestDataGenerator.createMultipleHintDao(100);
+			List<HintDao> page2 = List.of(HintTestDataGenerator.createHintDaoWithId("mongoId2"));
+			long totalHintDaos = page1.size() + page2.size();
 			when(mongoTemplate.find(any(Query.class), eq(HintDao.class)))
 				.thenReturn(page1)
 				.thenReturn(page2)
 				.thenReturn(Collections.emptyList());
-			when(mongoTemplate.count(any(Query.class), eq(HintDao.class))).thenReturn(totalItems).thenReturn(totalItems).thenReturn(0L);
+			when(mongoTemplate.count(any(Query.class), eq(HintDao.class))).thenReturn(totalHintDaos).thenReturn(totalHintDaos).thenReturn(0L);
 
 			// When
 			migrationService.startMigration(testJob).get();
 
 			// Then
-			verify(hintRepository, times(2)).save(any(HintEntity.class));
+			verify(hintRepository, times((int)(totalHintDaos))).save(any(HintEntity.class));
 		}
 	}
 
