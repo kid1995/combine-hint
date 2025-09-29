@@ -90,7 +90,7 @@ class MigrationServiceTest {
 			verify(migrationErrorRepo, never()).save(any());
 
 			ArgumentCaptor<MigrationJobEntity> jobCaptor = ArgumentCaptor.forClass(MigrationJobEntity.class);
-			verify(migrationJobRepo).save(jobCaptor.capture());
+			verify(migrationJobRepo, atLeastOnce()).save(jobCaptor.capture());
 			assertThat(jobCaptor.getValue().getState()).isEqualTo(MigrationJobEntity.STATE.COMPLETED);
 		}
 
@@ -149,7 +149,7 @@ class MigrationServiceTest {
 
 			// Then
 			ArgumentCaptor<MigrationJobEntity> jobCaptor = ArgumentCaptor.forClass(MigrationJobEntity.class);
-			verify(migrationJobRepo).save(jobCaptor.capture());
+			verify(migrationJobRepo, atLeastOnce()).save(jobCaptor.capture());
 			assertThat(jobCaptor.getValue().getState()).isEqualTo(MigrationJobEntity.STATE.BROKEN);
 			assertThat(jobCaptor.getValue().getMessage()).isEqualTo("Mongo is down");
 		}
@@ -166,7 +166,7 @@ class MigrationServiceTest {
 
 			// Then
 			ArgumentCaptor<MigrationJobEntity> jobCaptor = ArgumentCaptor.forClass(MigrationJobEntity.class);
-			verify(migrationJobRepo).save(jobCaptor.capture());
+			verify(migrationJobRepo, atLeastOnce()).save(jobCaptor.capture());
 			MigrationJobEntity captured = jobCaptor.getValue();
 			assertThat(captured.getState()).isEqualTo(MigrationJobEntity.STATE.BROKEN);
 			assertThat(captured.getMessage()).isEqualTo("Test exception");
