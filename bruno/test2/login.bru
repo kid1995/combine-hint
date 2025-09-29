@@ -1,0 +1,20 @@
+meta {
+  name: login
+  type: http
+  seq: 5
+}
+
+post {
+  url: https://employee.login.int.signal-iduna.org/auth/token/ccgjwt/60
+  body: formUrlEncoded
+  auth: basic
+}
+
+auth:basic {
+  username: U167653
+  password: Si6868
+}
+
+body:form-urlencoded {
+  grant_type: client_credentials
+}
