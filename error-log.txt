@@ -1,16 +1,10 @@
-some test path was not included so my jacoco is not so happy please add test
+> Task :hint-service:test
 
-Migration Service:
+MigrationService Test > startMigration > should migrate all hints successfully FAILED
+    org.mockito.exceptions.verification.TooManyActualInvocations at MigrationServiceTest.java:93
 
-        } catch (Exception e) {
-            updateJobState(newJob, MigrationJobEntity.STATE.BROKEN, e.getMessage());
-        }
----
-                if (job.getDataSetStartDate() != null && job.getDataSetStopDate() != null) {
-            query.addCriteria(Criteria.where("creationDate").gte(job.getDataSetStartDate()).lt(job.getDataSetStopDate()));
-        }
----
+MigrationService Test > startMigration > should handle exception during migration and set job to broken FAILED
+    org.mockito.exceptions.verification.TooManyActualInvocations at MigrationServiceTest.java:169
 
-        if (page.hasNext()) {
-            processPages(job, pageable.next());
-        }
+MigrationService Test > startMigration > should handle general exception and set job to broken FAILED
+    org.mockito.exceptions.verification.TooManyActualInvocations at MigrationServiceTest.java:152
