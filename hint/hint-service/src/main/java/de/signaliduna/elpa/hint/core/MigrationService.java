@@ -8,6 +8,7 @@ import de.signaliduna.elpa.hint.adapter.database.model.HintEntity;
 import de.signaliduna.elpa.hint.adapter.database.model.MigrationErrorEntity;
 import de.signaliduna.elpa.hint.adapter.database.model.MigrationJobEntity;
 import de.signaliduna.elpa.hint.adapter.mapper.HintMapper;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -24,6 +25,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 @Service
 public class MigrationService {
@@ -110,13 +113,14 @@ public class MigrationService {
 			existingError.ifPresent(this::resolveError);
 
 		} catch (DataIntegrityViolationException e) {
-			logAndSaveError(job, "Data integrity violation: " + Objects.requireNonNull(e.getRootCause()).getMessage(), mongoId);
+			logAndSaveError(job, "Data integrity violation: " + e.getMessage(), mongoId);
 		} catch (Exception e) {
 			logAndSaveError(job, e.getMessage(), mongoId);
 		}
 	}
 
 	private void logAndSaveError(MigrationJobEntity job, String message, String mongoId) {
+		LoggerFactory.getLogger(MigrationService.class).info(message);
 		migrationErrorRepo.save(MigrationErrorEntity.builder()
 			.message(message)
 			.mongoUUID(mongoId)

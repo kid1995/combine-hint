@@ -171,6 +171,7 @@ public class MigrationJobEntity {
 
 		public MigrationJobEntity build() {
 			MigrationJobEntity migrationJobEntity = new MigrationJobEntity();
+			migrationJobEntity.id = id;
 			migrationJobEntity.setMessage(message);
 			migrationJobEntity.setDataSetStartDate(dataSetStartDate);
 			migrationJobEntity.setDataSetStopDate(dataSetStopDate);

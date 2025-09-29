@@ -1,6 +1,5 @@
 package de.signaliduna.elpa.hint.core;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import de.signaliduna.elpa.hint.adapter.database.HintRepository;
 import de.signaliduna.elpa.hint.adapter.database.MigrationErrorRepo;
 import de.signaliduna.elpa.hint.adapter.database.MigrationJobRepo;
@@ -22,15 +21,12 @@ import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Query;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
@@ -52,8 +48,6 @@ class MigrationServiceTest {
 	private MigrationErrorRepo migrationErrorRepo;
 	@Spy
 	private HintMapper hintMapper = Mappers.getMapper(HintMapper.class);
-	@Spy
-	private ObjectMapper objectMapper;
 
 	@InjectMocks
 	private MigrationService migrationService;
@@ -79,7 +73,7 @@ class MigrationServiceTest {
 			);
 			when(mongoTemplate.find(any(Query.class), eq(HintDao.class)))
 				.thenReturn(hintDaos)
-				.thenReturn(Collections.emptyList()); // Second call for subsequent pages
+				.thenReturn(Collections.emptyList()); // This return need to end recursion
 			when(mongoTemplate.count(any(Query.class), eq(HintDao.class))).thenReturn((long) hintDaos.size());
 			when(hintRepository.existsByMongoUUID(anyString())).thenReturn(false);
 
@@ -120,12 +114,14 @@ class MigrationServiceTest {
 		@DisplayName("should log error on data integrity violation")
 		void shouldLogErrorOnDataIntegrityViolation() throws ExecutionException, InterruptedException {
 			// Given
-			HintDao badHint = HintTestDataGenerator.createHintDaoWithId("badId");
+			HintDao hintMongoDataWithNullProcessId = HintTestDataGenerator.createHintDaoWithId("DataIntegrityViolationID");
+
 			when(mongoTemplate.find(any(Query.class), eq(HintDao.class)))
-				.thenReturn(List.of(badHint))
+				.thenReturn(List.of(hintMongoDataWithNullProcessId))
 				.thenReturn(Collections.emptyList());
+
 			when(mongoTemplate.count(any(Query.class), eq(HintDao.class))).thenReturn(1L);
-			when(hintRepository.existsByMongoUUID(badHint.id())).thenReturn(false);
+			when(hintRepository.existsByMongoUUID(hintMongoDataWithNullProcessId.id())).thenReturn(false);
 			when(hintRepository.save(any(HintEntity.class))).thenThrow(new DataIntegrityViolationException("Test Exception"));
 
 			// When
@@ -135,7 +131,7 @@ class MigrationServiceTest {
 			verify(hintRepository, times(1)).save(any(HintEntity.class));
 			ArgumentCaptor<MigrationErrorEntity> errorCaptor = ArgumentCaptor.forClass(MigrationErrorEntity.class);
 			verify(migrationErrorRepo).save(errorCaptor.capture());
-			assertThat(errorCaptor.getValue().getMongoUUID()).isEqualTo(badHint.id());
+			assertThat(errorCaptor.getValue().getMongoUUID()).isEqualTo(hintMongoDataWithNullProcessId.id());
 			assertThat(errorCaptor.getValue().getMessage()).contains("Data integrity violation");
 		}
 
