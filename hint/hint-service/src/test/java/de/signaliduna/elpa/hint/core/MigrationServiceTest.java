@@ -170,12 +170,20 @@ class MigrationServiceTest {
 			assertThat(captured.getMessage()).isEqualTo("Test exception");
 		}
 
-		@Test
+private static Stream<Arguments> provideDateRangeArguments() {
+			return Stream.of(
+				Arguments.of(LocalDateTime.now().minusDays(1), LocalDateTime.now(), true, "Both dates present"),
+				Arguments.of(null, LocalDateTime.now(), false, "Start date null"),
+				Arguments.of(LocalDateTime.now().minusDays(1), null, false, "End date null")
+			);
+		}
 		@DisplayName("should filter by date range if provided")
-		void shouldFilterByDateRange() throws ExecutionException, InterruptedException {
+		@ParameterizedTest(name = "{3}")
+		@MethodSource("provideDateRangeArguments")
+		void shouldFilterByDateRange(LocalDateTime startDate, LocalDateTime stopDate, boolean shouldFilter, String testName) throws ExecutionException, InterruptedException {
 			// Given
-			testJob.setDataSetStartDate(LocalDateTime.now().minusDays(1));
-			testJob.setDataSetStopDate(LocalDateTime.now());
+			testJob.setDataSetStartDate(startDate);
+			testJob.setDataSetStopDate(stopDate);
 			when(mongoTemplate.find(any(Query.class), eq(HintDao.class))).thenReturn(Collections.emptyList());
 
 			// When
@@ -185,7 +193,11 @@ class MigrationServiceTest {
 			ArgumentCaptor<Query> queryCaptor = ArgumentCaptor.forClass(Query.class);
 			verify(mongoTemplate, atLeast(1)).find(queryCaptor.capture(), eq(HintDao.class));
 			Query capturedQuery = queryCaptor.getValue();
-			assertThat(capturedQuery.getQueryObject()).containsKey("creationDate");
+			if (shouldFilter) {
+				assertThat(capturedQuery.getQueryObject()).containsKey("creationDate");
+			} else {
+				assertThat(capturedQuery.getQueryObject()).doesNotContainKey("creationDate");
+			}
 		}
 
 		@Test
