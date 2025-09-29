@@ -150,6 +150,61 @@ class MigrationServiceTest {
 			assertThat(jobCaptor.getValue().getState()).isEqualTo(MigrationJobEntity.STATE.BROKEN);
 			assertThat(jobCaptor.getValue().getMessage()).isEqualTo("Mongo is down");
 		}
+
+        @Test
+		@DisplayName("should handle exception during migration and set job to broken")
+		void shouldHandleExceptionDuringMigration() throws ExecutionException, InterruptedException {
+			// Given
+			when(mongoTemplate.find(any(Query.class), eq(HintDao.class))).thenThrow(new RuntimeException("Test exception"));
+
+			// When
+			CompletableFuture<Long> future = migrationService.startMigration(testJob);
+			future.get();
+
+			// Then
+			ArgumentCaptor<MigrationJobEntity> jobCaptor = ArgumentCaptor.forClass(MigrationJobEntity.class);
+			verify(migrationJobRepo).save(jobCaptor.capture());
+			MigrationJobEntity captured = jobCaptor.getValue();
+			assertThat(captured.getState()).isEqualTo(MigrationJobEntity.STATE.BROKEN);
+			assertThat(captured.getMessage()).isEqualTo("Test exception");
+		}
+
+		@Test
+		@DisplayName("should filter by date range if provided")
+		void shouldFilterByDateRange() throws ExecutionException, InterruptedException {
+			// Given
+			testJob.setDataSetStartDate(LocalDateTime.now().minusDays(1));
+			testJob.setDataSetStopDate(LocalDateTime.now());
+			when(mongoTemplate.find(any(Query.class), eq(HintDao.class))).thenReturn(Collections.emptyList());
+
+			// When
+			migrationService.startMigration(testJob).get();
+
+			// Then
+			ArgumentCaptor<Query> queryCaptor = ArgumentCaptor.forClass(Query.class);
+			verify(mongoTemplate, atLeast(1)).find(queryCaptor.capture(), eq(HintDao.class));
+			Query capturedQuery = queryCaptor.getValue();
+			assertThat(capturedQuery.getQueryObject()).containsKey("creationDate");
+		}
+
+		@Test
+		@DisplayName("should process multiple pages")
+		void shouldProcessMultiplePages() throws ExecutionException, InterruptedException {
+			// Given
+			List<HintDao> page1 = List.of(HintTestDataGenerator.createHintDaoWithId("mongoId1"));
+			List<HintDao> page2 = List.of(HintTestDataGenerator.createHintDaoWithId("mongoId2"));
+			when(mongoTemplate.find(any(Query.class), eq(HintDao.class)))
+				.thenReturn(page1)
+				.thenReturn(page2)
+				.thenReturn(Collections.emptyList());
+			when(mongoTemplate.count(any(Query.class), eq(HintDao.class))).thenReturn(2L).thenReturn(2L).thenReturn(0L);
+
+			// When
+			migrationService.startMigration(testJob).get();
+
+			// Then
+			verify(hintRepository, times(2)).save(any(HintEntity.class));
+		}
 	}
 
 	@Nested
@@ -244,4 +299,21 @@ class MigrationServiceTest {
 			assertThat(errorCaptor.getValue().getMessage()).isEqualTo("Hint with mongoUUID mongo123 not found in MongoDB.");
 		}
 	}
+
+    @Test
+		@DisplayName("should handle exception during error fixing and set job to broken")
+		void shouldHandleExceptionDuringErrorFixing() {
+			// Given
+			when(migrationErrorRepo.findByJob_IdAndResolved(anyLong(), eq(false))).thenThrow(new RuntimeException("Test exception"));
+
+			// When
+			migrationService.fixUnresolvedErrors(testJob, 123L);
+
+			// Then
+			ArgumentCaptor<MigrationJobEntity> jobCaptor = ArgumentCaptor.forClass(MigrationJobEntity.class);
+			verify(migrationJobRepo).save(jobCaptor.capture());
+			MigrationJobEntity captured = jobCaptor.getValue();
+			assertThat(captured.getState()).isEqualTo(MigrationJobEntity.STATE.BROKEN);
+			assertThat(captured.getMessage()).isEqualTo("Test exception");
+		}
 }
