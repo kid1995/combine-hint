@@ -33,7 +33,13 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	implementation 'org.springframework.boot:spring-boot-starter-security'
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.13'
-	implementation 'io.github.springwolf:springwolf-kafka:1.17.0'
+
+	// Überschreiben transitiver Abhängigkeiten von springdoc-openapi-starter-webmvc-ui,
+	// um CVEs in älteren Versionen (z.B. commons-compress, commons-lang3) zu beheben.
+	implementation 'org.apache.commons:commons-compress:1.28.0'
+	implementation 'org.apache.commons:commons-lang3:3.19.0'
+
+	implementation 'io.github.springwolf:springwolf-kafka:1.18.0'
 	implementation 'com.c4-soft.springaddons:spring-addons-starter-oidc:8.1.23'
 	implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
 

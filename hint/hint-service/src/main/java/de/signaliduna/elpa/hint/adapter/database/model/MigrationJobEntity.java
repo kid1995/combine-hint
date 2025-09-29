@@ -9,9 +9,9 @@ import java.util.List;
 @Entity(name = "migration_job")
 public class MigrationJobEntity {
 	@Id
-	@GeneratedValue(strategy =  GenerationType.AUTO)
+	@GeneratedValue(strategy= GenerationType.IDENTITY)
 	@Column(name = "id")
-	private long id;
+	private Long id;
 
 	@Column(name = "message")
 	private String message;

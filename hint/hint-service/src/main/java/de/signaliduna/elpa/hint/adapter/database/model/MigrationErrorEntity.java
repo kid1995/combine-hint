@@ -5,7 +5,7 @@ import jakarta.persistence.*;
 @Entity(name = "migration_error")
 public class MigrationErrorEntity {
 	@Id
-	@GeneratedValue(strategy = GenerationType.AUTO)
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	@Column(name = "id")
 	private long id;
 

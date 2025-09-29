@@ -164,7 +164,7 @@ class MigrationServiceTest {
 			HintDao hintToFix = HintTestDataGenerator.createHintDaoWithId("fixId");
 			MigrationErrorEntity error = MigrationErrorEntity.builder().mongoUUID(hintToFix.id()).resolved(false).jobID(oldJob).build();
 
-			when(migrationErrorRepo.findByJobIDAndResolved(2L, false)).thenReturn(List.of(error));
+			when(migrationErrorRepo.findByJobID_IdAndResolved(2L, false)).thenReturn(List.of(error));
 			when(hintRepository.existsByMongoUUID(hintToFix.id())).thenReturn(false);
 			when(mongoTemplate.findById(hintToFix.id(), HintDao.class)).thenReturn(hintToFix);
 
@@ -190,7 +190,7 @@ class MigrationServiceTest {
 			HintDao hintToFix = HintTestDataGenerator.createHintDaoWithId("fixId");
 			MigrationErrorEntity error = MigrationErrorEntity.builder().mongoUUID(hintToFix.id()).resolved(false).jobID(oldJob).build();
 
-			when(migrationErrorRepo.findByJobIDAndResolved(2L, false)).thenReturn(List.of(error));
+			when(migrationErrorRepo.findByJobID_IdAndResolved(2L, false)).thenReturn(List.of(error));
 			when(hintRepository.existsByMongoUUID(hintToFix.id())).thenReturn(false);
 			when(mongoTemplate.findById(hintToFix.id(), HintDao.class)).thenReturn(hintToFix);
 			when(hintRepository.save(any(HintEntity.class))).thenThrow(new RuntimeException("Still broken"));
@@ -212,7 +212,7 @@ class MigrationServiceTest {
 			// Given
 			MigrationJobEntity oldJob = MigrationJobEntity.builder().id(2L).build();
 			MigrationErrorEntity error = MigrationErrorEntity.builder().mongoUUID("mongo123").resolved(false).jobID(oldJob).build();
-			when(migrationErrorRepo.findByJobIDAndResolved(2L, false)).thenReturn(List.of(error));
+			when(migrationErrorRepo.findByJobID_IdAndResolved(2L, false)).thenReturn(List.of(error));
 			when(hintRepository.existsByMongoUUID("mongo123")).thenReturn(true);
 
 			// When
@@ -231,7 +231,7 @@ class MigrationServiceTest {
 			// Given
 			MigrationJobEntity oldJob = MigrationJobEntity.builder().id(2L).build();
 			MigrationErrorEntity error = MigrationErrorEntity.builder().mongoUUID("mongo123").resolved(false).jobID(oldJob).build();
-			when(migrationErrorRepo.findByJobIDAndResolved(2L, false)).thenReturn(List.of(error));
+			when(migrationErrorRepo.findByJobID_IdAndResolved(2L, false)).thenReturn(List.of(error));
 			when(hintRepository.existsByMongoUUID("mongo123")).thenReturn(false);
 			when(mongoTemplate.findById("mongo123", HintDao.class)).thenReturn(null);
 

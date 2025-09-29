@@ -22,11 +22,8 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 @Service
 public class MigrationService {
@@ -64,7 +61,7 @@ public class MigrationService {
 	@Async
 	public void fixUnresolvedErrors(MigrationJobEntity newJob, Long oldJobId) {
 		try {
-			List<MigrationErrorEntity> unresolvedErrors = migrationErrorRepo.findByJobIDAndResolved(oldJobId, false);
+			List<MigrationErrorEntity> unresolvedErrors = migrationErrorRepo.findByJobID_IdAndResolved(oldJobId, false);
 			for (MigrationErrorEntity error : unresolvedErrors) {
 				processSingleHint(newJob, error.getMongoUUID(), Optional.empty(), Optional.of(error));
 			}
