@@ -14,14 +14,15 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mapstruct.factory.Mappers;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Query;
@@ -31,6 +32,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -170,15 +172,15 @@ class MigrationServiceTest {
 			assertThat(captured.getMessage()).isEqualTo("Test exception");
 		}
 
-private static Stream<Arguments> provideDateRangeArguments() {
+		private static Stream<Arguments> provideDateRangeArguments() {
 			return Stream.of(
 				Arguments.of(LocalDateTime.now().minusDays(1), LocalDateTime.now(), true, "Both dates present"),
 				Arguments.of(null, LocalDateTime.now(), false, "Start date null"),
-				Arguments.of(LocalDateTime.now().minusDays(1), null, false, "End date null")
-			);
+				Arguments.of(LocalDateTime.now().minusDays(1), null, false, "End date null"));
 		}
+
+		@ParameterizedTest
 		@DisplayName("should filter by date range if provided")
-		@ParameterizedTest(name = "{3}")
 		@MethodSource("provideDateRangeArguments")
 		void shouldFilterByDateRange(LocalDateTime startDate, LocalDateTime stopDate, boolean shouldFilter, String testName) throws ExecutionException, InterruptedException {
 			// Given
@@ -217,7 +219,7 @@ private static Stream<Arguments> provideDateRangeArguments() {
 			migrationService.startMigration(testJob).get();
 
 			// Then
-			verify(hintRepository, times((int)(totalHintDaos))).save(any(HintEntity.class));
+			verify(hintRepository, times((int) (totalHintDaos))).save(any(HintEntity.class));
 		}
 	}
 
