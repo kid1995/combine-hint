@@ -55,4 +55,5 @@
     },
     "peacock.color": "#185873",
     "vscode-pets.theme":"forest"
+    "java.compile.nullAnalysis.mode": "automatic"
 }

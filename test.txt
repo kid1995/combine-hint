@@ -1,0 +1,13 @@
+qwdqwd
+wdqw
+
+wdwdq
+
+
+dwqd
+
+
+
+namePrefix: "test"
+nameSuffix: "-dev"
+qwdqw
