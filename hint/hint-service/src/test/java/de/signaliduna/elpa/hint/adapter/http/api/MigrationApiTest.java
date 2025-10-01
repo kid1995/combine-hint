@@ -1,7 +1,6 @@
 package de.signaliduna.elpa.hint.adapter.http.api;
 
 import com.c4_soft.springaddons.security.oauth2.test.annotations.WithJwt;
-import com.c4_soft.springaddons.security.oauth2.test.annotations.WithJwt;
 import com.c4_soft.springaddons.security.oauth2.test.webmvc.AutoConfigureAddonsWebmvcResourceServerSecurity;
 import de.signaliduna.elpa.hint.adapter.database.MigrationErrorRepo;
 import de.signaliduna.elpa.hint.adapter.database.MigrationJobRepo;
@@ -15,6 +14,7 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -55,7 +55,16 @@ class MigrationApiTest {
 	@Test
 	@DisplayName("POST /start - should be forbidden for regular user")
 	@WithJwt(REGULAR_USER_JSON_TOKEN)
-	void startMigration_forbidden() throws Exception {
+	void startMigration_forbidden_by_regular_user() throws Exception {
+		mockMvc.perform(post("/migration/start"))
+			.andExpect(status().isForbidden());
+	}
+
+	@Test
+	@DisplayName("POST /start - should be forbidden for user, who have no token")
+	@WithMockUser
+	void startMigration_forbidden_by_not_having_token() throws Exception {
+
 		mockMvc.perform(post("/migration/start"))
 			.andExpect(status().isForbidden());
 	}
