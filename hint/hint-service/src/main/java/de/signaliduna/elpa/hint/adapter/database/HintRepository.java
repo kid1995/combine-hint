@@ -9,5 +9,6 @@ public interface HintRepository extends JpaRepository<HintEntity, Long>, JpaSpec
 	List<HintEntity> findAllByProcessId(String processId);
 	List<HintEntity> findAllByProcessIdAndHintSourceStartingWith(String processId, String hintSourcePrefix);
 	boolean existsByMongoUUID(String mongoUUID);
+	long countByMongoUUIDIsNotNull();
 }
 

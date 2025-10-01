@@ -8,6 +8,7 @@ import de.signaliduna.elpa.hint.adapter.database.model.HintEntity;
 import de.signaliduna.elpa.hint.adapter.database.model.MigrationErrorEntity;
 import de.signaliduna.elpa.hint.adapter.database.model.MigrationJobEntity;
 import de.signaliduna.elpa.hint.adapter.mapper.HintMapper;
+import de.signaliduna.elpa.hint.core.model.ValidationResult;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -51,18 +52,7 @@ public class MigrationService {
 	public CompletableFuture<Long> startMigration(MigrationJobEntity job) {
 		return CompletableFuture.supplyAsync(() -> {
 			try {
-				Query countQuery = new Query();
-				Criteria criteria = Criteria.where("creationDate");
-				if (job.getDataSetStartDate() != null) {
-					criteria.gte(job.getDataSetStartDate());
-				}
-				if( job.getDataSetStopDate() != null){
-					criteria.lte(job.getDataSetStopDate());
-				}
-				if (job.getDataSetStartDate() != null || job.getDataSetStopDate() != null ){
-					countQuery.addCriteria(criteria);
-				}
-				long totalItems = mongoTemplate.count(countQuery, HintDao.class);
+				long totalItems = countMongoHints(job.getDataSetStartDate(), job.getDataSetStopDate());
 				job.setTotalItems(totalItems);
 				job.setProcessedItems(0L);
 				migrationJobRepo.save(job);
@@ -86,6 +76,31 @@ public class MigrationService {
 		} catch (Exception e) {
 			updateJobState(newJob, MigrationJobEntity.STATE.BROKEN, e.getMessage());
 		}
+	}
+
+	public long countMongoHints(LocalDateTime dataSetStartDate, LocalDateTime dataSetStopDate) {
+		Query countQuery = createQueryByStartAndEndDate(dataSetStartDate, dataSetStopDate);
+		return mongoTemplate.count(countQuery, HintDao.class);
+	}
+
+	public ValidationResult validateMigration(Long jobId) {
+		Optional<MigrationJobEntity> jobOptional = migrationJobRepo.findById(jobId);
+		if (jobOptional.isEmpty()) {
+			return new ValidationResult(false, "Job with ID " + jobId + " not found.");
+		}
+		MigrationJobEntity job = jobOptional.get();
+		if (job.getState() != MigrationJobEntity.STATE.COMPLETED) {
+			return new ValidationResult(false, "Job state is " + job.getState() + ", not COMPLETED.");
+		}
+		List<MigrationErrorEntity> unresolvedErrors = migrationErrorRepo.findByJob_IdAndResolved(jobId, false);
+		if (!unresolvedErrors.isEmpty()) {
+			return new ValidationResult(false, "Found " + unresolvedErrors.size() + " unresolved errors for this job.");
+		}
+		long postgresCount = hintRepository.countByMongoUUIDIsNotNull();
+		if (job.getTotalItems() != null && postgresCount != job.getTotalItems()) {
+			return new ValidationResult(false, "Item count mismatch. Expected: " + job.getTotalItems() + ", Found in PostgreSQL: " + postgresCount);
+		}
+		return new ValidationResult(true, "Migration job " + jobId + " validated successfully.");
 	}
 
 	private void processPages(MigrationJobEntity job, Pageable pageable) {
@@ -156,4 +171,20 @@ public class MigrationService {
 		job.setFinishingDate(LocalDateTime.now());
 		migrationJobRepo.save(job);
 	}
+
+	private Query createQueryByStartAndEndDate(LocalDateTime dataSetStartDate, LocalDateTime dataSetStopDate){
+		Query countQuery = new Query();
+		Criteria criteria = Criteria.where("creationDate");
+		if (dataSetStartDate != null) {
+			criteria.gte(dataSetStartDate);
+		}
+		if( dataSetStopDate != null){
+			criteria.lte(dataSetStopDate);
+		}
+		if (dataSetStartDate != null || dataSetStopDate != null ){
+			countQuery.addCriteria(criteria);
+		}
+		return countQuery;
+	}
+
 }

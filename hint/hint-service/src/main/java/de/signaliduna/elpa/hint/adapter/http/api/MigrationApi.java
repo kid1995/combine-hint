@@ -5,6 +5,8 @@ import de.signaliduna.elpa.hint.adapter.database.MigrationJobRepo;
 import de.signaliduna.elpa.hint.adapter.database.model.MigrationErrorEntity;
 import de.signaliduna.elpa.hint.adapter.database.model.MigrationJobEntity;
 import de.signaliduna.elpa.hint.core.MigrationService;
+import de.signaliduna.elpa.hint.core.model.ValidationResult;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -26,6 +28,12 @@ public class MigrationApi {
 		this.migrationErrorRepo = migrationErrorRepo;
 	}
 
+	@PostMapping("/count")
+	public ResponseEntity<Long> countNumberOfMigrationItem(@RequestParam(required = false) LocalDateTime dataSetStartDate, @RequestParam(required = false) LocalDateTime dataSetEndDate) {
+		long numberOfItem = migrationService.countMongoHints(dataSetStartDate, dataSetEndDate);
+		return ResponseEntity.accepted().body(numberOfItem);
+	}
+
 	@PostMapping("/start")
 	public ResponseEntity<Long> startMigration(@RequestParam(required = false) LocalDateTime dataSetStartDate, @RequestParam(required = false) LocalDateTime dataSetEndDate) {
 		MigrationJobEntity job = migrationJobRepo.save(MigrationJobEntity.builder()
@@ -36,6 +44,16 @@ public class MigrationApi {
 			.build());
 		migrationService.startMigration(job);
 		return ResponseEntity.accepted().body(job.getId());
+	}
+
+	@GetMapping("/validate/{jobId}")
+	public ResponseEntity<ValidationResult> validateMigration(@PathVariable Long jobId) {
+		ValidationResult result = migrationService.validateMigration(jobId);
+		if (result.successful()) {
+			return ResponseEntity.ok(result);
+		} else {
+			return ResponseEntity.status(HttpStatus.EXPECTATION_FAILED).body(result);
+		}
 	}
 
 	@GetMapping("/jobs")
