@@ -1,6 +1,7 @@
 package de.signaliduna.elpa.hint.adapter.http.api;
 
-import com.c4_soft.springaddons.security.oauth2.test.annotations.WithMockAuthentication;
+import com.c4_soft.springaddons.security.oauth2.test.annotations.WithJwt;
+import com.c4_soft.springaddons.security.oauth2.test.annotations.WithJwt;
 import com.c4_soft.springaddons.security.oauth2.test.webmvc.AutoConfigureAddonsWebmvcResourceServerSecurity;
 import de.signaliduna.elpa.hint.adapter.database.MigrationErrorRepo;
 import de.signaliduna.elpa.hint.adapter.database.MigrationJobRepo;
@@ -39,10 +40,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Import(WebSecurityConfig.class)
 @DisplayName("MigrationApi Security and MVC Test")
 class MigrationApiTest {
-
 	@Autowired
 	private MockMvc mockMvc;
-
 	@MockitoBean
 	private MigrationService migrationService;
 	@MockitoBean
@@ -50,12 +49,12 @@ class MigrationApiTest {
 	@MockitoBean
 	private MigrationErrorRepo migrationErrorRepo;
 
-	private static final String MIGRATION_USER = "MIGRATION_USER";
-	private static final String REGULAR_USER = "HINT_USER";
+	private static final String MIGRATION_USER_JSON_TOKEN = "jwt/migration-user-access-token.json";
+	private static final String REGULAR_USER_JSON_TOKEN = "jwt/normal-user-access-token.json";
 
 	@Test
 	@DisplayName("POST /start - should be forbidden for regular user")
-	@WithMockAuthentication(name = REGULAR_USER)
+	@WithJwt(REGULAR_USER_JSON_TOKEN)
 	void startMigration_forbidden() throws Exception {
 		mockMvc.perform(post("/migration/start"))
 			.andExpect(status().isForbidden());
@@ -63,7 +62,7 @@ class MigrationApiTest {
 
 	@Test
 	@DisplayName("POST /start - should be accepted for migration user")
-	@WithMockAuthentication(name = MIGRATION_USER)
+	@WithJwt(MIGRATION_USER_JSON_TOKEN)
 	void startMigration_accepted() throws Exception {
 		// Create a saved job entity with ID
 		MigrationJobEntity savedJob = MigrationTestDataGenerator.createJobWithId(1L);
@@ -93,7 +92,7 @@ class MigrationApiTest {
 
 	@Test
 	@DisplayName("POST /start - should handle migration without date range")
-	@WithMockAuthentication(name = MIGRATION_USER)
+	@WithJwt(MIGRATION_USER_JSON_TOKEN)
 	void startMigration_withoutDateRange() throws Exception {
 		// Create a saved job without date range
 		MigrationJobEntity savedJob = MigrationTestDataGenerator.createRunningJob();
@@ -112,7 +111,7 @@ class MigrationApiTest {
 
 	@Test
 	@DisplayName("GET /jobs - should be forbidden for regular user")
-	@WithMockAuthentication(name = REGULAR_USER)
+	@WithJwt(REGULAR_USER_JSON_TOKEN)
 	void getJobs_forbidden() throws Exception {
 		mockMvc.perform(get("/migration/jobs"))
 			.andExpect(status().isForbidden());
@@ -120,7 +119,7 @@ class MigrationApiTest {
 
 	@Test
 	@DisplayName("GET /jobs - should return jobs for migration user")
-	@WithMockAuthentication(name = MIGRATION_USER)
+	@WithJwt(MIGRATION_USER_JSON_TOKEN)
 	void getJobs_ok() throws Exception {
 		mockMvc.perform(get("/migration/jobs"))
 			.andExpect(status().isOk());
@@ -128,7 +127,7 @@ class MigrationApiTest {
 
 	@Test
 	@DisplayName("GET /jobs/{jobId} - should return specific job for migration user")
-	@WithMockAuthentication(name = MIGRATION_USER)
+	@WithJwt(MIGRATION_USER_JSON_TOKEN)
 	void getJobById_ok() throws Exception {
 		MigrationJobEntity completedJob = MigrationTestDataGenerator.createCompletedJob();
 		when(migrationJobRepo.findById(completedJob.getId())).thenReturn(Optional.of(completedJob));
@@ -139,7 +138,7 @@ class MigrationApiTest {
 
 	@Test
 	@DisplayName("GET /jobs/{jobId} - should return 404 when job not found")
-	@WithMockAuthentication(name = MIGRATION_USER)
+	@WithJwt(MIGRATION_USER_JSON_TOKEN)
 	void getJobById_notFound() throws Exception {
 		when(migrationJobRepo.findById(999L)).thenReturn(Optional.empty());
 
@@ -149,7 +148,7 @@ class MigrationApiTest {
 
 	@Test
 	@DisplayName("POST /fix/{jobId} - should be accepted for migration user")
-	@WithMockAuthentication(name = MIGRATION_USER)
+	@WithJwt(MIGRATION_USER_JSON_TOKEN)
 	void fixErrors_accepted() throws Exception {
 		// Create a new job for fixing errors
 		MigrationJobEntity newJob = MigrationTestDataGenerator.createJobWithId(2L);
@@ -173,7 +172,7 @@ class MigrationApiTest {
 
 	@Test
 	@DisplayName("POST /fix/{jobId} - should be forbidden for regular user")
-	@WithMockAuthentication(name = REGULAR_USER)
+	@WithJwt(REGULAR_USER_JSON_TOKEN)
 	void fixErrors_forbidden() throws Exception {
 		mockMvc.perform(post("/migration/fix/1"))
 			.andExpect(status().isForbidden());
@@ -181,7 +180,7 @@ class MigrationApiTest {
 
 	@Test
 	@DisplayName("GET /errors - should be forbidden for regular user")
-	@WithMockAuthentication(name = REGULAR_USER)
+	@WithJwt(REGULAR_USER_JSON_TOKEN)
 	void getErrors_forbidden() throws Exception {
 		mockMvc.perform(get("/migration/errors"))
 			.andExpect(status().isForbidden());
@@ -189,7 +188,7 @@ class MigrationApiTest {
 
 	@Test
 	@DisplayName("GET /errors - should return errors for migration user")
-	@WithMockAuthentication(name = MIGRATION_USER)
+	@WithJwt(MIGRATION_USER_JSON_TOKEN)
 	void getErrors_ok() throws Exception {
 		mockMvc.perform(get("/migration/errors"))
 			.andExpect(status().isOk());
@@ -197,7 +196,7 @@ class MigrationApiTest {
 
 	@Test
 	@DisplayName("GET /errors/{errorId} - should return specific error for migration user")
-	@WithMockAuthentication(name = MIGRATION_USER)
+	@WithJwt(MIGRATION_USER_JSON_TOKEN)
 	void getErrorById_ok() throws Exception {
 		when(migrationErrorRepo.findById(1L)).thenReturn(Optional.of(MigrationTestDataGenerator.createErrorWithMongoId("1", MigrationTestDataGenerator.createCompletedJob())));
 		mockMvc.perform(get("/migration/errors/1"))

@@ -41,9 +41,7 @@ public class WebSecurityConfig {
 		}
 
 		public boolean isAuthorizedUser() {
-			return getUidFromToken()
-				.map(this.authorizedUsers::contains)
-				.orElse(false);
+			return this.authorizedUsers.contains(getAuthentication().getName());
 		}
 
 		public boolean isAuthorizedMigrationUser() {
