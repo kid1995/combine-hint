@@ -5,7 +5,6 @@ import de.signaliduna.elpa.hint.adapter.database.MigrationErrorRepo;
 import de.signaliduna.elpa.hint.adapter.database.MigrationJobRepo;
 import de.signaliduna.elpa.hint.adapter.mapper.HintMapper;
 import de.signaliduna.elpa.hint.core.MigrationService;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.mongodb.core.MongoTemplate;

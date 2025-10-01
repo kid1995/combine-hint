@@ -108,7 +108,9 @@ public class HintEntity {
 		return mongoUUID;
 	}
 
-	public void setMongoUUID(String mongoUUID) {}
+	public void setMongoUUID(String mongoUUID) {
+		this.mongoUUID = mongoUUID;
+	}
 
 	/* BUILDER */
 	public static Builder builder() {

@@ -52,8 +52,15 @@ public class MigrationService {
 		return CompletableFuture.supplyAsync(() -> {
 			try {
 				Query countQuery = new Query();
-				if (job.getDataSetStartDate() != null && job.getDataSetStopDate() != null) {
-					countQuery.addCriteria(Criteria.where("creationDate").gte(job.getDataSetStartDate()).lt(job.getDataSetStopDate()));
+				Criteria criteria = Criteria.where("creationDate");
+				if (job.getDataSetStartDate() != null) {
+					criteria.gte(job.getDataSetStartDate());
+				}
+				if( job.getDataSetStopDate() != null){
+					criteria.lte(job.getDataSetStopDate());
+				}
+				if (job.getDataSetStartDate() != null || job.getDataSetStopDate() != null ){
+					countQuery.addCriteria(criteria);
 				}
 				long totalItems = mongoTemplate.count(countQuery, HintDao.class);
 				job.setTotalItems(totalItems);

@@ -1,5 +1,3 @@
-// kid1995/combine-hint/kid1995-combine-hint-6e2814d4ec175a0c6409686107f1ef989c185ab9/hint/hint-service/src/main/java/de/signaliduna/elpa/hint/adapter/http/api/MigrationApi.java
-
 package de.signaliduna.elpa.hint.adapter.http.api;
 
 import de.signaliduna.elpa.hint.adapter.database.MigrationErrorRepo;

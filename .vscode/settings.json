@@ -33,5 +33,26 @@
         "Welchen",
         "werden",
         "wurde"
-    ]
+    ],
+    "workbench.colorCustomizations": {
+        "activityBar.activeBackground": "#21789d",
+        "activityBar.background": "#21789d",
+        "activityBar.foreground": "#e7e7e7",
+        "activityBar.inactiveForeground": "#e7e7e799",
+        "activityBarBadge.background": "#e996d0",
+        "activityBarBadge.foreground": "#15202b",
+        "commandCenter.border": "#e7e7e799",
+        "sash.hoverBorder": "#21789d",
+        "statusBar.background": "#185873",
+        "statusBar.foreground": "#e7e7e7",
+        "statusBarItem.hoverBackground": "#21789d",
+        "statusBarItem.remoteBackground": "#185873",
+        "statusBarItem.remoteForeground": "#e7e7e7",
+        "titleBar.activeBackground": "#185873",
+        "titleBar.activeForeground": "#e7e7e7",
+        "titleBar.inactiveBackground": "#18587399",
+        "titleBar.inactiveForeground": "#e7e7e799"
+    },
+    "peacock.color": "#185873",
+    "vscode-pets.theme":"forest"
 }
