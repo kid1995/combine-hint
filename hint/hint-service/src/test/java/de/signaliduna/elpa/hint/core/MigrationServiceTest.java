@@ -178,36 +178,26 @@ class MigrationServiceTest {
 			testJob.setDataSetStopDate(stopDate);
 			when(mongoTemplate.getCollectionName(HintDao.class)).thenReturn("Hint");
 			when(mongoTemplate.find(any(Query.class), eq(Document.class), eq("Hint"))).thenReturn(Collections.emptyList());
-
-
 			// When
 			migrationService.startMigration(testJob).get();
-
 			// Then
 			ArgumentCaptor<Query> queryCaptor = ArgumentCaptor.forClass(Query.class);
 			verify(mongoTemplate, atLeast(1)).find(queryCaptor.capture(), eq(Document.class), eq("Hint"));
 			Query capturedQuery = queryCaptor.getValue();
 			Document queryObject = capturedQuery.getQueryObject();
-
-			// If at least one date is provided, the 'creationDate' filter should exist
 			assertThat(queryObject).containsKey("creationDate");
 			assertThat(queryObject.get("creationDate")).isInstanceOf(Document.class);
-
 			Document creationDateFilter = (Document) queryObject.get("creationDate");
 
 			if (startDate != null) {
-				// If startDate is provided, it should contain the $gte operator
 				assertThat(creationDateFilter).containsEntry("$gte", startDate);
 			} else {
-				// If startDate is null, it should not contain the $gte operator
 				assertThat(creationDateFilter).doesNotContainKey("$gte");
 			}
 
 			if (stopDate != null) {
-				// If stopDate is provided, it should contain the $lte operator
 				assertThat(creationDateFilter).containsEntry("$lte", stopDate);
 			} else {
-				// If stopDate is null, it should not contain the $lte operator
 				assertThat(creationDateFilter).doesNotContainKey("$lte");
 			}
 
@@ -232,20 +222,74 @@ class MigrationServiceTest {
 
 			MongoConverter converter = mock(MongoConverter.class);
 			when(mongoTemplate.getConverter()).thenReturn(converter);
-
-			// Mock converter for page 1
 			for(int i = 0; i < page1Daos.size(); i++) {
-				when(converter.read(eq(HintDao.class), eq(page1Docs.get(i)))).thenReturn(page1Daos.get(i));
+				when(converter.read(HintDao.class, page1Docs.get(i))).thenReturn(page1Daos.get(i));
 			}
-			// Mock converter for page 2
-			when(converter.read(eq(HintDao.class), eq(page2Docs.getFirst()))).thenReturn(page2Daos.getFirst());
-
-
+			when(converter.read(HintDao.class, page2Docs.getFirst())).thenReturn(page2Daos.getFirst());
 			when(mongoTemplate.count(any(Query.class), eq(HintDao.class))).thenReturn(totalHintDaos);
 			// When
 			migrationService.startMigration(testJob).get();
 			// Then
 			verify(hintRepository, times((int) (totalHintDaos))).save(any(HintEntity.class));
+		}
+
+		@Test
+		@DisplayName("should handle document with missing id")
+		void shouldHandleDocumentWithMissingId() throws ExecutionException, InterruptedException {
+			// Given
+			Document docWithMissingId = new Document("some_other_field", "some_value");
+
+			when(mongoTemplate.getCollectionName(HintDao.class)).thenReturn("Hint");
+			when(mongoTemplate.find(any(Query.class), eq(Document.class), eq("Hint")))
+				.thenReturn(List.of(docWithMissingId))
+				.thenReturn(Collections.emptyList());
+
+			MongoConverter converter = mock(MongoConverter.class);
+			when(mongoTemplate.getConverter()).thenReturn(converter);
+			when(converter.read(eq(HintDao.class), any(Document.class))).thenThrow(new RuntimeException("Conversion fails"));
+
+			when(mongoTemplate.count(any(Query.class), eq(HintDao.class))).thenReturn(1L);
+
+			// When
+			migrationService.startMigration(testJob).get();
+
+			// Then
+			ArgumentCaptor<MigrationErrorEntity> errorCaptor = ArgumentCaptor.forClass(MigrationErrorEntity.class);
+			verify(migrationErrorRepo).save(errorCaptor.capture());
+			assertThat(errorCaptor.getValue().getMongoUUID()).isEqualTo("UNKNOWN_MONGO_ID");
+		}
+
+
+
+		@Test
+		@DisplayName("should log parsing errors and continue migration")
+		void shouldLogParsingErrorsAndContinue() throws ExecutionException, InterruptedException {
+			// Given
+			HintDao validHint = HintTestDataGenerator.createHintDaoWithId("validId");
+			Document validDoc = HintTestDataGenerator.createDocumentFromHintDao(validHint);
+			Document invalidDoc = new Document("_id", "invalidId");
+
+			when(mongoTemplate.find(any(Query.class), eq(Document.class), anyString()))
+				.thenReturn(List.of(invalidDoc, validDoc))
+				.thenReturn(Collections.emptyList());
+			when(mongoTemplate.count(any(Query.class), eq(HintDao.class))).thenReturn(2L);
+			when(mongoTemplate.getCollectionName(HintDao.class)).thenReturn("Hint");
+
+			// Mock converter to throw exception for invalid document, succeed for valid
+			MongoConverter converter = mock(MongoConverter.class);
+			when(mongoTemplate.getConverter()).thenReturn(converter);
+			when(converter.read(eq(HintDao.class), any(Document.class)))
+				.thenThrow(new RuntimeException("Parse error"))
+				.thenReturn(validHint);
+			when(hintRepository.existsByMongoUUID("validId")).thenReturn(false);
+			// When
+			migrationService.startMigration(testJob).get();
+			// Then
+			verify(hintRepository, times(1)).save(any(HintEntity.class));
+			ArgumentCaptor<MigrationErrorEntity> errorCaptor = ArgumentCaptor.forClass(MigrationErrorEntity.class);
+			verify(migrationErrorRepo).save(errorCaptor.capture());
+			assertThat(errorCaptor.getValue().getMongoUUID()).isEqualTo("invalidId");
+			assertThat(errorCaptor.getValue().getMessage()).contains("Failed to parse HintDao");
 		}
 	}
 
