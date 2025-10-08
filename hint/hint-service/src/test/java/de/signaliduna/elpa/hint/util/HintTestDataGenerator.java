@@ -4,6 +4,7 @@ import de.signaliduna.elpa.hint.adapter.database.legacy.model.HintDao;
 import de.signaliduna.elpa.hint.adapter.database.model.HintEntity;
 import de.signaliduna.elpa.hint.adapter.mapper.HintMapper;
 import de.signaliduna.elpa.hint.model.HintDto;
+import org.bson.Document;
 import org.mapstruct.factory.Mappers;
 
 import java.time.LocalDateTime;
@@ -168,6 +169,27 @@ public class HintTestDataGenerator {
 		);
 	}
 
+	public static Document createDocumentFromHintDao(HintDao hintDao) {
+		Document doc = new Document();
+		doc.append("_id", hintDao.id()); // @Id field maps to _id in MongoDB
+		doc.append("hintSource", hintDao.hintSource());
+		doc.append("hintTextOriginal", hintDao.hintTextOriginal());
+		if (hintDao.hintCategory() != null) {
+			doc.append("hintCategory", hintDao.hintCategory().name());
+		}
+		doc.append("showToUser", hintDao.showToUser());
+		doc.append("processId", hintDao.processId());
+		doc.append("creationDate", hintDao.creationDate());
+		// Handle optional fields
+		if (hintDao.processVersion() != null) {
+			doc.append("processVersion", hintDao.processVersion());
+		}
+		if (hintDao.resourceId() != null) {
+			doc.append("resourceId", hintDao.resourceId());
+		}
+		return doc;
+	}
+
 	private static <T> T getRandomElement(List<T> list) {
 		return list.get(random.nextInt(list.size()));
 	}
@@ -199,7 +221,6 @@ public class HintTestDataGenerator {
 		}
 		return sb.toString();
 	}
-
 }
 
 

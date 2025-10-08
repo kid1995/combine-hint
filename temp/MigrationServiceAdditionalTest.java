@@ -341,10 +341,8 @@ class MigrationServiceAdditionalTest {
 			when(mongoTemplate.find(any(Query.class), eq(HintDao.class)))
 				.thenReturn(Collections.emptyList());
 			when(mongoTemplate.count(any(Query.class), eq(HintDao.class))).thenReturn(0L);
-
 			// When
 			migrationService.startMigration(testJob).get();
-
 			// Then
 			verify(hintRepository, never()).save(any());
 			verify(migrationJobRepo, atLeast(1)).save(any(MigrationJobEntity.class));

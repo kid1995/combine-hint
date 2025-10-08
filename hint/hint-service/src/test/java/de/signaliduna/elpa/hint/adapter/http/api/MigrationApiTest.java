@@ -7,6 +7,7 @@ import de.signaliduna.elpa.hint.adapter.database.MigrationJobRepo;
 import de.signaliduna.elpa.hint.adapter.database.model.MigrationJobEntity;
 import de.signaliduna.elpa.hint.config.WebSecurityConfig;
 import de.signaliduna.elpa.hint.core.MigrationService;
+import de.signaliduna.elpa.hint.core.model.ValidationResult;
 import de.signaliduna.elpa.hint.util.MigrationTestDataGenerator;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -29,8 +30,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(controllers = MigrationApi.class, properties = {
 	"authorization.users=HINT_USER",
@@ -221,5 +221,57 @@ class MigrationApiTest {
 		mockMvc.perform(get("/migration/errors")).andExpect(status().isUnauthorized());
 		mockMvc.perform(get("/migration/errors/1")).andExpect(status().isUnauthorized());
 		mockMvc.perform(post("/migration/fix/1")).andExpect(status().isUnauthorized());
+	}
+
+	@Test
+	@DisplayName("should count migration items")
+	@WithJwt(MIGRATION_USER_JSON_TOKEN)
+	void shouldCountWithBothDates() throws Exception {
+		// Given
+		when(migrationService.countMongoHints(any(LocalDateTime.class), any(LocalDateTime.class)))
+			.thenReturn(250L);
+
+		// When & Then
+		mockMvc.perform(post("/migration/count")
+				.param("dataSetStartDate", "2024-01-01T00:00:00")
+				.param("dataSetEndDate", "2024-01-31T23:59:59"))
+			.andExpect(status().isAccepted())
+			.andExpect(content().string("250"));
+
+		verify(migrationService).countMongoHints(any(LocalDateTime.class), any(LocalDateTime.class));
+	}
+
+	@Test
+	@DisplayName("should return OK when validation is successful")
+	@WithJwt(MIGRATION_USER_JSON_TOKEN)
+	void shouldReturnOkWhenValidationSuccessful() throws Exception {
+		// Given
+		ValidationResult successResult = new ValidationResult(true, "Validation passed");
+		when(migrationService.validateMigration(1L)).thenReturn(successResult);
+
+		// When & Then
+		mockMvc.perform(get("/migration/validate/1"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.successful").value(true))
+			.andExpect(jsonPath("$.message").value("Validation passed"));
+
+		verify(migrationService).validateMigration(1L);
+	}
+
+	@Test
+	@DisplayName("should return EXPECTATION_FAILED when validation fails")
+	@WithJwt(MIGRATION_USER_JSON_TOKEN)
+	void shouldReturnExpectationFailedWhenValidationFails() throws Exception {
+		// Given
+		ValidationResult failureResult = new ValidationResult(false, "Validation failed");
+		when(migrationService.validateMigration(2L)).thenReturn(failureResult);
+
+		// When & Then
+		mockMvc.perform(get("/migration/validate/2"))
+			.andExpect(status().isExpectationFailed())
+			.andExpect(jsonPath("$.successful").value(false))
+			.andExpect(jsonPath("$.message").value("Validation failed"));
+
+		verify(migrationService).validateMigration(2L);
 	}
 }

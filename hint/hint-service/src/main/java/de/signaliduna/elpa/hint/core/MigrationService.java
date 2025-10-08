@@ -1,5 +1,4 @@
 package de.signaliduna.elpa.hint.core;
-
 import de.signaliduna.elpa.hint.adapter.database.HintRepository;
 import de.signaliduna.elpa.hint.adapter.database.MigrationErrorRepo;
 import de.signaliduna.elpa.hint.adapter.database.MigrationJobRepo;
@@ -9,36 +8,33 @@ import de.signaliduna.elpa.hint.adapter.database.model.MigrationErrorEntity;
 import de.signaliduna.elpa.hint.adapter.database.model.MigrationJobEntity;
 import de.signaliduna.elpa.hint.adapter.mapper.HintMapper;
 import de.signaliduna.elpa.hint.core.model.ValidationResult;
+import de.signaliduna.elpa.hint.model.HintDto;
+import org.bson.Document;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.*;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-
 @Service
 public class MigrationService {
-
 	@Value("${migration.batch_size:100}")
 	private int batchSize = 100;
-
+	private final Logger log = LoggerFactory.getLogger(MigrationService.class);
 	private final MongoTemplate mongoTemplate;
 	private final HintRepository hintRepository;
 	private final MigrationJobRepo migrationJobRepo;
 	private final MigrationErrorRepo migrationErrorRepo;
 	private final HintMapper hintMapper;
-
 	public MigrationService(MongoTemplate mongoTemplate, HintRepository hintRepository, MigrationJobRepo migrationJobRepo,
 													MigrationErrorRepo migrationErrorRepo, HintMapper hintMapper) {
 		this.mongoTemplate = mongoTemplate;
@@ -56,15 +52,14 @@ public class MigrationService {
 				job.setTotalItems(totalItems);
 				job.setProcessedItems(0L);
 				migrationJobRepo.save(job);
-				processPages(job, PageRequest.of(0, batchSize));
+				processPages(job, PageRequest.of(0, batchSize, Sort.by(Sort.Direction.ASC, "creationDate")));
 				updateJobState(job, MigrationJobEntity.STATE.COMPLETED, "Migration completed successfully.");
 			} catch (Exception e) {
-				updateJobState(job, MigrationJobEntity.STATE.BROKEN, e.getMessage());
+				updateJobState(job, MigrationJobEntity.STATE.BROKEN, e.getMessage() + "\n" + Arrays.toString(e.getStackTrace()));
 			}
 			return job.getId();
 		});
 	}
-
 	@Async
 	public void fixUnresolvedErrors(MigrationJobEntity newJob, Long oldJobId) {
 		try {
@@ -74,14 +69,20 @@ public class MigrationService {
 			}
 			updateJobState(newJob, MigrationJobEntity.STATE.COMPLETED, "Fix job completed.");
 		} catch (Exception e) {
-			updateJobState(newJob, MigrationJobEntity.STATE.BROKEN, e.getMessage());
+			updateJobState(newJob, MigrationJobEntity.STATE.BROKEN, e.getMessage() + "\n" + Arrays.toString(e.getStackTrace()));
 		}
 	}
 
-	public long countMongoHints(LocalDateTime dataSetStartDate, LocalDateTime dataSetStopDate) {
-		Query countQuery = createQueryByStartAndEndDate(dataSetStartDate, dataSetStopDate);
-		return mongoTemplate.count(countQuery, HintDao.class);
-	}
+	/**
+	 * Validates a migration job based on specific criteria.
+	 * This method checks:
+	 * 1. If a job with the provided ID exists.
+	 * 2. If the job's state is 'COMPLETED'.
+	 * 3. If there are no unresolved migration errors linked to this job.
+	 * 4. If the count of items successfully migrated to PostgresSQL matches the total items recorded for the job.
+	 * @param jobId The ID of the migration job to validate.
+	 * @return A ValidationResult object indicating success or failure and a descriptive message.
+	 */
 
 	public ValidationResult validateMigration(Long jobId) {
 		Optional<MigrationJobEntity> jobOptional = migrationJobRepo.findById(jobId);
@@ -97,25 +98,49 @@ public class MigrationService {
 			return new ValidationResult(false, "Found " + unresolvedErrors.size() + " unresolved errors for this job.");
 		}
 		long postgresCount = hintRepository.countByMongoUUIDIsNotNull();
-		if (job.getTotalItems() != null && postgresCount != job.getTotalItems()) {
+		if (postgresCount != job.getTotalItems()) {
 			return new ValidationResult(false, "Item count mismatch. Expected: " + job.getTotalItems() + ", Found in PostgreSQL: " + postgresCount);
 		}
 		return new ValidationResult(true, "Migration job " + jobId + " validated successfully.");
 	}
 
+	// Counts the total number of hints in MongoDB based on the provided start and end dates.
+	public long countMongoHints(LocalDateTime dataSetStartDate, LocalDateTime dataSetStopDate) {
+		Query countQuery = createQueryByStartAndEndDate(dataSetStartDate, dataSetStopDate, Optional.empty());
+		return mongoTemplate.count(countQuery, HintDao.class);
+	}
+
 	private void processPages(MigrationJobEntity job, Pageable pageable) {
-		Query query = new Query().with(pageable);
-		if (job.getDataSetStartDate() != null && job.getDataSetStopDate() != null) {
-			query.addCriteria(Criteria.where("creationDate").gte(job.getDataSetStartDate()).lt(job.getDataSetStopDate()));
+    // Create a query that includes pagination for fetching the current page's data.
+    Query queryForPage = createQueryByStartAndEndDate(job.getDataSetStartDate(), job.getDataSetStopDate(), Optional.of(pageable));
+
+		String collectionName = mongoTemplate.getCollectionName(HintDao.class);
+		List<Document> rawHints = mongoTemplate.find(queryForPage, Document.class, collectionName);
+
+		List<HintDao> hints = new java.util.ArrayList<>();
+		for (Document rawHint : rawHints) {
+			// check missing _id
+			String mongoId = rawHint.get("_id") != null ? rawHint.get("_id").toString() : "UNKNOWN_MONGO_ID";
+			try {
+				// Attempt to convert each raw document to HintDao
+				HintDao hintDao = mongoTemplate.getConverter().read(HintDao.class, rawHint);
+				hints.add(hintDao);
+			} catch (Exception e) {
+				// Log and save convert error
+				logAndSaveError(job, "Failed to parse HintDao from MongoDB document with _id: " + mongoId + ". Error: " + e.getMessage(), mongoId);
+				log.warn("Parsing error for document with _id: {}. \n Error: {}", mongoId, e.getMessage(), e);
+			}
 		}
 
-		List<HintDao> hints = mongoTemplate.find(query, HintDao.class);
-		Page<HintDao> page = new PageImpl<>(hints, pageable, mongoTemplate.count(query, HintDao.class));
+    Page<HintDao> page = new PageImpl<>(hints, pageable, job.getTotalItems());
 
+    log.info("Processing page {}/{} (size {}). Found {} hints for job {}",
+            page.getNumber() + 1, page.getTotalPages(), page.getSize(), hints.size(), job.getId());
 		for (HintDao hintDao : page.getContent()) {
 			processSingleHint(job, hintDao.id(), Optional.of(hintDao), Optional.empty());
-			job.setProcessedItems(job.getProcessedItems() + 1);
 		}
+
+    job.setProcessedItems(job.getProcessedItems() + hints.size());
 		migrationJobRepo.save(job);
 
 		if (page.hasNext()) {
@@ -123,33 +148,30 @@ public class MigrationService {
 		}
 	}
 
+
 	private void processSingleHint(MigrationJobEntity job, String mongoId, Optional<HintDao> optionalHintDao, Optional<MigrationErrorEntity> existingError) {
 		try {
 			if (hintRepository.existsByMongoUUID(mongoId)) {
 				existingError.ifPresent(this::resolveError);
 				return;
 			}
+			job.setLastMergedPoint(mongoId);
 
 			HintDao hintDao = optionalHintDao.orElseGet(() -> mongoTemplate.findById(mongoId, HintDao.class));
-
 			if (hintDao == null) {
 				logAndSaveError(job, "Hint with mongoUUID " + mongoId + " not found in MongoDB.", mongoId);
 				return;
 			}
-
 			HintEntity hintEntity = hintMapper.dtoToEntity(hintMapper.daoToDto(hintDao));
 			hintEntity.setMongoUUID(hintDao.id());
 			hintRepository.save(hintEntity);
-
 			existingError.ifPresent(this::resolveError);
-
 		} catch (DataIntegrityViolationException e) {
 			logAndSaveError(job, "Data integrity violation: " + e.getMessage(), mongoId);
 		} catch (Exception e) {
 			logAndSaveError(job, e.getMessage(), mongoId);
 		}
 	}
-
 	private void logAndSaveError(MigrationJobEntity job, String message, String mongoId) {
 		LoggerFactory.getLogger(MigrationService.class).info(message);
 		migrationErrorRepo.save(MigrationErrorEntity.builder()
@@ -159,32 +181,33 @@ public class MigrationService {
 			.job(job)
 			.build());
 	}
-
 	private void resolveError(MigrationErrorEntity error) {
 		error.setResolved(true);
 		migrationErrorRepo.save(error);
 	}
-
 	private void updateJobState(MigrationJobEntity job, MigrationJobEntity.STATE state, String message) {
 		job.setState(state);
 		job.setMessage(message);
 		job.setFinishingDate(LocalDateTime.now());
 		migrationJobRepo.save(job);
 	}
+	private Query createQueryByStartAndEndDate(LocalDateTime dataSetStartDate, LocalDateTime dataSetStopDate, Optional<Pageable> pageable) {
+		Query query = new Query();
 
-	private Query createQueryByStartAndEndDate(LocalDateTime dataSetStartDate, LocalDateTime dataSetStopDate){
-		Query countQuery = new Query();
-		Criteria criteria = Criteria.where("creationDate");
-		if (dataSetStartDate != null) {
-			criteria.gte(dataSetStartDate);
+		query.addCriteria(Criteria.where("hintSource").ne(null))
+			.addCriteria(Criteria.where("hintTextOriginal").ne(null))
+			.addCriteria(Criteria.where("hintCategory").in(List.of(HintDto.Category.values())).ne(null))
+			.addCriteria(Criteria.where("processId").ne(null));
+
+		Criteria dateCriteria = Criteria.where("creationDate").ne(null);
+		if (dataSetStartDate != null  ) {
+			dateCriteria.gte(dataSetStartDate);
 		}
-		if( dataSetStopDate != null){
-			criteria.lte(dataSetStopDate);
+		if(dataSetStopDate != null){
+			dateCriteria.lte(dataSetStopDate);
 		}
-		if (dataSetStartDate != null || dataSetStopDate != null ){
-			countQuery.addCriteria(criteria);
-		}
-		return countQuery;
+		query.addCriteria(dateCriteria);
+		pageable.ifPresent(query::with);
+		return query;
 	}
-
 }

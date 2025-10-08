@@ -16,6 +16,9 @@ public class MigrationJobEntity {
 	@Column(name = "message")
 	private String message;
 
+	@Column(name = "last_merged_point")
+	private String lastMergedPoint;
+
 	@Column(name = "data_set_start_date")
 	private LocalDateTime dataSetStartDate;
 
@@ -127,13 +130,22 @@ public class MigrationJobEntity {
 		this.processedItems = processedItems;
 	}
 
+	public String getLastMergedPoint() {
+		return lastMergedPoint;
+	}
+
+	public void setLastMergedPoint(String lastMergedPoint) {
+		this.lastMergedPoint = lastMergedPoint;
+	}
+
 	public static Builder builder() {
 		return new Builder();
 	}
 
 	public static final class Builder {
-		private long id;
+		private Long id;
 		private String message;
+		private  String lastMergedPoint;
 		private LocalDateTime dataSetStartDate;
 		private LocalDateTime dataSetStopDate;
 		private LocalDateTime creationDate;
@@ -151,6 +163,11 @@ public class MigrationJobEntity {
 		}
 
 		public Builder message(String message) {
+			this.message = message;
+			return this;
+		}
+
+		public  Builder lastMergedPoint(String lastMergedPoint) {
 			this.message = message;
 			return this;
 		}
@@ -199,6 +216,7 @@ public class MigrationJobEntity {
 			MigrationJobEntity migrationJobEntity = new MigrationJobEntity();
 			migrationJobEntity.id = id;
 			migrationJobEntity.setMessage(message);
+			migrationJobEntity.setLastMergedPoint(lastMergedPoint);
 			migrationJobEntity.setDataSetStartDate(dataSetStartDate);
 			migrationJobEntity.setDataSetStopDate(dataSetStopDate);
 			migrationJobEntity.setCreationDate(creationDate);

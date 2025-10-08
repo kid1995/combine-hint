@@ -8,7 +8,9 @@ import de.signaliduna.elpa.hint.adapter.database.model.HintEntity;
 import de.signaliduna.elpa.hint.adapter.database.model.MigrationErrorEntity;
 import de.signaliduna.elpa.hint.adapter.database.model.MigrationJobEntity;
 import de.signaliduna.elpa.hint.adapter.mapper.HintMapper;
+import de.signaliduna.elpa.hint.core.model.ValidationResult;
 import de.signaliduna.elpa.hint.util.HintTestDataGenerator;
+import de.signaliduna.elpa.hint.util.MigrationTestDataGenerator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -30,6 +32,7 @@ import org.springframework.data.mongodb.core.query.Query;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Stream;
@@ -51,10 +54,8 @@ class MigrationServiceTest {
 	private MigrationErrorRepo migrationErrorRepo;
 	@Spy
 	private HintMapper hintMapper = Mappers.getMapper(HintMapper.class);
-
 	@InjectMocks
 	private MigrationService migrationService;
-
 	private MigrationJobEntity testJob;
 
 	@BeforeEach
@@ -65,7 +66,6 @@ class MigrationServiceTest {
 	@Nested
 	@DisplayName("startMigration")
 	class StartMigration {
-
 		@Test
 		@DisplayName("should migrate all hints successfully")
 		void shouldMigrateAllHintsSuccessfully() throws ExecutionException, InterruptedException {
@@ -79,16 +79,13 @@ class MigrationServiceTest {
 				.thenReturn(Collections.emptyList()); // This return need to end recursion
 			when(mongoTemplate.count(any(Query.class), eq(HintDao.class))).thenReturn((long) hintDaos.size());
 			when(hintRepository.existsByMongoUUID(anyString())).thenReturn(false);
-
 			// When
 			CompletableFuture<Long> future = migrationService.startMigration(testJob);
 			Long jobId = future.get();
-
 			// Then
 			assertThat(jobId).isEqualTo(testJob.getId());
 			verify(hintRepository, times(2)).save(any(HintEntity.class));
 			verify(migrationErrorRepo, never()).save(any());
-
 			ArgumentCaptor<MigrationJobEntity> jobCaptor = ArgumentCaptor.forClass(MigrationJobEntity.class);
 			verify(migrationJobRepo, atLeastOnce()).save(jobCaptor.capture());
 			assertThat(jobCaptor.getValue().getState()).isEqualTo(MigrationJobEntity.STATE.COMPLETED);
@@ -104,10 +101,8 @@ class MigrationServiceTest {
 				.thenReturn(Collections.emptyList());
 			when(mongoTemplate.count(any(Query.class), eq(HintDao.class))).thenReturn(1L);
 			when(hintRepository.existsByMongoUUID(existingHint.id())).thenReturn(true);
-
 			// When
 			migrationService.startMigration(testJob).get();
-
 			// Then
 			verify(hintRepository, never()).save(any(HintEntity.class));
 			verify(migrationErrorRepo, never()).save(any());
@@ -118,18 +113,14 @@ class MigrationServiceTest {
 		void shouldLogErrorOnDataIntegrityViolation() throws ExecutionException, InterruptedException {
 			// Given
 			HintDao hintMongoDataWithNullProcessId = HintTestDataGenerator.createHintDaoWithId("DataIntegrityViolationID");
-
 			when(mongoTemplate.find(any(Query.class), eq(HintDao.class)))
 				.thenReturn(List.of(hintMongoDataWithNullProcessId))
 				.thenReturn(Collections.emptyList());
-
 			when(mongoTemplate.count(any(Query.class), eq(HintDao.class))).thenReturn(1L);
 			when(hintRepository.existsByMongoUUID(hintMongoDataWithNullProcessId.id())).thenReturn(false);
 			when(hintRepository.save(any(HintEntity.class))).thenThrow(new DataIntegrityViolationException("Test Exception"));
-
 			// When
 			migrationService.startMigration(testJob).get();
-
 			// Then
 			verify(hintRepository, times(1)).save(any(HintEntity.class));
 			ArgumentCaptor<MigrationErrorEntity> errorCaptor = ArgumentCaptor.forClass(MigrationErrorEntity.class);
@@ -143,10 +134,8 @@ class MigrationServiceTest {
 		void shouldHandleGeneralException() throws ExecutionException, InterruptedException {
 			// Given
 			when(mongoTemplate.find(any(Query.class), eq(HintDao.class))).thenThrow(new RuntimeException("Mongo is down"));
-
 			// When
 			migrationService.startMigration(testJob).get();
-
 			// Then
 			ArgumentCaptor<MigrationJobEntity> jobCaptor = ArgumentCaptor.forClass(MigrationJobEntity.class);
 			verify(migrationJobRepo, atLeastOnce()).save(jobCaptor.capture());
@@ -159,11 +148,9 @@ class MigrationServiceTest {
 		void shouldHandleExceptionDuringMigration() throws ExecutionException, InterruptedException {
 			// Given
 			when(mongoTemplate.find(any(Query.class), eq(HintDao.class))).thenThrow(new RuntimeException("Test exception"));
-
 			// When
 			CompletableFuture<Long> future = migrationService.startMigration(testJob);
 			future.get();
-
 			// Then
 			ArgumentCaptor<MigrationJobEntity> jobCaptor = ArgumentCaptor.forClass(MigrationJobEntity.class);
 			verify(migrationJobRepo, atLeastOnce()).save(jobCaptor.capture());
@@ -173,16 +160,20 @@ class MigrationServiceTest {
 		}
 
 		private static Stream<Arguments> provideDateRangeArguments() {
+			LocalDateTime now = LocalDateTime.now().withNano(0); // Align with MongoDB's precision
+			LocalDateTime yesterday = now.minusDays(1);
 			return Stream.of(
-				Arguments.of(LocalDateTime.now().minusDays(1), LocalDateTime.now(), true, "Both dates present"),
-				Arguments.of(null, LocalDateTime.now(), false, "Start date null"),
-				Arguments.of(LocalDateTime.now().minusDays(1), null, false, "End date null"));
+				Arguments.of(yesterday, now, "Both dates present"),
+				Arguments.of(yesterday, null, "Only start date present"),
+				Arguments.of(null, now, "Only end date present"),
+				Arguments.of(null, null, "No dates present")
+			);
 		}
 
 		@ParameterizedTest
 		@DisplayName("should filter by date range if provided")
 		@MethodSource("provideDateRangeArguments")
-		void shouldFilterByDateRange(LocalDateTime startDate, LocalDateTime stopDate, boolean shouldFilter, String testName) throws ExecutionException, InterruptedException {
+		void shouldFilterByDateRange(LocalDateTime startDate, LocalDateTime stopDate, String testName) throws ExecutionException, InterruptedException {
 			// Given
 			testJob.setDataSetStartDate(startDate);
 			testJob.setDataSetStopDate(stopDate);
@@ -195,11 +186,31 @@ class MigrationServiceTest {
 			ArgumentCaptor<Query> queryCaptor = ArgumentCaptor.forClass(Query.class);
 			verify(mongoTemplate, atLeast(1)).find(queryCaptor.capture(), eq(HintDao.class));
 			Query capturedQuery = queryCaptor.getValue();
-			if (shouldFilter) {
-				assertThat(capturedQuery.getQueryObject()).containsKey("creationDate");
+			// Spring Data MongoDB's Query.getQueryObject() returns a org.bson.Document
+			org.bson.Document queryObject = capturedQuery.getQueryObject();
+
+			// If at least one date is provided, the 'creationDate' filter should exist
+			assertThat(queryObject).containsKey("creationDate");
+			assertThat(queryObject.get("creationDate")).isInstanceOf(org.bson.Document.class);
+
+			org.bson.Document creationDateFilter = (org.bson.Document) queryObject.get("creationDate");
+
+			if (startDate != null) {
+				// If startDate is provided, it should contain the $gte operator
+				assertThat(creationDateFilter).containsEntry("$gte", startDate);
 			} else {
-				assertThat(capturedQuery.getQueryObject()).doesNotContainKey("creationDate");
+				// If startDate is null, it should not contain the $gte operator
+				assertThat(creationDateFilter).doesNotContainKey("$gte");
 			}
+
+			if (stopDate != null) {
+				// If stopDate is provided, it should contain the $lte operator
+				assertThat(creationDateFilter).containsEntry("$lte", stopDate);
+			} else {
+				// If stopDate is null, it should not contain the $lte operator
+				assertThat(creationDateFilter).doesNotContainKey("$lte");
+			}
+
 		}
 
 		@Test
@@ -214,10 +225,8 @@ class MigrationServiceTest {
 				.thenReturn(page2)
 				.thenReturn(Collections.emptyList());
 			when(mongoTemplate.count(any(Query.class), eq(HintDao.class))).thenReturn(totalHintDaos).thenReturn(totalHintDaos).thenReturn(0L);
-
 			// When
 			migrationService.startMigration(testJob).get();
-
 			// Then
 			verify(hintRepository, times((int) (totalHintDaos))).save(any(HintEntity.class));
 		}
@@ -226,7 +235,6 @@ class MigrationServiceTest {
 	@Nested
 	@DisplayName("fixUnresolvedErrors")
 	class FixUnresolvedErrors {
-
 		@Test
 		@DisplayName("should reprocess and resolve errors")
 		void shouldReprocessAndResolveErrors() {
@@ -234,20 +242,16 @@ class MigrationServiceTest {
 			MigrationJobEntity oldJob = MigrationJobEntity.builder().id(2L).build();
 			HintDao hintToFix = HintTestDataGenerator.createHintDaoWithId("fixId");
 			MigrationErrorEntity error = MigrationErrorEntity.builder().mongoUUID(hintToFix.id()).resolved(false).job(oldJob).build();
-
 			when(migrationErrorRepo.findByJob_IdAndResolved(2L, false)).thenReturn(List.of(error));
 			when(hintRepository.existsByMongoUUID(hintToFix.id())).thenReturn(false);
 			when(mongoTemplate.findById(hintToFix.id(), HintDao.class)).thenReturn(hintToFix);
-
 			// When
 			migrationService.fixUnresolvedErrors(testJob, 2L);
-
 			// Then
 			verify(hintRepository).save(any(HintEntity.class));
 			ArgumentCaptor<MigrationErrorEntity> errorCaptor = ArgumentCaptor.forClass(MigrationErrorEntity.class);
 			verify(migrationErrorRepo).save(errorCaptor.capture());
 			assertThat(errorCaptor.getValue().getResolved()).isTrue();
-
 			ArgumentCaptor<MigrationJobEntity> jobCaptor = ArgumentCaptor.forClass(MigrationJobEntity.class);
 			verify(migrationJobRepo).save(jobCaptor.capture());
 			assertThat(jobCaptor.getValue().getState()).isEqualTo(MigrationJobEntity.STATE.COMPLETED);
@@ -260,15 +264,12 @@ class MigrationServiceTest {
 			MigrationJobEntity oldJob = MigrationJobEntity.builder().id(2L).build();
 			HintDao hintToFix = HintTestDataGenerator.createHintDaoWithId("fixId");
 			MigrationErrorEntity error = MigrationErrorEntity.builder().mongoUUID(hintToFix.id()).resolved(false).job(oldJob).build();
-
 			when(migrationErrorRepo.findByJob_IdAndResolved(2L, false)).thenReturn(List.of(error));
 			when(hintRepository.existsByMongoUUID(hintToFix.id())).thenReturn(false);
 			when(mongoTemplate.findById(hintToFix.id(), HintDao.class)).thenReturn(hintToFix);
 			when(hintRepository.save(any(HintEntity.class))).thenThrow(new RuntimeException("Still broken"));
-
 			// When
 			migrationService.fixUnresolvedErrors(testJob, 2L);
-
 			// Then
 			ArgumentCaptor<MigrationErrorEntity> errorCaptor = ArgumentCaptor.forClass(MigrationErrorEntity.class);
 			verify(migrationErrorRepo).save(errorCaptor.capture());
@@ -285,10 +286,8 @@ class MigrationServiceTest {
 			MigrationErrorEntity error = MigrationErrorEntity.builder().mongoUUID("mongo123").resolved(false).job(oldJob).build();
 			when(migrationErrorRepo.findByJob_IdAndResolved(2L, false)).thenReturn(List.of(error));
 			when(hintRepository.existsByMongoUUID("mongo123")).thenReturn(true);
-
 			// When
 			migrationService.fixUnresolvedErrors(testJob, 2L);
-
 			// Then
 			verify(mongoTemplate, never()).findById(anyString(), any());
 			ArgumentCaptor<MigrationErrorEntity> errorCaptor = ArgumentCaptor.forClass(MigrationErrorEntity.class);
@@ -305,10 +304,8 @@ class MigrationServiceTest {
 			when(migrationErrorRepo.findByJob_IdAndResolved(2L, false)).thenReturn(List.of(error));
 			when(hintRepository.existsByMongoUUID("mongo123")).thenReturn(false);
 			when(mongoTemplate.findById("mongo123", HintDao.class)).thenReturn(null);
-
 			// When
 			migrationService.fixUnresolvedErrors(testJob, 2L);
-
 			// Then
 			ArgumentCaptor<MigrationErrorEntity> errorCaptor = ArgumentCaptor.forClass(MigrationErrorEntity.class);
 			verify(migrationErrorRepo).save(errorCaptor.capture());
@@ -321,15 +318,140 @@ class MigrationServiceTest {
 	void shouldHandleExceptionDuringErrorFixing() {
 		// Given
 		when(migrationErrorRepo.findByJob_IdAndResolved(anyLong(), eq(false))).thenThrow(new RuntimeException("Test exception"));
-
 		// When
 		migrationService.fixUnresolvedErrors(testJob, 123L);
-
 		// Then
 		ArgumentCaptor<MigrationJobEntity> jobCaptor = ArgumentCaptor.forClass(MigrationJobEntity.class);
 		verify(migrationJobRepo).save(jobCaptor.capture());
 		MigrationJobEntity captured = jobCaptor.getValue();
 		assertThat(captured.getState()).isEqualTo(MigrationJobEntity.STATE.BROKEN);
 		assertThat(captured.getMessage()).isEqualTo("Test exception");
+	}
+
+	@Nested
+	@DisplayName("validateMigration Tests")
+	class ValidateMigration {
+		@Test
+		@DisplayName("should return failure when job not found")
+		void shouldReturnFailureWhenJobNotFound() {
+			// Given
+			when(migrationJobRepo.findById(999L)).thenReturn(Optional.empty());
+			// When
+			ValidationResult result = migrationService.validateMigration(999L);
+			// Then
+			assertThat(result.successful()).isFalse();
+			assertThat(result.message()).contains("Job with ID 999 not found");
+		}
+
+		private static Stream<Arguments> provideNonCompletedStates() {
+			return Stream.of(
+				Arguments.of(MigrationJobEntity.STATE.RUNNING, "RUNNING"),
+				Arguments.of(MigrationJobEntity.STATE.BROKEN, "BROKEN")
+			);
+		}
+
+		@ParameterizedTest(name = "state = {1}")
+		@MethodSource("provideNonCompletedStates")
+		@DisplayName("should return failure when job state is not COMPLETED")
+		void shouldReturnFailureWhenJobNotCompleted(MigrationJobEntity.STATE state, String stateName) {
+			// Given
+			MigrationJobEntity job = MigrationJobEntity.builder()
+				.id(1L)
+				.state(state)
+				.build();
+			when(migrationJobRepo.findById(1L)).thenReturn(Optional.of(job));
+			// When
+			ValidationResult result = migrationService.validateMigration(1L);
+			// Then
+			assertThat(result.successful()).isFalse();
+			assertThat(result.message()).contains("Job state is " + stateName + ", not COMPLETED");
+		}
+
+		@Test
+		@DisplayName("should return failure when unresolved errors exist")
+		void shouldReturnFailureWhenUnresolvedErrorsExist() {
+			// Given
+			MigrationJobEntity job = MigrationJobEntity.builder()
+				.id(1L)
+				.state(MigrationJobEntity.STATE.COMPLETED)
+				.build();
+			List<MigrationErrorEntity> unresolvedErrors = List.of(
+				MigrationTestDataGenerator.createUnresolvedError(job),
+				MigrationTestDataGenerator.createUnresolvedError(job)
+			);
+			when(migrationJobRepo.findById(1L)).thenReturn(Optional.of(job));
+			when(migrationErrorRepo.findByJob_IdAndResolved(1L, false)).thenReturn(unresolvedErrors);
+			// When
+			ValidationResult result = migrationService.validateMigration(1L);
+			// Then
+			assertThat(result.successful()).isFalse();
+			assertThat(result.message()).contains("Found 2 unresolved errors");
+		}
+
+		@Test
+		@DisplayName("should return failure when item count mismatch")
+		void shouldReturnFailureWhenItemCountMismatch() {
+			// Given
+			MigrationJobEntity job = MigrationJobEntity.builder()
+				.id(1L)
+				.state(MigrationJobEntity.STATE.COMPLETED)
+				.totalItems(100L)
+				.build();
+			when(migrationJobRepo.findById(1L)).thenReturn(Optional.of(job));
+			when(migrationErrorRepo.findByJob_IdAndResolved(1L, false)).thenReturn(Collections.emptyList());
+			when(hintRepository.countByMongoUUIDIsNotNull()).thenReturn(95L);
+			// When
+			ValidationResult result = migrationService.validateMigration(1L);
+			// Then
+			assertThat(result.successful()).isFalse();
+			assertThat(result.message()).contains("Item count mismatch. Expected: 100, Found in PostgreSQL: 95");
+		}
+
+		@Test
+		@DisplayName("should return success when validation passes")
+		void shouldReturnSuccessWhenValidationPasses() {
+			// Given
+			MigrationJobEntity job = MigrationJobEntity.builder()
+				.id(1L)
+				.state(MigrationJobEntity.STATE.COMPLETED)
+				.totalItems(100L)
+				.build();
+			when(migrationJobRepo.findById(1L)).thenReturn(Optional.of(job));
+			when(migrationErrorRepo.findByJob_IdAndResolved(1L, false)).thenReturn(Collections.emptyList());
+			when(hintRepository.countByMongoUUIDIsNotNull()).thenReturn(100L);
+			// When
+			ValidationResult result = migrationService.validateMigration(1L);
+			// Then
+			assertThat(result.successful()).isTrue();
+			assertThat(result.message()).contains("validated successfully");
+		}
+	}
+
+	@Nested
+	@DisplayName("countMongoHints Tests")
+	class CountMongoHints {
+		private static Stream<Arguments> provideDateRangeCombinations() {
+			LocalDateTime now = LocalDateTime.now();
+			LocalDateTime lastWeek = now.minusDays(7);
+			return Stream.of(
+				Arguments.of(null, null, "both null"),
+				Arguments.of(lastWeek, null, "only start date"),
+				Arguments.of(null, now, "only end date"),
+				Arguments.of(lastWeek, now, "both dates present")
+			);
+		}
+
+		@ParameterizedTest(name = "{2}")
+		@MethodSource("provideDateRangeCombinations")
+		@DisplayName("should count with different date range combinations")
+		void shouldCountWithDifferentDateRanges(LocalDateTime startDate, LocalDateTime endDate, String scenario) {
+			// Given
+			when(mongoTemplate.count(any(Query.class), eq(HintDao.class))).thenReturn(42L);
+			// When
+			long count = migrationService.countMongoHints(startDate, endDate);
+			// Then
+			assertThat(count).isEqualTo(42L);
+			verify(mongoTemplate).count(any(Query.class), eq(HintDao.class));
+		}
 	}
 }

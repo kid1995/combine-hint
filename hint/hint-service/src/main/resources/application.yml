@@ -7,7 +7,7 @@ spring:
       write-dates-as-timestamps: false
   data:
     mongodb:
-      uri: mongodb://${MONGODB_USER:mongouser}:${MONGODB_PASSWORD:mongopass}@${MONGODB_HOSTS:localhost}/mongodb?${MONGODB_OPTIONS:=}
+      uri: mongodb://${MONGODB_USER:mongouser}:${MONGODB_PASSWORD:mongopass}@${MONGODB_HOSTS:localhost:27017}/mongodb?${MONGODB_OPTIONS:=}
       database: mongodb
       uuid-representation: standard
   cloud:
