@@ -70,15 +70,20 @@ class MigrationServiceTest {
 		@DisplayName("should migrate all hints successfully")
 		void shouldMigrateAllHintsSuccessfully() throws ExecutionException, InterruptedException {
 			// Given
-			List<HintDao> hintDaos = List.of(
-				HintTestDataGenerator.createHintDaoWithId("mongoId1"),
-				HintTestDataGenerator.createHintDaoWithId("mongoId2")
+			HintDao hintDao1 = HintTestDataGenerator.createHintDaoWithId("mongoId1");
+			HintDao hintDao2 = HintTestDataGenerator.createHintDaoWithId("mongoId2");
+			List<org.bson.Document> documents = List.of(
+				HintTestDataGenerator.createDocumentFromHintDao(hintDao1),
+				HintTestDataGenerator.createDocumentFromHintDao(hintDao2)
 			);
-			when(mongoTemplate.find(any(Query.class), eq(HintDao.class)))
-				.thenReturn(hintDaos)
+			when(mongoTemplate.find(any(Query.class), eq(org.bson.Document.class), anyString()))
+				.thenReturn(documents)
 				.thenReturn(Collections.emptyList()); // This return need to end recursion
-			when(mongoTemplate.count(any(Query.class), eq(HintDao.class))).thenReturn((long) hintDaos.size());
+			when(mongoTemplate.count(any(Query.class), eq(HintDao.class))).thenReturn((long) documents.size());
 			when(hintRepository.existsByMongoUUID(anyString())).thenReturn(false);
+			when(mongoTemplate.getConverter().read(eq(HintDao.class), any(org.bson.Document.class)))
+				.thenReturn(hintDao1, hintDao2);
+			when(mongoTemplate.getCollectionName(HintDao.class)).thenReturn("Hint");
 			// When
 			CompletableFuture<Long> future = migrationService.startMigration(testJob);
 			Long jobId = future.get();
@@ -96,11 +101,15 @@ class MigrationServiceTest {
 		void shouldSkipExistingHints() throws ExecutionException, InterruptedException {
 			// Given
 			HintDao existingHint = HintTestDataGenerator.createHintDaoWithId("existingId");
-			when(mongoTemplate.find(any(Query.class), eq(HintDao.class)))
-				.thenReturn(List.of(existingHint))
+			org.bson.Document document = HintTestDataGenerator.createDocumentFromHintDao(existingHint);
+			when(mongoTemplate.find(any(Query.class), eq(org.bson.Document.class), anyString()))
+				.thenReturn(List.of(document))
 				.thenReturn(Collections.emptyList());
 			when(mongoTemplate.count(any(Query.class), eq(HintDao.class))).thenReturn(1L);
 			when(hintRepository.existsByMongoUUID(existingHint.id())).thenReturn(true);
+			when(mongoTemplate.getConverter().read(eq(HintDao.class), any(org.bson.Document.class)))
+				.thenReturn(existingHint);
+			when(mongoTemplate.getCollectionName(HintDao.class)).thenReturn("Hint");
 			// When
 			migrationService.startMigration(testJob).get();
 			// Then
@@ -113,12 +122,16 @@ class MigrationServiceTest {
 		void shouldLogErrorOnDataIntegrityViolation() throws ExecutionException, InterruptedException {
 			// Given
 			HintDao hintMongoDataWithNullProcessId = HintTestDataGenerator.createHintDaoWithId("DataIntegrityViolationID");
-			when(mongoTemplate.find(any(Query.class), eq(HintDao.class)))
-				.thenReturn(List.of(hintMongoDataWithNullProcessId))
+			org.bson.Document document = HintTestDataGenerator.createDocumentFromHintDao(hintMongoDataWithNullProcessId);
+			when(mongoTemplate.find(any(Query.class), eq(org.bson.Document.class), anyString()))
+				.thenReturn(List.of(document))
 				.thenReturn(Collections.emptyList());
 			when(mongoTemplate.count(any(Query.class), eq(HintDao.class))).thenReturn(1L);
 			when(hintRepository.existsByMongoUUID(hintMongoDataWithNullProcessId.id())).thenReturn(false);
 			when(hintRepository.save(any(HintEntity.class))).thenThrow(new DataIntegrityViolationException("Test Exception"));
+			when(mongoTemplate.getConverter().read(eq(HintDao.class), any(org.bson.Document.class)))
+				.thenReturn(hintMongoDataWithNullProcessId);
+			when(mongoTemplate.getCollectionName(HintDao.class)).thenReturn("Hint");
 			// When
 			migrationService.startMigration(testJob).get();
 			// Then
@@ -133,7 +146,8 @@ class MigrationServiceTest {
 		@DisplayName("should handle general exception and set job to broken")
 		void shouldHandleGeneralException() throws ExecutionException, InterruptedException {
 			// Given
-			when(mongoTemplate.find(any(Query.class), eq(HintDao.class))).thenThrow(new RuntimeException("Mongo is down"));
+			when(mongoTemplate.find(any(Query.class), eq(org.bson.Document.class), anyString())).thenThrow(new RuntimeException("Mongo is down"));
+			when(mongoTemplate.getCollectionName(HintDao.class)).thenReturn("Hint");
 			// When
 			migrationService.startMigration(testJob).get();
 			// Then
@@ -147,7 +161,8 @@ class MigrationServiceTest {
 		@DisplayName("should handle exception during migration and set job to broken")
 		void shouldHandleExceptionDuringMigration() throws ExecutionException, InterruptedException {
 			// Given
-			when(mongoTemplate.find(any(Query.class), eq(HintDao.class))).thenThrow(new RuntimeException("Test exception"));
+			when(mongoTemplate.find(any(Query.class), eq(org.bson.Document.class), anyString())).thenThrow(new RuntimeException("Test exception"));
+			when(mongoTemplate.getCollectionName(HintDao.class)).thenReturn("Hint");
 			// When
 			CompletableFuture<Long> future = migrationService.startMigration(testJob);
 			future.get();
@@ -177,14 +192,15 @@ class MigrationServiceTest {
 			// Given
 			testJob.setDataSetStartDate(startDate);
 			testJob.setDataSetStopDate(stopDate);
-			when(mongoTemplate.find(any(Query.class), eq(HintDao.class))).thenReturn(Collections.emptyList());
+			when(mongoTemplate.find(any(Query.class), eq(org.bson.Document.class), anyString())).thenReturn(Collections.emptyList());
+			when(mongoTemplate.getCollectionName(HintDao.class)).thenReturn("Hint");
 
 			// When
 			migrationService.startMigration(testJob).get();
 
 			// Then
 			ArgumentCaptor<Query> queryCaptor = ArgumentCaptor.forClass(Query.class);
-			verify(mongoTemplate, atLeast(1)).find(queryCaptor.capture(), eq(HintDao.class));
+			verify(mongoTemplate, atLeast(1)).find(queryCaptor.capture(), eq(org.bson.Document.class), anyString());
 			Query capturedQuery = queryCaptor.getValue();
 			// Spring Data MongoDB's Query.getQueryObject() returns a org.bson.Document
 			org.bson.Document queryObject = capturedQuery.getQueryObject();
@@ -220,15 +236,66 @@ class MigrationServiceTest {
 			List<HintDao> page1 = HintTestDataGenerator.createMultipleHintDao(100);
 			List<HintDao> page2 = List.of(HintTestDataGenerator.createHintDaoWithId("mongoId2"));
 			long totalHintDaos = page1.size() + page2.size();
-			when(mongoTemplate.find(any(Query.class), eq(HintDao.class)))
-				.thenReturn(page1)
-				.thenReturn(page2)
+			
+			List<org.bson.Document> page1Docs = page1.stream()
+				.map(HintTestDataGenerator::createDocumentFromHintDao)
+				.toList();
+			List<org.bson.Document> page2Docs = page2.stream()
+				.map(HintTestDataGenerator::createDocumentFromHintDao)
+				.toList();
+			
+			when(mongoTemplate.find(any(Query.class), eq(org.bson.Document.class), anyString()))
+				.thenReturn(page1Docs)
+				.thenReturn(page2Docs)
 				.thenReturn(Collections.emptyList());
 			when(mongoTemplate.count(any(Query.class), eq(HintDao.class))).thenReturn(totalHintDaos).thenReturn(totalHintDaos).thenReturn(0L);
+			when(mongoTemplate.getCollectionName(HintDao.class)).thenReturn("Hint");
+			
+			// Mock converter to return HintDao objects
+			List<HintDao> allHints = new java.util.ArrayList<>(page1);
+			allHints.addAll(page2);
+			when(mongoTemplate.getConverter().read(eq(HintDao.class), any(org.bson.Document.class)))
+				.thenAnswer(invocation -> {
+					// Return hints sequentially
+					return allHints.remove(0);
+				});
+			
 			// When
 			migrationService.startMigration(testJob).get();
 			// Then
 			verify(hintRepository, times((int) (totalHintDaos))).save(any(HintEntity.class));
+		}
+
+		@Test
+		@DisplayName("should log parsing errors and continue migration")
+		void shouldLogParsingErrorsAndContinue() throws ExecutionException, InterruptedException {
+			// Given
+			HintDao validHint = HintTestDataGenerator.createHintDaoWithId("validId");
+			org.bson.Document validDoc = HintTestDataGenerator.createDocumentFromHintDao(validHint);
+			org.bson.Document invalidDoc = new org.bson.Document("_id", "invalidId");
+			
+			when(mongoTemplate.find(any(Query.class), eq(org.bson.Document.class), anyString()))
+				.thenReturn(List.of(invalidDoc, validDoc))
+				.thenReturn(Collections.emptyList());
+			when(mongoTemplate.count(any(Query.class), eq(HintDao.class))).thenReturn(2L);
+			when(mongoTemplate.getCollectionName(HintDao.class)).thenReturn("Hint");
+			
+			// Mock converter to throw exception for invalid document, succeed for valid
+			when(mongoTemplate.getConverter().read(eq(HintDao.class), any(org.bson.Document.class)))
+				.thenThrow(new RuntimeException("Parse error"))
+				.thenReturn(validHint);
+			
+			when(hintRepository.existsByMongoUUID("validId")).thenReturn(false);
+			
+			// When
+			migrationService.startMigration(testJob).get();
+			
+			// Then
+			verify(hintRepository, times(1)).save(any(HintEntity.class));
+			ArgumentCaptor<MigrationErrorEntity> errorCaptor = ArgumentCaptor.forClass(MigrationErrorEntity.class);
+			verify(migrationErrorRepo).save(errorCaptor.capture());
+			assertThat(errorCaptor.getValue().getMongoUUID()).isEqualTo("invalidId");
+			assertThat(errorCaptor.getValue().getMessage()).contains("Failed to parse HintDao");
 		}
 	}
 
