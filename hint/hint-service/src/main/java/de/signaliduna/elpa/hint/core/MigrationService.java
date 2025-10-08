@@ -13,7 +13,6 @@ import org.bson.Document;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.*;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
@@ -166,8 +165,6 @@ public class MigrationService {
 			hintEntity.setMongoUUID(hintDao.id());
 			hintRepository.save(hintEntity);
 			existingError.ifPresent(this::resolveError);
-		} catch (DataIntegrityViolationException e) {
-			logAndSaveError(job, "Data integrity violation: " + e.getMessage(), mongoId);
 		} catch (Exception e) {
 			logAndSaveError(job, e.getMessage(), mongoId);
 		}
