@@ -24,6 +24,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.convert.MongoConverter;
 import org.springframework.data.mongodb.core.query.Query;
@@ -411,6 +413,115 @@ class MigrationServiceTest {
 			// Then
 			assertThat(count).isEqualTo(42L);
 			verify(mongoTemplate).count(any(Query.class), eq(HintDao.class));
+		}
+	}
+
+	@Nested
+	@DisplayName("startValidation")
+	class StartValidation {
+
+		@Test
+		@DisplayName("should complete successfully when validation passes")
+		void shouldCompleteSuccessfully() throws ExecutionException, InterruptedException {
+			// Given
+			MigrationJobEntity validationJob = MigrationJobEntity.builder().id(1L).type(MigrationJobEntity.TYPE.VALIDATION).build();
+			List<HintDao> mongoHints = List.of(HintTestDataGenerator.createHintDaoWithId("1"));
+			Page<HintEntity> postgresHints = new PageImpl<>(List.of(HintTestDataGenerator.createHintEntityWithMongoId("1")));
+
+			when(mongoTemplate.count(any(Query.class), eq(HintDao.class))).thenReturn(1L);
+			when(mongoTemplate.find(any(Query.class), eq(HintDao.class))).thenReturn(mongoHints);
+			when(hintRepository.findByCreationDateBetweenAndMongoUUIDIsNotNull(any(), any(), any())).thenReturn(postgresHints);
+
+			// When
+			migrationService.startValidation(validationJob).get();
+
+			// Then
+			ArgumentCaptor<MigrationJobEntity> jobCaptor = ArgumentCaptor.forClass(MigrationJobEntity.class);
+			verify(migrationJobRepo, atLeastOnce()).save(jobCaptor.capture());
+			assertThat(jobCaptor.getValue().getState()).isEqualTo(MigrationJobEntity.STATE.COMPLETED);
+		}
+
+		@Test
+		@DisplayName("should break job when item counts mismatch")
+		void shouldBreakJobWhenCountsMismatch() throws ExecutionException, InterruptedException {
+			// Given
+			MigrationJobEntity validationJob = MigrationJobEntity.builder().id(1L).type(MigrationJobEntity.TYPE.VALIDATION).build();
+			List<HintDao> mongoHints = List.of(HintTestDataGenerator.createHintDaoWithId("1"));
+			Page<HintEntity> postgresHints = new PageImpl<>(Collections.emptyList());
+
+			when(mongoTemplate.count(any(Query.class), eq(HintDao.class))).thenReturn(1L);
+			when(mongoTemplate.find(any(Query.class), eq(HintDao.class))).thenReturn(mongoHints);
+			when(hintRepository.findByCreationDateBetweenAndMongoUUIDIsNotNull(any(), any(), any())).thenReturn(postgresHints);
+
+			// When
+			migrationService.startValidation(validationJob).get();
+
+			// Then
+			ArgumentCaptor<MigrationJobEntity> jobCaptor = ArgumentCaptor.forClass(MigrationJobEntity.class);
+			verify(migrationJobRepo, atLeastOnce()).save(jobCaptor.capture());
+			assertThat(jobCaptor.getValue().getState()).isEqualTo(MigrationJobEntity.STATE.BROKEN);
+		}
+
+		@Test
+		@DisplayName("should break job on immediate ID mismatch")
+		void shouldBreakJobOnIdMismatch() throws ExecutionException, InterruptedException {
+			// Given
+			MigrationJobEntity validationJob = MigrationJobEntity.builder().id(1L).type(MigrationJobEntity.TYPE.VALIDATION).build();
+			List<HintDao> mongoHints = List.of(HintTestDataGenerator.createHintDaoWithId("1"));
+			Page<HintEntity> postgresHints = new PageImpl<>(List.of(HintTestDataGenerator.createHintEntityWithMongoId("2")));
+
+			when(mongoTemplate.count(any(Query.class), eq(HintDao.class))).thenReturn(1L);
+			when(mongoTemplate.find(any(Query.class), eq(HintDao.class))).thenReturn(mongoHints);
+			when(hintRepository.findByCreationDateBetweenAndMongoUUIDIsNotNull(any(), any(), any())).thenReturn(postgresHints);
+
+			// When
+			migrationService.startValidation(validationJob).get();
+
+			// Then
+			ArgumentCaptor<MigrationJobEntity> jobCaptor = ArgumentCaptor.forClass(MigrationJobEntity.class);
+			verify(migrationJobRepo, atLeastOnce()).save(jobCaptor.capture());
+			assertThat(jobCaptor.getValue().getState()).isEqualTo(MigrationJobEntity.STATE.BROKEN);
+		}
+
+		@Test
+		@DisplayName("should log errors on field mismatch but complete job")
+		void shouldLogErrorsOnFieldMismatch() throws ExecutionException, InterruptedException {
+			// Given
+			MigrationJobEntity validationJob = MigrationJobEntity.builder().id(1L).type(MigrationJobEntity.TYPE.VALIDATION).build();
+			HintDao mongoHint = HintTestDataGenerator.createHintDaoWithId("1");
+			HintEntity postgresHint = HintTestDataGenerator.createHintEntityWithMongoId("1");
+			postgresHint.setMessage("different message");
+
+			when(mongoTemplate.count(any(Query.class), eq(HintDao.class))).thenReturn(1L);
+			when(mongoTemplate.find(any(Query.class), eq(HintDao.class))).thenReturn(List.of(mongoHint));
+			when(hintRepository.findByCreationDateBetweenAndMongoUUIDIsNotNull(any(), any(), any())).thenReturn(new PageImpl<>(List.of(postgresHint)));
+
+			// When
+			migrationService.startValidation(validationJob).get();
+
+			// Then
+			verify(migrationErrorRepo).save(any(MigrationErrorEntity.class));
+			ArgumentCaptor<MigrationJobEntity> jobCaptor = ArgumentCaptor.forClass(MigrationJobEntity.class);
+			verify(migrationJobRepo, atLeastOnce()).save(jobCaptor.capture());
+			assertThat(jobCaptor.getValue().getState()).isEqualTo(MigrationJobEntity.STATE.COMPLETED);
+		}
+
+		@Test
+		@DisplayName("should handle exceptions and break the job")
+		void shouldHandleExceptions() throws ExecutionException, InterruptedException {
+			// Given
+			MigrationJobEntity validationJob = MigrationJobEntity.builder().id(1L).type(MigrationJobEntity.TYPE.VALIDATION).build();
+			when(mongoTemplate.count(any(Query.class), eq(HintDao.class))).thenThrow(new RuntimeException("DB error"));
+
+			// When
+			migrationService.startValidation(validationJob).get();
+
+			// Then
+			ArgumentCaptor<MigrationJobEntity> jobCaptor = ArgumentCaptor.forClass(MigrationJobEntity.class);
+			verify(migrationJobRepo, atLeastOnce()).save(jobCaptor.capture());
+			MigrationJobEntity finalJob = jobCaptor.getValue();
+			assertThat(finalJob.getState()).isEqualTo(MigrationJobEntity.STATE.BROKEN);
+			assertThat(finalJob.getMessage()).contains("DB error");
 		}
 	}
 }

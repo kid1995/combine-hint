@@ -117,6 +117,12 @@ public class HintTestDataGenerator {
 			.build();
 	}
 
+	public static HintEntity createHintEntityWithMongoId(String mongoUUID){
+		HintEntity hintEntity = createInfoHintEntity();
+		hintEntity.setMongoUUID(mongoUUID);
+		return hintEntity;
+	}
+
 	public static HintEntity createInfoHintEntity() {
 		return hintMapper.dtoToEntity(createInfoHintDto());
 	}

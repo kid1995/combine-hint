@@ -8,6 +8,7 @@ import de.signaliduna.elpa.hint.adapter.database.model.HintEntity;
 import de.signaliduna.elpa.hint.adapter.database.model.MigrationErrorEntity;
 import de.signaliduna.elpa.hint.adapter.database.model.MigrationJobEntity;
 import de.signaliduna.elpa.hint.adapter.mapper.HintMapper;
+import de.signaliduna.elpa.hint.core.model.ValidationResult;
 import de.signaliduna.elpa.hint.model.HintDto;
 import org.bson.Document;
 import org.slf4j.Logger;
@@ -79,17 +80,17 @@ public class MigrationService {
 	}
 
 	@Async
-	public void startValidation(MigrationJobEntity job) {
-		CompletableFuture.supplyAsync(() -> {
+	public CompletableFuture<Boolean> startValidation(MigrationJobEntity job) {
+    return CompletableFuture.supplyAsync(() -> {
 			try {
 				long totalItems = countMongoHints(job.getDataSetStartDate(), job.getDataSetStopDate());
 				job.setTotalItems(totalItems);
 				job.setProcessedItems(0L);
 				migrationJobRepo.save(job);
-				boolean successMigrate = processValidation(job, FIRST_PAGE_REQUEST);
-				String validationJobMsg = successMigrate ? "Migration completed successfully" : "Migration failed";
-				updateJobState(job, MigrationJobEntity.STATE.COMPLETED, validationJobMsg);
-				return successMigrate;
+				ValidationResult validationResult = processValidation(job, FIRST_PAGE_REQUEST);
+				MigrationJobEntity.STATE validationJobState = validationResult.successful() ? MigrationJobEntity.STATE.COMPLETED : MigrationJobEntity.STATE.BROKEN;
+				updateJobState(job, validationJobState, validationResult.message());
+				return validationResult.successful();
 			} catch (Exception e) {
 				updateJobState(job, MigrationJobEntity.STATE.BROKEN, String.format(ERROR_STRING_FORMAT, e.getMessage(), Arrays.toString(e.getStackTrace())));
 				return false;
@@ -139,20 +140,19 @@ public class MigrationService {
 		}
 	}
 
-	private boolean processValidation(MigrationJobEntity job, Pageable pageable) {
+	private ValidationResult processValidation(MigrationJobEntity job, Pageable pageable) {
 		Query mongoQuery = createQueryByStartAndEndDate(job.getDataSetStartDate(), job.getDataSetStopDate(), Optional.of(pageable));
 		List<HintDao> hintDaos = mongoTemplate.find(mongoQuery, HintDao.class);
 		Page<HintEntity> hintEntitysPage = hintRepository.findByCreationDateBetweenAndMongoUUIDIsNotNull(job.getDataSetStartDate(), job.getDataSetStopDate(), pageable);
 		List<HintEntity> hintEntitys = hintEntitysPage.getContent();
 
 		if (hintDaos.size() != hintEntitys.size()) {
-			updateJobState(job, MigrationJobEntity.STATE.BROKEN, "Mismatch in number of elements between MongoDB and Postgres.");
-			return false;
+			return new ValidationResult(false, "Mismatch in number of elements between MongoDB and Postgres.");
 		}
 
 		for (int i = 0; i < hintDaos.size() ; i++) {
 				if(!compareHintAfterMigration(job, hintDaos.get(i), hintEntitys.get(i))) {
-					return  false;
+					return new ValidationResult(false, String.format("Mismatch id between mongo und postgres element. hintDao: %s - hintEntity %s", hintDaos.get(i), hintEntitys.get(i)));
 				}
 		}
 		job.setProcessedItems(job.getProcessedItems() + hintEntitys.size());
@@ -160,7 +160,7 @@ public class MigrationService {
 		if(hintEntitysPage.hasNext()){
 			return processValidation(job, pageable.next());
 		}
-		return  true;
+		return new ValidationResult(true, "Migration completed successfully.");
 	}
 
 	private boolean compareHintAfterMigration(MigrationJobEntity job, HintDao hintDao, HintEntity hintEntity) {

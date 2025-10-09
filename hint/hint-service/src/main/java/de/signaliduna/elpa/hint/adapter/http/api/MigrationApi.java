@@ -5,8 +5,6 @@ import de.signaliduna.elpa.hint.adapter.database.MigrationJobRepo;
 import de.signaliduna.elpa.hint.adapter.database.model.MigrationErrorEntity;
 import de.signaliduna.elpa.hint.adapter.database.model.MigrationJobEntity;
 import de.signaliduna.elpa.hint.core.MigrationService;
-import de.signaliduna.elpa.hint.core.model.ValidationResult;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -47,7 +45,7 @@ public class MigrationApi {
 		return ResponseEntity.accepted().body(job.getId());
 	}
 
-	@GetMapping("/validate")
+	@PostMapping("/validate")
 	public ResponseEntity<Long> validateMigration(@RequestParam(required = false) LocalDateTime dataSetStartDate, @RequestParam LocalDateTime dataSetEndDate) {
 		MigrationJobEntity job = migrationJobRepo.save(MigrationJobEntity.builder()
 			.dataSetStartDate(dataSetStartDate)
