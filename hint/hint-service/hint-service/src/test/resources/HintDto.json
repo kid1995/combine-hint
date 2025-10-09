@@ -1,0 +1,10 @@
+{
+  "hintSource": "ELISA",
+  "message": "Test",
+  "hintCategory": "BLOCKER",
+  "showToUser": true,
+  "processId": "E1234",
+  "creationDate": "2023-05-22T09:01:02",
+	"processVersion": "1",
+	"resourceId": "resourceId-1"
+}

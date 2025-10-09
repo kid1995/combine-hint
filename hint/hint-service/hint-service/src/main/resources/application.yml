@@ -1,0 +1,193 @@
+spring:
+  main:
+    banner-mode: off
+  jackson:
+    default-property-inclusion: non_null
+    serialization:
+      write-dates-as-timestamps: false
+  data:
+    mongodb:
+      uri: mongodb://${MONGODB_USER:mongouser}:${MONGODB_PASSWORD:mongopass}@${MONGODB_HOSTS:localhost:27017}/mongodb?${MONGODB_OPTIONS:=}
+      database: mongodb
+      uuid-representation: standard
+  cloud:
+    function:
+      definition: hintCreated
+    stream:
+      function:
+        autodetect: false
+      bindings:
+        hintCreated-in-0:
+          destination: ${topics.hintCreated}
+          group: ${KAFKA_CONSUMER_GROUP:kafka-elpa-hint}
+          consumer:
+            max-attempts: 1
+      kafka:
+        binder:
+          brokers: ${KAFKA_BROKERS:localhost:9092}
+          enableObservation: true
+          configuration:
+            sasl:
+              jaas:
+                enabled: ${KAFKA_JAAS_ENABLED:false}
+                config: org.apache.kafka.common.security.scram.ScramLoginModule required username="${KAFKA_USER}" password="${KAFKA_PASSWORD}";
+              mechanism: ${KAFKA_SASL_MECHANISM:PLAIN}
+            security:
+              user: ${KAFKA_USER}
+              password: ${KAFKA_PASSWORD}
+              protocol: ${KAFKA_PROTOCOL:PLAINTEXT}
+              saslMechanism: ${KAFKA_SASL_MECHANISM:PLAIN}
+          consumerProperties:
+            auto-offset-reset: earliest
+  servlet:
+    multipart:
+      max-file-size: 1MB
+      max-request-size: 1MB
+  flyway:
+    locations: ${FLYWAY_LOCATIONS:db/migration}
+    validateMigrationNaming: true
+    schemas: ${postgres.schema}
+    placeholders:
+      schema: ${postgres.schema}
+      role: ${FLYWAY_ROLE:elpapg_role_hint_admin}
+    baselineOnMigrate: true
+    enabled: ${FLYWAY_ENABLED:true}
+  datasource:
+    url: ${POSTGRES_URL:jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB_NAME:postgresql}}
+    username: ${POSTGRES_USER:db_user}
+    password: ${POSTGRES_PASSWORD:db_password}
+    hikari:
+      #Defaults are taken from https://github.com/brettwooldridge/HikariCP
+      maximum-pool-size: ${DATABASE_CONNECTION_POOL_MAX_SIZE:4} # Wir haben unseren Use-Case nicht viele parallele anfragen, weil die Application in nur einem Thread auf die DB zugreift.
+      minimum-idle: ${DATABASE_CONNECTION_POOL_MIN_SIZE:1}
+      idle-timeout: 30000
+      schema: ${postgres.schema}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: ${postgres.schema}
+    database: postgresql
+
+postgres:
+  schema: ${POSTGRES_SCHEMA_NAME:hint}
+
+topics:
+  hintCreated: elpa-hint-created${KAFKA_TOPIC_SUFFIX:}
+
+com:
+  c4-soft:
+    springaddons:
+      oidc:
+        resourceserver:
+          cors[0]:
+            allowed-methods:
+              - POST
+              - GET
+              - OPTIONS
+            allowed-headers:
+              - origin
+              - content-type
+              - X-Requested-With
+              - accept
+              - authorization
+              - consumer-name
+              - consumer-token
+              - consumer
+          permit-all:
+            - /docs/swagger-ui/**
+            - /api-docs/**
+            - /health
+            - /health/readiness
+            - /health/liveness
+            - /v3/api-docs/**
+            - /api-docs
+            - /docs/rest
+            - /metrics/prometheus
+            - /springwolf/**
+        ops[0]:
+          iss: ${AUTH_URL:https://employee.login.int.signal-iduna.org/}
+
+authorization:
+  users: ${AUTH_USERS:S000325}
+  migration_users: ${MIGRATION_USERS:U167653}
+
+management:
+  tracing:
+    enabled: true
+  endpoints:
+    web:
+      base-path: /
+      exposure:
+        include: health,info,mappings,metrics,prometheus
+      path-mapping:
+        prometheus: metrics/prometheus
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+  server:
+    port: 8081
+  health:
+    readinessstate:
+      enabled: true
+    livenessstate:
+      enabled: true
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+
+server:
+  servlet:
+    context-path: /api
+    jsp:
+      init-parameters:
+        listings: false
+  port: '8080'
+  error:
+    whitelabel:
+      enabled: 'false'
+  tomcat:
+    basedir: ${java.io.tmpdir}/tomcat
+  session:
+    cookie:
+      same-site: strict
+      secure: true
+      http-only: true
+  forward-headers-strategy: native
+  server-header:
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    enabled: ${SWAGGER_ENABLED:false}
+    path: /docs/rest
+    operations-sorter: method
+  paths-to-match: /hints,/hints/**
+
+springwolf:
+  enabled: true
+  docket:
+    base-package: "de.signaliduna.elpa.adapter.message"
+    info:
+      title: hint
+      version: 1.0.0
+    servers:
+      kafka:
+        protocol: kafka
+        host: ${KAFKA_BROKERS:localhost:9092}
+logging:
+  level:
+    root: ${LOG_LEVEL:INFO}
+    org:
+      springframework:
+        security: INFO
+      apache:
+        kafka: ERROR
+    de:
+      signaliduna: ${LOG_LEVEL_SI:${logging.level.root}}
+  config: classpath:${LOGBACK_FILE:logback-plain.xml}

@@ -1,0 +1,22 @@
+spring:
+  cloud:
+    stream:
+      kafka:
+        binder:
+          brokers: ${KAFKA_BROKERS:localhost:9092}
+          enableObservation: true
+          configuration:
+            security:
+              protocol: ${KAFKA_SECURITY_PROTOCOL:SASL_PLAINTEXT}
+            sasl:
+              mechanism: ${KAFKA_SASL_MECHANISM:OAUTHBEARER}
+              jaas:
+                config: org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginModule required clientId="${KAFKA_OAUTH_CLIENT_ID:workload-client}" clientSecret="${KAFKA_OAUTH_CLIENT_SECRET:workload-secret}";
+              login:
+                callback:
+                  handler:
+                    class: org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginCallbackHandler
+              oauthbearer:
+                token:
+                  endpoint:
+                    url: ${KAFKA_OAUTH_TOKEN_ENDPOINT_URL}
