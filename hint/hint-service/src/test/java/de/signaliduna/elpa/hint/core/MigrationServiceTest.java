@@ -8,9 +8,7 @@ import de.signaliduna.elpa.hint.adapter.database.model.HintEntity;
 import de.signaliduna.elpa.hint.adapter.database.model.MigrationErrorEntity;
 import de.signaliduna.elpa.hint.adapter.database.model.MigrationJobEntity;
 import de.signaliduna.elpa.hint.adapter.mapper.HintMapper;
-import de.signaliduna.elpa.hint.core.model.ValidationResult;
 import de.signaliduna.elpa.hint.util.HintTestDataGenerator;
-import de.signaliduna.elpa.hint.util.MigrationTestDataGenerator;
 import org.bson.Document;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -33,7 +31,6 @@ import org.springframework.data.mongodb.core.query.Query;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Stream;
@@ -387,105 +384,6 @@ class MigrationServiceTest {
 		MigrationJobEntity captured = jobCaptor.getValue();
 		assertThat(captured.getState()).isEqualTo(MigrationJobEntity.STATE.BROKEN);
 		assertThat(captured.getMessage()).startsWith("Test exception");
-	}
-
-	@Nested
-	@DisplayName("validateMigration Tests")
-	class ValidateMigration {
-		@Test
-		@DisplayName("should return failure when job not found")
-		void shouldReturnFailureWhenJobNotFound() {
-			// Given
-			when(migrationJobRepo.findById(999L)).thenReturn(Optional.empty());
-			// When
-			ValidationResult result = migrationService.validateMigration(999L);
-			// Then
-			assertThat(result.successful()).isFalse();
-			assertThat(result.message()).contains("Job with ID 999 not found");
-		}
-
-		private static Stream<Arguments> provideNonCompletedStates() {
-			return Stream.of(
-				Arguments.of(MigrationJobEntity.STATE.RUNNING, "RUNNING"),
-				Arguments.of(MigrationJobEntity.STATE.BROKEN, "BROKEN")
-			);
-		}
-
-		@ParameterizedTest(name = "state = {1}")
-		@MethodSource("provideNonCompletedStates")
-		@DisplayName("should return failure when job state is not COMPLETED")
-		void shouldReturnFailureWhenJobNotCompleted(MigrationJobEntity.STATE state, String stateName) {
-			// Given
-			MigrationJobEntity job = MigrationJobEntity.builder()
-				.id(1L)
-				.state(state)
-				.build();
-			when(migrationJobRepo.findById(1L)).thenReturn(Optional.of(job));
-			// When
-			ValidationResult result = migrationService.validateMigration(1L);
-			// Then
-			assertThat(result.successful()).isFalse();
-			assertThat(result.message()).contains("Job state is " + stateName + ", not COMPLETED");
-		}
-
-		@Test
-		@DisplayName("should return failure when unresolved errors exist")
-		void shouldReturnFailureWhenUnresolvedErrorsExist() {
-			// Given
-			MigrationJobEntity job = MigrationJobEntity.builder()
-				.id(1L)
-				.state(MigrationJobEntity.STATE.COMPLETED)
-				.build();
-			List<MigrationErrorEntity> unresolvedErrors = List.of(
-				MigrationTestDataGenerator.createUnresolvedError(job),
-				MigrationTestDataGenerator.createUnresolvedError(job)
-			);
-			when(migrationJobRepo.findById(1L)).thenReturn(Optional.of(job));
-			when(migrationErrorRepo.findByJob_IdAndResolved(1L, false)).thenReturn(unresolvedErrors);
-			// When
-			ValidationResult result = migrationService.validateMigration(1L);
-			// Then
-			assertThat(result.successful()).isFalse();
-			assertThat(result.message()).contains("Found 2 unresolved errors");
-		}
-
-		@Test
-		@DisplayName("should return failure when item count mismatch")
-		void shouldReturnFailureWhenItemCountMismatch() {
-			// Given
-			MigrationJobEntity job = MigrationJobEntity.builder()
-				.id(1L)
-				.state(MigrationJobEntity.STATE.COMPLETED)
-				.totalItems(100L)
-				.build();
-			when(migrationJobRepo.findById(1L)).thenReturn(Optional.of(job));
-			when(migrationErrorRepo.findByJob_IdAndResolved(1L, false)).thenReturn(Collections.emptyList());
-			when(hintRepository.countByMongoUUIDIsNotNull()).thenReturn(95L);
-			// When
-			ValidationResult result = migrationService.validateMigration(1L);
-			// Then
-			assertThat(result.successful()).isFalse();
-			assertThat(result.message()).contains("Item count mismatch. Expected: 100, Found in PostgreSQL: 95");
-		}
-
-		@Test
-		@DisplayName("should return success when validation passes")
-		void shouldReturnSuccessWhenValidationPasses() {
-			// Given
-			MigrationJobEntity job = MigrationJobEntity.builder()
-				.id(1L)
-				.state(MigrationJobEntity.STATE.COMPLETED)
-				.totalItems(100L)
-				.build();
-			when(migrationJobRepo.findById(1L)).thenReturn(Optional.of(job));
-			when(migrationErrorRepo.findByJob_IdAndResolved(1L, false)).thenReturn(Collections.emptyList());
-			when(hintRepository.countByMongoUUIDIsNotNull()).thenReturn(100L);
-			// When
-			ValidationResult result = migrationService.validateMigration(1L);
-			// Then
-			assertThat(result.successful()).isTrue();
-			assertThat(result.message()).contains("validated successfully");
-		}
 	}
 
 	@Nested

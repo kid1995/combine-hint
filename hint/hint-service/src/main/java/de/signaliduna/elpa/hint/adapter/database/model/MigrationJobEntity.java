@@ -16,9 +16,6 @@ public class MigrationJobEntity {
 	@Column(name = "message")
 	private String message;
 
-	@Column(name = "last_merged_point")
-	private String lastMergedPoint;
-
 	@Column(name = "data_set_start_date")
 	private LocalDateTime dataSetStartDate;
 
@@ -40,15 +37,20 @@ public class MigrationJobEntity {
 	@Enumerated(value=EnumType.STRING)
 	private MigrationJobEntity.STATE state;
 
+	@Enumerated(value=EnumType.STRING)
+	private MigrationJobEntity.TYPE type;
+
 	@OneToMany(mappedBy = "job", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
 	private List<MigrationErrorEntity> errors = new ArrayList<>();
 
-	protected MigrationJobEntity() {
-
-	}
+	protected MigrationJobEntity() {}
 
 	public enum STATE{
 		RUNNING, BROKEN, COMPLETED
+	}
+
+	public enum TYPE{
+		MIGRATION, FIXING, VALIDATION
 	}
 
 	public long getId() {
@@ -130,12 +132,12 @@ public class MigrationJobEntity {
 		this.processedItems = processedItems;
 	}
 
-	public String getLastMergedPoint() {
-		return lastMergedPoint;
+	public TYPE getType() {
+		return type;
 	}
 
-	public void setLastMergedPoint(String lastMergedPoint) {
-		this.lastMergedPoint = lastMergedPoint;
+	public void setType(TYPE type) {
+		this.type = type;
 	}
 
 	public static Builder builder() {
@@ -145,15 +147,15 @@ public class MigrationJobEntity {
 	public static final class Builder {
 		private Long id;
 		private String message;
-		private  String lastMergedPoint;
 		private LocalDateTime dataSetStartDate;
 		private LocalDateTime dataSetStopDate;
 		private LocalDateTime creationDate;
 		private LocalDateTime finishingDate;
 		private STATE state;
-		private List<MigrationErrorEntity> errors = new ArrayList<>();
+		private final List<MigrationErrorEntity> errors = new ArrayList<>();
 		private Long totalItems;
 		private Long processedItems;
+		private TYPE type;
 
 		private Builder() {}
 
@@ -163,11 +165,6 @@ public class MigrationJobEntity {
 		}
 
 		public Builder message(String message) {
-			this.message = message;
-			return this;
-		}
-
-		public  Builder lastMergedPoint(String lastMergedPoint) {
 			this.message = message;
 			return this;
 		}
@@ -202,13 +199,8 @@ public class MigrationJobEntity {
 			return this;
 		}
 
-		public Builder processedItems(Long processedItems) {
-			this.processedItems = processedItems;
-			return this;
-		}
-
-		public Builder errors(List<MigrationErrorEntity> errors) {
-			this.errors = errors;
+		public  Builder type(TYPE type) {
+			this.type = type;
 			return this;
 		}
 
@@ -216,7 +208,6 @@ public class MigrationJobEntity {
 			MigrationJobEntity migrationJobEntity = new MigrationJobEntity();
 			migrationJobEntity.id = id;
 			migrationJobEntity.setMessage(message);
-			migrationJobEntity.setLastMergedPoint(lastMergedPoint);
 			migrationJobEntity.setDataSetStartDate(dataSetStartDate);
 			migrationJobEntity.setDataSetStopDate(dataSetStopDate);
 			migrationJobEntity.setCreationDate(creationDate);
@@ -224,6 +215,7 @@ public class MigrationJobEntity {
 			migrationJobEntity.setState(state);
 			migrationJobEntity.setErrors(errors);
 			migrationJobEntity.setTotalItems(totalItems);
+			migrationJobEntity.setType(type);
 			migrationJobEntity.setProcessedItems(processedItems);
 			return migrationJobEntity;
 		}

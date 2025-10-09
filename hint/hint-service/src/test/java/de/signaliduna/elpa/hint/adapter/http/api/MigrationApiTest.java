@@ -7,7 +7,6 @@ import de.signaliduna.elpa.hint.adapter.database.MigrationJobRepo;
 import de.signaliduna.elpa.hint.adapter.database.model.MigrationJobEntity;
 import de.signaliduna.elpa.hint.config.WebSecurityConfig;
 import de.signaliduna.elpa.hint.core.MigrationService;
-import de.signaliduna.elpa.hint.core.model.ValidationResult;
 import de.signaliduna.elpa.hint.util.MigrationTestDataGenerator;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -239,39 +238,5 @@ class MigrationApiTest {
 			.andExpect(content().string("250"));
 
 		verify(migrationService).countMongoHints(any(LocalDateTime.class), any(LocalDateTime.class));
-	}
-
-	@Test
-	@DisplayName("should return OK when validation is successful")
-	@WithJwt(MIGRATION_USER_JSON_TOKEN)
-	void shouldReturnOkWhenValidationSuccessful() throws Exception {
-		// Given
-		ValidationResult successResult = new ValidationResult(true, "Validation passed");
-		when(migrationService.validateMigration(1L)).thenReturn(successResult);
-
-		// When & Then
-		mockMvc.perform(get("/migration/validate/1"))
-			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.successful").value(true))
-			.andExpect(jsonPath("$.message").value("Validation passed"));
-
-		verify(migrationService).validateMigration(1L);
-	}
-
-	@Test
-	@DisplayName("should return EXPECTATION_FAILED when validation fails")
-	@WithJwt(MIGRATION_USER_JSON_TOKEN)
-	void shouldReturnExpectationFailedWhenValidationFails() throws Exception {
-		// Given
-		ValidationResult failureResult = new ValidationResult(false, "Validation failed");
-		when(migrationService.validateMigration(2L)).thenReturn(failureResult);
-
-		// When & Then
-		mockMvc.perform(get("/migration/validate/2"))
-			.andExpect(status().isExpectationFailed())
-			.andExpect(jsonPath("$.successful").value(false))
-			.andExpect(jsonPath("$.message").value("Validation failed"));
-
-		verify(migrationService).validateMigration(2L);
 	}
 }

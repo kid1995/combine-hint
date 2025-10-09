@@ -5,7 +5,7 @@ create table if not exists migration_job
 (
 	id                  bigint primary key generated always as identity not null,
 	message             text,
-	last_merged_point   text,
+	type								text																						not null,
 	data_set_start_date timestamp,
 	data_set_end_date   timestamp,
 	creation_date       timestamp                                       not null,
@@ -22,7 +22,7 @@ create table if not exists migration_error
 	message    					text,
 	mongo_uuid 					text,
 	resolved						boolean,
-	job							    bigint																						not null
+	job							    bigint																					not null
 );
 
 alter table migration_error

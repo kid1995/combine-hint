@@ -113,9 +113,6 @@ authorization:
   users: ${AUTH_USERS:S000325}
   migration_users: ${MIGRATION_USERS:U167653}
 
-migration:
-  batch_size: ${MIGRATION_BATCH_SIZE:100}
-
 management:
   tracing:
     enabled: true

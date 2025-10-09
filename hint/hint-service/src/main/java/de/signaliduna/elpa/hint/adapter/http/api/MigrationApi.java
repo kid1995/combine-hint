@@ -41,19 +41,23 @@ public class MigrationApi {
 			.dataSetStopDate(dataSetEndDate)
 			.creationDate(LocalDateTime.now())
 			.state(MigrationJobEntity.STATE.RUNNING)
+			.type(MigrationJobEntity.TYPE.MIGRATION)
 			.build());
 		migrationService.startMigration(job);
 		return ResponseEntity.accepted().body(job.getId());
 	}
 
-	@GetMapping("/validate/{jobId}")
-	public ResponseEntity<ValidationResult> validateMigration(@PathVariable Long jobId) {
-		ValidationResult result = migrationService.validateMigration(jobId);
-		if (result.successful()) {
-			return ResponseEntity.ok(result);
-		} else {
-			return ResponseEntity.status(HttpStatus.EXPECTATION_FAILED).body(result);
-		}
+	@GetMapping("/validate")
+	public ResponseEntity<Long> validateMigration(@RequestParam(required = false) LocalDateTime dataSetStartDate, @RequestParam LocalDateTime dataSetEndDate) {
+		MigrationJobEntity job = migrationJobRepo.save(MigrationJobEntity.builder()
+			.dataSetStartDate(dataSetStartDate)
+			.dataSetStopDate(dataSetEndDate)
+			.state(MigrationJobEntity.STATE.RUNNING)
+			.type(MigrationJobEntity.TYPE.VALIDATION)
+			.build()
+		);
+		migrationService.startValidation(job);
+		return ResponseEntity.accepted().body(job.getId());
 	}
 
 	@GetMapping("/jobs")
@@ -81,6 +85,7 @@ public class MigrationApi {
 		MigrationJobEntity job = migrationJobRepo.save(MigrationJobEntity.builder()
 			.creationDate(LocalDateTime.now())
 			.state(MigrationJobEntity.STATE.RUNNING)
+			.type(MigrationJobEntity.TYPE.FIXING)
 			.build());
 		migrationService.fixUnresolvedErrors(job, jobId);
 		return ResponseEntity.accepted().body(job.getId());
