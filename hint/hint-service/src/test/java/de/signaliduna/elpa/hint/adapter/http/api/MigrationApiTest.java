@@ -9,6 +9,7 @@ import de.signaliduna.elpa.hint.config.WebSecurityConfig;
 import de.signaliduna.elpa.hint.core.MigrationService;
 import de.signaliduna.elpa.hint.util.MigrationTestDataGenerator;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,7 +30,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(controllers = MigrationApi.class, properties = {
 	"authorization.users=HINT_USER",
@@ -51,192 +53,261 @@ class MigrationApiTest {
 	private static final String MIGRATION_USER_JSON_TOKEN = "jwt/migration-user-access-token.json";
 	private static final String REGULAR_USER_JSON_TOKEN = "jwt/normal-user-access-token.json";
 
-	@Test
-	@DisplayName("POST /start - should be forbidden for regular user")
-	@WithJwt(REGULAR_USER_JSON_TOKEN)
-	void startMigration_forbidden_by_regular_user() throws Exception {
-		mockMvc.perform(post("/migration/start"))
-			.andExpect(status().isForbidden());
+	@Nested
+	@DisplayName("Unauthorized Access")
+	class UnauthorizedAccess {
+
+		@Test
+		@DisplayName("All endpoints should be unauthorized without JWT")
+		void allEndpointsUnauthorized() throws Exception {
+			mockMvc.perform(post("/migration/start")).andExpect(status().isUnauthorized());
+			mockMvc.perform(get("/migration/jobs")).andExpect(status().isUnauthorized());
+			mockMvc.perform(get("/migration/jobs/1")).andExpect(status().isUnauthorized());
+			mockMvc.perform(get("/migration/errors")).andExpect(status().isUnauthorized());
+			mockMvc.perform(get("/migration/errors/1")).andExpect(status().isUnauthorized());
+			mockMvc.perform(post("/migration/fix/1")).andExpect(status().isUnauthorized());
+			mockMvc.perform(post("/migration/validate")).andExpect(status().isUnauthorized());
+		}
 	}
 
-	@Test
-	@DisplayName("POST /start - should be forbidden for user, who have no token")
-	@WithMockUser
-	void startMigration_forbidden_by_not_having_token() throws Exception {
+	@Nested
+	@DisplayName("Migration User Access")
+	class MigrationUserAccess {
 
-		mockMvc.perform(post("/migration/start"))
-			.andExpect(status().isForbidden());
+		@Nested
+		@DisplayName("POST /start")
+		class StartMigration {
+
+			@Test
+			@DisplayName("should be accepted for migration user")
+			@WithJwt(MIGRATION_USER_JSON_TOKEN)
+			void startMigrationAccepted() throws Exception {
+				MigrationJobEntity savedJob = MigrationTestDataGenerator.createJobWithId(1L);
+				savedJob.setDataSetStartDate(LocalDateTime.of(2024, 1, 1, 0, 0, 0));
+				savedJob.setDataSetStopDate(LocalDateTime.of(2024, 1, 31, 23, 59, 59));
+
+				when(migrationJobRepo.save(any(MigrationJobEntity.class))).thenReturn(savedJob);
+				when(migrationService.startMigration(any(MigrationJobEntity.class)))
+					.thenReturn(CompletableFuture.completedFuture(1L));
+
+				mockMvc.perform(post("/migration/start")
+						.param("dataSetStartDate", "2024-01-01T00:00:00")
+						.param("dataSetEndDate", "2024-01-31T23:59:59"))
+					.andExpect(status().isAccepted())
+					.andExpect(content().string("1"));
+
+				ArgumentCaptor<MigrationJobEntity> jobCaptor = ArgumentCaptor.forClass(MigrationJobEntity.class);
+				verify(migrationJobRepo).save(jobCaptor.capture());
+				MigrationJobEntity capturedJob = jobCaptor.getValue();
+				assertThat(capturedJob.getDataSetStartDate()).isEqualTo(LocalDateTime.of(2024, 1, 1, 0, 0, 0));
+				assertThat(capturedJob.getDataSetStopDate()).isEqualTo(LocalDateTime.of(2024, 1, 31, 23, 59, 59));
+				assertThat(capturedJob.getState()).isEqualTo(MigrationJobEntity.STATE.RUNNING);
+			}
+
+			@Test
+			@DisplayName("should handle migration without date range")
+			@WithJwt(MIGRATION_USER_JSON_TOKEN)
+			void startMigrationWithoutDateRange() throws Exception {
+				MigrationJobEntity savedJob = MigrationTestDataGenerator.createRunningJob();
+				savedJob.setId(3L);
+				savedJob.setDataSetStartDate(null);
+				savedJob.setDataSetStopDate(null);
+
+				when(migrationJobRepo.save(any(MigrationJobEntity.class))).thenReturn(savedJob);
+				when(migrationService.startMigration(any(MigrationJobEntity.class)))
+					.thenReturn(CompletableFuture.completedFuture(3L));
+
+				mockMvc.perform(post("/migration/start"))
+					.andExpect(status().isAccepted())
+					.andExpect(content().string("3"));
+			}
+		}
+
+		@Nested
+		@DisplayName("POST /validate")
+		class ValidateMigration {
+			@Test
+			@DisplayName("should be accepted for migration user")
+			@WithJwt(MIGRATION_USER_JSON_TOKEN)
+			void validateMigrationAccepted() throws Exception {
+				MigrationJobEntity savedJob = MigrationTestDataGenerator.createJobWithId(1L);
+				savedJob.setDataSetStartDate(LocalDateTime.of(2024, 1, 1, 0, 0, 0));
+				savedJob.setDataSetStopDate(LocalDateTime.of(2024, 1, 31, 23, 59, 59));
+
+				when(migrationJobRepo.save(any(MigrationJobEntity.class))).thenReturn(savedJob);
+				when(migrationService.startValidation(any(MigrationJobEntity.class)))
+					.thenReturn(CompletableFuture.completedFuture(true));
+
+				mockMvc.perform(post("/migration/validate")
+						.param("dataSetStartDate", "2024-01-01T00:00:00")
+						.param("dataSetEndDate", "2024-01-31T23:59:59"))
+					.andExpect(status().isAccepted())
+					.andExpect(content().string("1"));
+
+				ArgumentCaptor<MigrationJobEntity> jobCaptor = ArgumentCaptor.forClass(MigrationJobEntity.class);
+				verify(migrationJobRepo).save(jobCaptor.capture());
+				MigrationJobEntity capturedJob = jobCaptor.getValue();
+				assertThat(capturedJob.getDataSetStartDate()).isEqualTo(LocalDateTime.of(2024, 1, 1, 0, 0, 0));
+				assertThat(capturedJob.getDataSetStopDate()).isEqualTo(LocalDateTime.of(2024, 1, 31, 23, 59, 59));
+				assertThat(capturedJob.getState()).isEqualTo(MigrationJobEntity.STATE.RUNNING);
+				assertThat(capturedJob.getType()).isEqualTo(MigrationJobEntity.TYPE.VALIDATION);
+			}
+		}
+
+		@Nested
+		@DisplayName("GET /jobs")
+		class GetJobs {
+
+			@Test
+			@DisplayName("should return jobs for migration user")
+			@WithJwt(MIGRATION_USER_JSON_TOKEN)
+			void getJobsOk() throws Exception {
+				mockMvc.perform(get("/migration/jobs"))
+					.andExpect(status().isOk());
+			}
+
+			@Test
+			@DisplayName("should return specific job for migration user")
+			@WithJwt(MIGRATION_USER_JSON_TOKEN)
+			void getJobByIdOk() throws Exception {
+				MigrationJobEntity completedJob = MigrationTestDataGenerator.createCompletedJob();
+				when(migrationJobRepo.findById(completedJob.getId())).thenReturn(Optional.of(completedJob));
+
+				mockMvc.perform(get("/migration/jobs/" + completedJob.getId()))
+					.andExpect(status().isOk());
+			}
+
+			@Test
+			@DisplayName("should return 404 when job not found")
+			@WithJwt(MIGRATION_USER_JSON_TOKEN)
+			void getJobByIdNotFound() throws Exception {
+				when(migrationJobRepo.findById(999L)).thenReturn(Optional.empty());
+
+				mockMvc.perform(get("/migration/jobs/999"))
+					.andExpect(status().isNotFound());
+			}
+		}
+
+		@Nested
+		@DisplayName("POST /fix/{jobId}")
+		class FixErrors {
+			@Test
+			@DisplayName("should be accepted for migration user")
+			@WithJwt(MIGRATION_USER_JSON_TOKEN)
+			void fixErrorsAccepted() throws Exception {
+				MigrationJobEntity newJob = MigrationTestDataGenerator.createJobWithId(2L);
+
+				when(migrationJobRepo.save(any(MigrationJobEntity.class))).thenReturn(newJob);
+
+				mockMvc.perform(post("/migration/fix/1"))
+					.andExpect(status().isAccepted())
+					.andExpect(content().string("2"));
+
+				verify(migrationService).fixUnresolvedErrors(any(MigrationJobEntity.class), eq(1L));
+
+				ArgumentCaptor<MigrationJobEntity> jobCaptor = ArgumentCaptor.forClass(MigrationJobEntity.class);
+				verify(migrationJobRepo).save(jobCaptor.capture());
+				MigrationJobEntity capturedJob = jobCaptor.getValue();
+				assertThat(capturedJob.getState()).isEqualTo(MigrationJobEntity.STATE.RUNNING);
+				assertThat(capturedJob.getCreationDate()).isNotNull();
+			}
+		}
+
+		@Nested
+		@DisplayName("GET /errors")
+		class GetErrors {
+			@Test
+			@DisplayName("should return errors for migration user")
+			@WithJwt(MIGRATION_USER_JSON_TOKEN)
+			void getErrorsOk() throws Exception {
+				mockMvc.perform(get("/migration/errors"))
+					.andExpect(status().isOk());
+			}
+
+			@Test
+			@DisplayName("should return specific error for migration user")
+			@WithJwt(MIGRATION_USER_JSON_TOKEN)
+			void getErrorByIdOk() throws Exception {
+				when(migrationErrorRepo.findById(1L)).thenReturn(Optional.of(MigrationTestDataGenerator.createErrorWithMongoId("1", MigrationTestDataGenerator.createCompletedJob())));
+				mockMvc.perform(get("/migration/errors/1"))
+					.andExpect(status().isOk());
+			}
+		}
+
+		@Nested
+		@DisplayName("POST /count")
+		class CountMigrationItems {
+			@Test
+			@DisplayName("should count migration items")
+			@WithJwt(MIGRATION_USER_JSON_TOKEN)
+			void shouldCountWithBothDates() throws Exception {
+				when(migrationService.countMongoHints(any(LocalDateTime.class), any(LocalDateTime.class)))
+					.thenReturn(250L);
+
+				mockMvc.perform(post("/migration/count")
+						.param("dataSetStartDate", "2024-01-01T00:00:00")
+						.param("dataSetEndDate", "2024-01-31T23:59:59"))
+					.andExpect(status().isAccepted())
+					.andExpect(content().string("250"));
+
+				verify(migrationService).countMongoHints(any(LocalDateTime.class), any(LocalDateTime.class));
+			}
+		}
 	}
 
-	@Test
-	@DisplayName("POST /start - should be accepted for migration user")
-	@WithJwt(MIGRATION_USER_JSON_TOKEN)
-	void startMigration_accepted() throws Exception {
-		// Create a saved job entity with ID
-		MigrationJobEntity savedJob = MigrationTestDataGenerator.createJobWithId(1L);
-		savedJob.setDataSetStartDate(LocalDateTime.of(2024, 1, 1, 0, 0, 0));
-		savedJob.setDataSetStopDate(LocalDateTime.of(2024, 1, 31, 23, 59, 59));
+	@Nested
+	@DisplayName("Regular User Access (Forbidden)")
+	class RegularUserAccess {
 
-		// Mock the save to return the job with ID
-		when(migrationJobRepo.save(any(MigrationJobEntity.class))).thenReturn(savedJob);
+		@Test
+		@DisplayName("POST /start - should be forbidden for regular user")
+		@WithJwt(REGULAR_USER_JSON_TOKEN)
+		void startMigrationForbidden() throws Exception {
+			mockMvc.perform(post("/migration/start"))
+				.andExpect(status().isForbidden());
+		}
 
-		when(migrationService.startMigration(any(MigrationJobEntity.class)))
-			.thenReturn(CompletableFuture.completedFuture(1L));
+		@Test
+		@DisplayName("POST /validate - should be forbidden for regular user")
+		@WithJwt(REGULAR_USER_JSON_TOKEN)
+		void validateMigrationForbidden() throws Exception {
+			mockMvc.perform(post("/migration/validate"))
+				.andExpect(status().isForbidden());
+		}
 
-		mockMvc.perform(post("/migration/start")
-				.param("dataSetStartDate", "2024-01-01T00:00:00")
-				.param("dataSetEndDate", "2024-01-31T23:59:59"))
-			.andExpect(status().isAccepted())
-			.andExpect(content().string("1"));
 
-		// Verify the job was saved with correct parameters
-		ArgumentCaptor<MigrationJobEntity> jobCaptor = ArgumentCaptor.forClass(MigrationJobEntity.class);
-		verify(migrationJobRepo).save(jobCaptor.capture());
-		MigrationJobEntity capturedJob = jobCaptor.getValue();
-		assertThat(capturedJob.getDataSetStartDate()).isEqualTo(LocalDateTime.of(2024, 1, 1, 0, 0, 0));
-		assertThat(capturedJob.getDataSetStopDate()).isEqualTo(LocalDateTime.of(2024, 1, 31, 23, 59, 59));
-		assertThat(capturedJob.getState()).isEqualTo(MigrationJobEntity.STATE.RUNNING);
-	}
+		@Test
+		@DisplayName("POST /start - should be forbidden for user, who have no token")
+		@WithMockUser
+		void startMigrationForbiddenByNotHavingToken() throws Exception {
 
-	@Test
-	@DisplayName("POST /start - should handle migration without date range")
-	@WithJwt(MIGRATION_USER_JSON_TOKEN)
-	void startMigration_withoutDateRange() throws Exception {
-		// Create a saved job without date range
-		MigrationJobEntity savedJob = MigrationTestDataGenerator.createRunningJob();
-		savedJob.setId(3L);
-		savedJob.setDataSetStartDate(null);
-		savedJob.setDataSetStopDate(null);
+			mockMvc.perform(post("/migration/start"))
+				.andExpect(status().isForbidden());
+		}
 
-		when(migrationJobRepo.save(any(MigrationJobEntity.class))).thenReturn(savedJob);
-		when(migrationService.startMigration(any(MigrationJobEntity.class)))
-			.thenReturn(CompletableFuture.completedFuture(3L));
 
-		mockMvc.perform(post("/migration/start"))
-			.andExpect(status().isAccepted())
-			.andExpect(content().string("3"));
-	}
+		@Test
+		@DisplayName("GET /jobs - should be forbidden for regular user")
+		@WithJwt(REGULAR_USER_JSON_TOKEN)
+		void getJobsForbidden() throws Exception {
+			mockMvc.perform(get("/migration/jobs"))
+				.andExpect(status().isForbidden());
+		}
 
-	@Test
-	@DisplayName("GET /jobs - should be forbidden for regular user")
-	@WithJwt(REGULAR_USER_JSON_TOKEN)
-	void getJobs_forbidden() throws Exception {
-		mockMvc.perform(get("/migration/jobs"))
-			.andExpect(status().isForbidden());
-	}
+		@Test
+		@DisplayName("POST /fix/{jobId} - should be forbidden for regular user")
+		@WithJwt(REGULAR_USER_JSON_TOKEN)
+		void fixErrorsForbidden() throws Exception {
+			mockMvc.perform(post("/migration/fix/1"))
+				.andExpect(status().isForbidden());
+		}
 
-	@Test
-	@DisplayName("GET /jobs - should return jobs for migration user")
-	@WithJwt(MIGRATION_USER_JSON_TOKEN)
-	void getJobs_ok() throws Exception {
-		mockMvc.perform(get("/migration/jobs"))
-			.andExpect(status().isOk());
-	}
-
-	@Test
-	@DisplayName("GET /jobs/{jobId} - should return specific job for migration user")
-	@WithJwt(MIGRATION_USER_JSON_TOKEN)
-	void getJobById_ok() throws Exception {
-		MigrationJobEntity completedJob = MigrationTestDataGenerator.createCompletedJob();
-		when(migrationJobRepo.findById(completedJob.getId())).thenReturn(Optional.of(completedJob));
-
-		mockMvc.perform(get("/migration/jobs/" + completedJob.getId()))
-			.andExpect(status().isOk());
-	}
-
-	@Test
-	@DisplayName("GET /jobs/{jobId} - should return 404 when job not found")
-	@WithJwt(MIGRATION_USER_JSON_TOKEN)
-	void getJobById_notFound() throws Exception {
-		when(migrationJobRepo.findById(999L)).thenReturn(Optional.empty());
-
-		mockMvc.perform(get("/migration/jobs/999"))
-			.andExpect(status().isNotFound());
-	}
-
-	@Test
-	@DisplayName("POST /fix/{jobId} - should be accepted for migration user")
-	@WithJwt(MIGRATION_USER_JSON_TOKEN)
-	void fixErrors_accepted() throws Exception {
-		// Create a new job for fixing errors
-		MigrationJobEntity newJob = MigrationTestDataGenerator.createJobWithId(2L);
-
-		// Mock the save to return the job with ID
-		when(migrationJobRepo.save(any(MigrationJobEntity.class))).thenReturn(newJob);
-
-		mockMvc.perform(post("/migration/fix/1"))
-			.andExpect(status().isAccepted())
-			.andExpect(content().string("2"));
-
-		verify(migrationService).fixUnresolvedErrors(any(MigrationJobEntity.class), eq(1L));
-
-		// Verify the job was saved with correct state
-		ArgumentCaptor<MigrationJobEntity> jobCaptor = ArgumentCaptor.forClass(MigrationJobEntity.class);
-		verify(migrationJobRepo).save(jobCaptor.capture());
-		MigrationJobEntity capturedJob = jobCaptor.getValue();
-		assertThat(capturedJob.getState()).isEqualTo(MigrationJobEntity.STATE.RUNNING);
-		assertThat(capturedJob.getCreationDate()).isNotNull();
-	}
-
-	@Test
-	@DisplayName("POST /fix/{jobId} - should be forbidden for regular user")
-	@WithJwt(REGULAR_USER_JSON_TOKEN)
-	void fixErrors_forbidden() throws Exception {
-		mockMvc.perform(post("/migration/fix/1"))
-			.andExpect(status().isForbidden());
-	}
-
-	@Test
-	@DisplayName("GET /errors - should be forbidden for regular user")
-	@WithJwt(REGULAR_USER_JSON_TOKEN)
-	void getErrors_forbidden() throws Exception {
-		mockMvc.perform(get("/migration/errors"))
-			.andExpect(status().isForbidden());
-	}
-
-	@Test
-	@DisplayName("GET /errors - should return errors for migration user")
-	@WithJwt(MIGRATION_USER_JSON_TOKEN)
-	void getErrors_ok() throws Exception {
-		mockMvc.perform(get("/migration/errors"))
-			.andExpect(status().isOk());
-	}
-
-	@Test
-	@DisplayName("GET /errors/{errorId} - should return specific error for migration user")
-	@WithJwt(MIGRATION_USER_JSON_TOKEN)
-	void getErrorById_ok() throws Exception {
-		when(migrationErrorRepo.findById(1L)).thenReturn(Optional.of(MigrationTestDataGenerator.createErrorWithMongoId("1", MigrationTestDataGenerator.createCompletedJob())));
-		mockMvc.perform(get("/migration/errors/1"))
-			.andExpect(status().isOk());
-	}
-
-	@Test
-	@DisplayName("All endpoints should be unauthorized without JWT")
-	void allEndpoints_unauthorized() throws Exception {
-		mockMvc.perform(post("/migration/start")).andExpect(status().isUnauthorized());
-		mockMvc.perform(get("/migration/jobs")).andExpect(status().isUnauthorized());
-		mockMvc.perform(get("/migration/jobs/1")).andExpect(status().isUnauthorized());
-		mockMvc.perform(get("/migration/errors")).andExpect(status().isUnauthorized());
-		mockMvc.perform(get("/migration/errors/1")).andExpect(status().isUnauthorized());
-		mockMvc.perform(post("/migration/fix/1")).andExpect(status().isUnauthorized());
-	}
-
-	@Test
-	@DisplayName("should count migration items")
-	@WithJwt(MIGRATION_USER_JSON_TOKEN)
-	void shouldCountWithBothDates() throws Exception {
-		// Given
-		when(migrationService.countMongoHints(any(LocalDateTime.class), any(LocalDateTime.class)))
-			.thenReturn(250L);
-
-		// When & Then
-		mockMvc.perform(post("/migration/count")
-				.param("dataSetStartDate", "2024-01-01T00:00:00")
-				.param("dataSetEndDate", "2024-01-31T23:59:59"))
-			.andExpect(status().isAccepted())
-			.andExpect(content().string("250"));
-
-		verify(migrationService).countMongoHints(any(LocalDateTime.class), any(LocalDateTime.class));
+		@Test
+		@DisplayName("GET /errors - should be forbidden for regular user")
+		@WithJwt(REGULAR_USER_JSON_TOKEN)
+		void getErrorsForbidden() throws Exception {
+			mockMvc.perform(get("/migration/errors"))
+				.andExpect(status().isForbidden());
+		}
 	}
 }
