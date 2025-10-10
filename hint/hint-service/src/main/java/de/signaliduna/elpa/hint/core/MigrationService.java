@@ -21,15 +21,13 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
 @Service
 public class MigrationService {
 	private static final int BATCH_SIZE = 100;
-	private static final String CREATION_DATE_KEY ="creationDate";
+	private static final String CREATION_DATE_KEY = "creationDate";
 	private static final Pageable FIRST_PAGE_REQUEST = PageRequest.of(0, BATCH_SIZE, Sort.by(Sort.Direction.ASC, CREATION_DATE_KEY));
 	private static final String ERROR_STRING_FORMAT = "%s%n%s";
 
@@ -81,7 +79,7 @@ public class MigrationService {
 
 	@Async
 	public CompletableFuture<Boolean> startValidation(MigrationJobEntity job) {
-    return CompletableFuture.supplyAsync(() -> {
+		return CompletableFuture.supplyAsync(() -> {
 			try {
 				long totalItems = countMongoHints(job.getDataSetStartDate(), job.getDataSetStopDate());
 				job.setTotalItems(totalItems);
@@ -150,36 +148,49 @@ public class MigrationService {
 			return new ValidationResult(false, "Mismatch in number of elements between MongoDB and Postgres.");
 		}
 
-		for (int i = 0; i < hintDaos.size() ; i++) {
-				if(!compareHintAfterMigration(job, hintDaos.get(i), hintEntitys.get(i))) {
-					return new ValidationResult(false, String.format("Mismatch id between mongo und postgres element. hintDao: %s - hintEntity %s", hintDaos.get(i), hintEntitys.get(i)));
-				}
+		for (int i = 0; i < hintDaos.size(); i++) {
+			if (!hintDaos.get(i).id().equals(hintEntitys.get(i).getMongoUUID())) {
+				return new ValidationResult(false, String.format("Mismatch id between mongo und postgres element. hintDao: %s - hintEntity %s", hintDaos.get(i).id(), hintEntitys.get(i).getMongoUUID()));
+			}
+			compareHintAfterMigration(job, hintDaos.get(i), hintEntitys.get(i));
 		}
 		job.setProcessedItems(job.getProcessedItems() + hintEntitys.size());
 		migrationJobRepo.save(job);
-		if(hintEntitysPage.hasNext()){
+		if (hintEntitysPage.hasNext()) {
 			return processValidation(job, pageable.next());
 		}
-		return new ValidationResult(true, "Migration completed successfully.");
+		List<MigrationErrorEntity> migrationErrorEntities = migrationErrorRepo.findByJob_IdAndResolved(job.getId(), false);
+		if (migrationErrorEntities.isEmpty()) {
+			return new ValidationResult(true, "Migration completed successfully.");
+		} else  {
+			return new ValidationResult(false, "There are errors in migration process");
+		}
 	}
 
-	private boolean compareHintAfterMigration(MigrationJobEntity job, HintDao hintDao, HintEntity hintEntity) {
+	private void compareHintAfterMigration(MigrationJobEntity job, HintDao hintDao, HintEntity hintEntity) {
 		if (!hintDao.id().equals(hintEntity.getMongoUUID())) {
 			String errorMsg = String.format("Id mismatch: Sort or Query from DBs are not identical - hintMongoId: %s, postgresMongoUUID: %s", hintDao.id(), hintEntity.getMongoUUID());
 			logAndSaveError(job, errorMsg, hintDao.id());
-			return false;
+			return;
 		}
+
 		StringBuilder diffs = new StringBuilder();
-		if (!hintDao.hintSource().equals(hintEntity.getHintSource())) {
-			diffs.append("hintSource: Mongo='").append(hintDao.hintSource()).append("', Postgres='").append(hintEntity.getHintSource()).append("'; ");
-		}
-		if (!hintDao.hintTextOriginal().equals(hintEntity.getMessage())) {
-			diffs.append("message: Mongo='").append(hintDao.hintTextOriginal()).append("', Postgres='").append(hintEntity.getMessage()).append("'; ");
-		}
+		appendIfDifferent(diffs, "processId", hintDao.processId(), hintEntity.getProcessId());
+		appendIfDifferent(diffs, "hintCategory", hintDao.hintCategory(), hintEntity.getHintCategory());
+		appendIfDifferent(diffs, "hintSource", hintDao.hintSource(), hintEntity.getHintSource());
+		appendIfDifferent(diffs, "message", hintDao.hintTextOriginal(), hintEntity.getMessage());
 		if (!diffs.isEmpty()) {
 			logAndSaveError(job, String.format("Field mismatches for mongo_uuid %s: %s", hintDao.id(), diffs), hintDao.id());
-		} return true;
+		}
+	}
 
+	private void appendIfDifferent(StringBuilder diffs, String fieldName, Object mongoValue, Object postgresValue) {
+		if (!Objects.equals(mongoValue, postgresValue)) {
+			if (!diffs.isEmpty()) {
+				diffs.append("; ");
+			}
+			diffs.append(fieldName).append(": Mongo=").append(mongoValue).append(", Postgres=").append(postgresValue);
+		}
 	}
 
 	private void processSingleHint(MigrationJobEntity job, String mongoId, Optional<HintDao> optionalHintDao, Optional<MigrationErrorEntity> existingError) {

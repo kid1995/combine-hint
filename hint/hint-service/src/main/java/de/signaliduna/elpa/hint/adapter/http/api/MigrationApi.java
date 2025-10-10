@@ -46,7 +46,7 @@ public class MigrationApi {
 	}
 
 	@PostMapping("/validate")
-	public ResponseEntity<Long> validateMigration(@RequestParam(required = false) LocalDateTime dataSetStartDate, @RequestParam LocalDateTime dataSetEndDate) {
+	public ResponseEntity<Long> validateMigration(@RequestParam(required = false) LocalDateTime dataSetStartDate, @RequestParam(required = false) LocalDateTime dataSetEndDate) {
 		MigrationJobEntity job = migrationJobRepo.save(MigrationJobEntity.builder()
 			.dataSetStartDate(dataSetStartDate)
 			.dataSetStopDate(dataSetEndDate)
