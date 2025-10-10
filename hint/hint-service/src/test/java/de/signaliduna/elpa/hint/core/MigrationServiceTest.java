@@ -172,8 +172,8 @@ class MigrationServiceTest {
 			Document docWithoutId = new Document("processId", "123");
 			when(mongoTemplate.getCollectionName(HintDao.class)).thenReturn("Hint");
 			when(mongoTemplate.find(any(Query.class), eq(Document.class), eq("Hint")))
-					.thenReturn(List.of(docWithoutId))
-					.thenReturn(Collections.emptyList());
+				.thenReturn(List.of(docWithoutId))
+				.thenReturn(Collections.emptyList());
 
 			MongoConverter converter = mock(MongoConverter.class);
 			when(mongoTemplate.getConverter()).thenReturn(converter);
@@ -203,8 +203,8 @@ class MigrationServiceTest {
 
 			when(mongoTemplate.getCollectionName(HintDao.class)).thenReturn("Hint");
 			when(mongoTemplate.find(any(Query.class), eq(Document.class), eq("Hint")))
-					.thenReturn(List.of(document))
-					.thenReturn(Collections.emptyList());
+				.thenReturn(List.of(document))
+				.thenReturn(Collections.emptyList());
 
 			MongoConverter converter = mock(MongoConverter.class);
 			when(mongoTemplate.getConverter()).thenReturn(converter);
@@ -589,11 +589,11 @@ class MigrationServiceTest {
 
 		// NEW TEST CASE
 		@Test
-		@DisplayName("should log error on ID mismatch within compareHintAfterMigration")
+		@DisplayName("should break the job on ID mismatch")
 		void shouldLogErrorOnIdMismatchInComparison() throws ExecutionException, InterruptedException {
 			// Given
 			MigrationJobEntity validationJob = MigrationJobEntity.builder()
-					.id(1L).type(MigrationJobEntity.TYPE.VALIDATION).build();
+				.id(1L).type(MigrationJobEntity.TYPE.VALIDATION).build();
 
 			HintDao mongoHint1 = HintTestDataGenerator.createHintDaoWithId("id1");
 			HintDao mongoHint2 = HintTestDataGenerator.createHintDaoWithId("id2");
@@ -608,23 +608,13 @@ class MigrationServiceTest {
 			when(mongoTemplate.count(any(Query.class), eq(HintDao.class))).thenReturn(2L);
 			when(mongoTemplate.find(any(Query.class), eq(HintDao.class))).thenReturn(List.of(mongoHint1, mongoHint2));
 			when(hintRepository.findByCreationDateBetweenAndMongoUUIDIsNotNull(any(), any(), any()))
-					.thenReturn(new PageImpl<>(List.of(postgresHint1, postgresHint2)));
+				.thenReturn(new PageImpl<>(List.of(postgresHint1, postgresHint2)));
 
 			// When
 			CompletableFuture<Boolean> result = migrationService.startValidation(validationJob);
 			result.get();
 
 			// Then
-			ArgumentCaptor<MigrationErrorEntity> errorCaptor = ArgumentCaptor.forClass(MigrationErrorEntity.class);
-			// It should capture two errors, one for each mismatch
-			verify(migrationErrorRepo, times(2)).save(errorCaptor.capture());
-			List<MigrationErrorEntity> capturedErrors = errorCaptor.getAllValues();
-
-			assertThat(capturedErrors.getFirst().getMessage()).contains("Id mismatch: Sort or Query from DBs are not identical");
-			assertThat(capturedErrors.getFirst().getMongoUUID()).isEqualTo("id1");
-			assertThat(capturedErrors.get(1).getMessage()).contains("Id mismatch: Sort or Query from DBs are not identical");
-			assertThat(capturedErrors.get(1).getMongoUUID()).isEqualTo("id2");
-
 			ArgumentCaptor<MigrationJobEntity> jobCaptor = ArgumentCaptor.forClass(MigrationJobEntity.class);
 			verify(migrationJobRepo, atLeastOnce()).save(jobCaptor.capture());
 			assertThat(jobCaptor.getValue().getState()).isEqualTo(MigrationJobEntity.STATE.BROKEN);

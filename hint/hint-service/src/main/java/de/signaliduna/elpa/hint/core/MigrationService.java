@@ -168,12 +168,6 @@ public class MigrationService {
 	}
 
 	private void compareHintAfterMigration(MigrationJobEntity job, HintDao hintDao, HintEntity hintEntity) {
-		if (!hintDao.id().equals(hintEntity.getMongoUUID())) {
-			String errorMsg = String.format("Id mismatch: Sort or Query from DBs are not identical - hintMongoId: %s, postgresMongoUUID: %s", hintDao.id(), hintEntity.getMongoUUID());
-			logAndSaveError(job, errorMsg, hintDao.id());
-			return;
-		}
-
 		StringBuilder diffs = new StringBuilder();
 		appendIfDifferent(diffs, "processId", hintDao.processId(), hintEntity.getProcessId());
 		appendIfDifferent(diffs, "hintCategory", hintDao.hintCategory(), hintEntity.getHintCategory());
