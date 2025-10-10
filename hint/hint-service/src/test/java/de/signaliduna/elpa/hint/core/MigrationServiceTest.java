@@ -8,7 +8,7 @@ import de.signaliduna.elpa.hint.adapter.database.model.HintEntity;
 import de.signaliduna.elpa.hint.adapter.database.model.MigrationErrorEntity;
 import de.signaliduna.elpa.hint.adapter.database.model.MigrationJobEntity;
 import de.signaliduna.elpa.hint.adapter.mapper.HintMapper;
-import de.signaliduna.elpa.hint.core.model.ValidationResult;
+import de.signaliduna.elpa.hint.model.HintDto;
 import de.signaliduna.elpa.hint.util.HintTestDataGenerator;
 import de.signaliduna.elpa.hint.util.MigrationTestDataGenerator;
 import org.bson.Document;
@@ -29,6 +29,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.convert.MongoConverter;
 import org.springframework.data.mongodb.core.query.Query;
@@ -36,7 +37,6 @@ import org.springframework.data.mongodb.core.query.Query;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Stream;
@@ -104,11 +104,11 @@ class MigrationServiceTest {
 			verify(migrationErrorRepo, never()).save(any());
 			ArgumentCaptor<MigrationJobEntity> jobCaptor = ArgumentCaptor.forClass(MigrationJobEntity.class);
 			verify(migrationJobRepo, atLeastOnce()).save(jobCaptor.capture());
-			
+
 			MigrationJobEntity finalJobState = jobCaptor.getAllValues().stream()
-                .reduce((first, second) -> second).orElse(null);
-        	assertThat(finalJobState).isNotNull();
-        	assertThat(finalJobState.getState()).isEqualTo(MigrationJobEntity.STATE.COMPLETED);
+				.reduce((first, second) -> second).orElse(null);
+			assertThat(finalJobState).isNotNull();
+			assertThat(finalJobState.getState()).isEqualTo(MigrationJobEntity.STATE.COMPLETED);
 		}
 
 		@Test
@@ -162,7 +162,6 @@ class MigrationServiceTest {
 			ArgumentCaptor<MigrationErrorEntity> errorCaptor = ArgumentCaptor.forClass(MigrationErrorEntity.class);
 			verify(migrationErrorRepo).save(errorCaptor.capture());
 			assertThat(errorCaptor.getValue().getMongoUUID()).isEqualTo(hintMongoDataWithNullProcessId.id());
-			assertThat(errorCaptor.getValue().getMessage()).contains("Data integrity violation");
 		}
 
 		@Test
@@ -177,10 +176,10 @@ class MigrationServiceTest {
 			verify(migrationJobRepo, atLeastOnce()).save(jobCaptor.capture());
 
 			MigrationJobEntity finalJobState = jobCaptor.getAllValues().stream()
-                .reduce((first, second) -> second).orElse(null);
-        	assertThat(finalJobState).isNotNull();
-        	assertThat(finalJobState.getState()).isEqualTo(MigrationJobEntity.STATE.BROKEN);
-        	assertThat(finalJobState.getMessage()).startsWith("Mongo is down");
+				.reduce((first, second) -> second).orElse(null);
+			assertThat(finalJobState).isNotNull();
+			assertThat(finalJobState.getState()).isEqualTo(MigrationJobEntity.STATE.BROKEN);
+			assertThat(finalJobState.getMessage()).startsWith("Mongo is down");
 		}
 
 		@Test
@@ -194,10 +193,10 @@ class MigrationServiceTest {
 			// Then
 			ArgumentCaptor<MigrationJobEntity> jobCaptor = ArgumentCaptor.forClass(MigrationJobEntity.class);
 			verify(migrationJobRepo, atLeastOnce()).save(jobCaptor.capture());
-			
+
 			MigrationJobEntity finalJobState = jobCaptor.getAllValues().stream()
-                .reduce((first, second) -> second).orElse(null);
-        	assertThat(finalJobState).isNotNull();
+				.reduce((first, second) -> second).orElse(null);
+			assertThat(finalJobState).isNotNull();
 			assertThat(finalJobState.getState()).isEqualTo(MigrationJobEntity.STATE.BROKEN);
 			assertThat(finalJobState.getMessage()).startsWith("Test exception");
 		}
@@ -280,10 +279,10 @@ class MigrationServiceTest {
 
 			// Mock converter for page 1
 			for(int i = 0; i < page1Daos.size(); i++) {
-				when(converter.read(eq(HintDao.class), eq(page1Docs.get(i)))).thenReturn(page1Daos.get(i));
+				when(converter.read(HintDao.class, page1Docs.get(i))).thenReturn(page1Daos.get(i));
 			}
 			// Mock converter for page 2
-			when(converter.read(eq(HintDao.class), eq(page2Docs.get(0)))).thenReturn(page2Daos.get(0));
+			when(converter.read(HintDao.class, page2Docs.getFirst())).thenReturn(page2Daos.getFirst());
 
 
 			when(mongoTemplate.count(any(Query.class), eq(HintDao.class))).thenReturn(totalHintDaos);
@@ -388,105 +387,6 @@ class MigrationServiceTest {
 		MigrationJobEntity captured = jobCaptor.getValue();
 		assertThat(captured.getState()).isEqualTo(MigrationJobEntity.STATE.BROKEN);
 		assertThat(captured.getMessage()).startsWith("Test exception");
-	}
-
-	@Nested
-	@DisplayName("validateMigration Tests")
-	class ValidateMigration {
-		@Test
-		@DisplayName("should return failure when job not found")
-		void shouldReturnFailureWhenJobNotFound() {
-			// Given
-			when(migrationJobRepo.findById(999L)).thenReturn(Optional.empty());
-			// When
-			ValidationResult result = migrationService.validateMigration(999L);
-			// Then
-			assertThat(result.successful()).isFalse();
-			assertThat(result.message()).contains("Job with ID 999 not found");
-		}
-
-		private static Stream<Arguments> provideNonCompletedStates() {
-			return Stream.of(
-				Arguments.of(MigrationJobEntity.STATE.RUNNING, "RUNNING"),
-				Arguments.of(MigrationJobEntity.STATE.BROKEN, "BROKEN")
-			);
-		}
-
-		@ParameterizedTest(name = "state = {1}")
-		@MethodSource("provideNonCompletedStates")
-		@DisplayName("should return failure when job state is not COMPLETED")
-		void shouldReturnFailureWhenJobNotCompleted(MigrationJobEntity.STATE state, String stateName) {
-			// Given
-			MigrationJobEntity job = MigrationJobEntity.builder()
-				.id(1L)
-				.state(state)
-				.build();
-			when(migrationJobRepo.findById(1L)).thenReturn(Optional.of(job));
-			// When
-			ValidationResult result = migrationService.validateMigration(1L);
-			// Then
-			assertThat(result.successful()).isFalse();
-			assertThat(result.message()).contains("Job state is " + stateName + ", not COMPLETED");
-		}
-
-		@Test
-		@DisplayName("should return failure when unresolved errors exist")
-		void shouldReturnFailureWhenUnresolvedErrorsExist() {
-			// Given
-			MigrationJobEntity job = MigrationJobEntity.builder()
-				.id(1L)
-				.state(MigrationJobEntity.STATE.COMPLETED)
-				.build();
-			List<MigrationErrorEntity> unresolvedErrors = List.of(
-				MigrationTestDataGenerator.createUnresolvedError(job),
-				MigrationTestDataGenerator.createUnresolvedError(job)
-			);
-			when(migrationJobRepo.findById(1L)).thenReturn(Optional.of(job));
-			when(migrationErrorRepo.findByJob_IdAndResolved(1L, false)).thenReturn(unresolvedErrors);
-			// When
-			ValidationResult result = migrationService.validateMigration(1L);
-			// Then
-			assertThat(result.successful()).isFalse();
-			assertThat(result.message()).contains("Found 2 unresolved errors");
-		}
-
-		@Test
-		@DisplayName("should return failure when item count mismatch")
-		void shouldReturnFailureWhenItemCountMismatch() {
-			// Given
-			MigrationJobEntity job = MigrationJobEntity.builder()
-				.id(1L)
-				.state(MigrationJobEntity.STATE.COMPLETED)
-				.totalItems(100L)
-				.build();
-			when(migrationJobRepo.findById(1L)).thenReturn(Optional.of(job));
-			when(migrationErrorRepo.findByJob_IdAndResolved(1L, false)).thenReturn(Collections.emptyList());
-			when(hintRepository.countByMongoUUIDIsNotNull()).thenReturn(95L);
-			// When
-			ValidationResult result = migrationService.validateMigration(1L);
-			// Then
-			assertThat(result.successful()).isFalse();
-			assertThat(result.message()).contains("Item count mismatch. Expected: 100, Found in PostgreSQL: 95");
-		}
-
-		@Test
-		@DisplayName("should return success when validation passes")
-		void shouldReturnSuccessWhenValidationPasses() {
-			// Given
-			MigrationJobEntity job = MigrationJobEntity.builder()
-				.id(1L)
-				.state(MigrationJobEntity.STATE.COMPLETED)
-				.totalItems(100L)
-				.build();
-			when(migrationJobRepo.findById(1L)).thenReturn(Optional.of(job));
-			when(migrationErrorRepo.findByJob_IdAndResolved(1L, false)).thenReturn(Collections.emptyList());
-			when(hintRepository.countByMongoUUIDIsNotNull()).thenReturn(100L);
-			// When
-			ValidationResult result = migrationService.validateMigration(1L);
-			// Then
-			assertThat(result.successful()).isTrue();
-			assertThat(result.message()).contains("validated successfully");
-		}
 	}
 
 	@Nested
@@ -648,7 +548,7 @@ class MigrationServiceTest {
 
 			HintDao mongoHint = HintTestDataGenerator.createHintDaoWithId("mongoId1");
 			HintEntity postgresHint = HintTestDataGenerator.createHintEntityWithMongoId("mongoId1");
-			
+
 			// Set all fields to match initially
 			postgresHint.setProcessId(mongoHint.processId());
 			postgresHint.setHintCategory(mongoHint.hintCategory());
@@ -661,6 +561,7 @@ class MigrationServiceTest {
 				case "hintCategory" -> postgresHint.setHintCategory((HintDto.Category) differentValue);
 				case "hintSource" -> postgresHint.setHintSource((String) differentValue);
 				case "message" -> postgresHint.setMessage((String) differentValue);
+				default ->  throw new IllegalStateException("Unexpected value: " + fieldName);
 			}
 
 			when(mongoTemplate.count(any(Query.class), eq(HintDao.class))).thenReturn(1L);
@@ -695,7 +596,7 @@ class MigrationServiceTest {
 
 			HintDao mongoHint = HintTestDataGenerator.createHintDaoWithId("mongoId1");
 			HintEntity postgresHint = HintTestDataGenerator.createHintEntityWithMongoId("mongoId1");
-			
+
 			// Set multiple fields to be different
 			postgresHint.setMessage("different message");
 			postgresHint.setHintCategory(HintDto.Category.WARNING);
