@@ -9,6 +9,7 @@ import de.signaliduna.elpa.hint.adapter.database.model.MigrationErrorEntity;
 import de.signaliduna.elpa.hint.adapter.database.model.MigrationJobEntity;
 import de.signaliduna.elpa.hint.adapter.mapper.HintMapper;
 import de.signaliduna.elpa.hint.core.model.ValidationResult;
+import de.signaliduna.elpa.hint.model.HintDto;
 import de.signaliduna.elpa.hint.util.HintTestDataGenerator;
 import de.signaliduna.elpa.hint.util.MigrationTestDataGenerator;
 import org.bson.Document;
@@ -29,6 +30,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.convert.MongoConverter;
 import org.springframework.data.mongodb.core.query.Query;
@@ -104,11 +106,7 @@ class MigrationServiceTest {
 			verify(migrationErrorRepo, never()).save(any());
 			ArgumentCaptor<MigrationJobEntity> jobCaptor = ArgumentCaptor.forClass(MigrationJobEntity.class);
 			verify(migrationJobRepo, atLeastOnce()).save(jobCaptor.capture());
-			
-			MigrationJobEntity finalJobState = jobCaptor.getAllValues().stream()
-                .reduce((first, second) -> second).orElse(null);
-        	assertThat(finalJobState).isNotNull();
-        	assertThat(finalJobState.getState()).isEqualTo(MigrationJobEntity.STATE.COMPLETED);
+			assertThat(jobCaptor.getValue().getState()).isEqualTo(MigrationJobEntity.STATE.COMPLETED);
 		}
 
 		@Test
@@ -175,12 +173,8 @@ class MigrationServiceTest {
 			// Then
 			ArgumentCaptor<MigrationJobEntity> jobCaptor = ArgumentCaptor.forClass(MigrationJobEntity.class);
 			verify(migrationJobRepo, atLeastOnce()).save(jobCaptor.capture());
-
-			MigrationJobEntity finalJobState = jobCaptor.getAllValues().stream()
-                .reduce((first, second) -> second).orElse(null);
-        	assertThat(finalJobState).isNotNull();
-        	assertThat(finalJobState.getState()).isEqualTo(MigrationJobEntity.STATE.BROKEN);
-        	assertThat(finalJobState.getMessage()).startsWith("Mongo is down");
+			assertThat(jobCaptor.getValue().getState()).isEqualTo(MigrationJobEntity.STATE.BROKEN);
+			assertThat(jobCaptor.getValue().getMessage()).startsWith("Mongo is down");
 		}
 
 		@Test
@@ -194,12 +188,9 @@ class MigrationServiceTest {
 			// Then
 			ArgumentCaptor<MigrationJobEntity> jobCaptor = ArgumentCaptor.forClass(MigrationJobEntity.class);
 			verify(migrationJobRepo, atLeastOnce()).save(jobCaptor.capture());
-			
-			MigrationJobEntity finalJobState = jobCaptor.getAllValues().stream()
-                .reduce((first, second) -> second).orElse(null);
-        	assertThat(finalJobState).isNotNull();
-			assertThat(finalJobState.getState()).isEqualTo(MigrationJobEntity.STATE.BROKEN);
-			assertThat(finalJobState.getMessage()).startsWith("Test exception");
+			MigrationJobEntity captured = jobCaptor.getValue();
+			assertThat(captured.getState()).isEqualTo(MigrationJobEntity.STATE.BROKEN);
+			assertThat(captured.getMessage()).startsWith("Test exception");
 		}
 
 		private static Stream<Arguments> provideDateRangeArguments() {
@@ -529,7 +520,7 @@ class MigrationServiceTest {
 			verify(migrationJobRepo, atLeastOnce()).save(jobCaptor.capture());
 			MigrationJobEntity savedJob = jobCaptor.getValue();
 			assertThat(savedJob.getState()).isEqualTo(MigrationJobEntity.STATE.COMPLETED);
-			assertThat(savedJob.getMessage()).contains("Migration completed successfully.");
+			assertThat(savedJob.getMessage()).contains("validated successfully");
 			verify(migrationErrorRepo, never()).save(any());
 		}
 
