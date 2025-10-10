@@ -164,6 +164,66 @@ class MigrationServiceTest {
 			assertThat(errorCaptor.getValue().getMongoUUID()).isEqualTo(hintMongoDataWithNullProcessId.id());
 		}
 
+		// NEW TEST CASE
+		@Test
+		@DisplayName("should log error for document with missing _id")
+		void shouldLogErrorForDocumentWithMissingId() throws ExecutionException, InterruptedException {
+			// Given
+			Document docWithoutId = new Document("processId", "123");
+			when(mongoTemplate.getCollectionName(HintDao.class)).thenReturn("Hint");
+			when(mongoTemplate.find(any(Query.class), eq(Document.class), eq("Hint")))
+					.thenReturn(List.of(docWithoutId))
+					.thenReturn(Collections.emptyList());
+
+			MongoConverter converter = mock(MongoConverter.class);
+			when(mongoTemplate.getConverter()).thenReturn(converter);
+			// Simulate a conversion error because the document is incomplete
+			when(converter.read(HintDao.class, docWithoutId)).thenThrow(new RuntimeException("Conversion failed"));
+
+			when(mongoTemplate.count(any(Query.class), eq(HintDao.class))).thenReturn(1L);
+
+			// When
+			migrationService.startMigration(testJob).get();
+
+			// Then
+			ArgumentCaptor<MigrationErrorEntity> errorCaptor = ArgumentCaptor.forClass(MigrationErrorEntity.class);
+			verify(migrationErrorRepo).save(errorCaptor.capture());
+			MigrationErrorEntity capturedError = errorCaptor.getValue();
+			assertThat(capturedError.getMongoUUID()).isEqualTo("UNKNOWN_MONGO_ID");
+			assertThat(capturedError.getMessage()).contains("Failed to parse HintDao");
+		}
+
+		// NEW TEST CASE
+		@Test
+		@DisplayName("should log error on conversion failure")
+		void shouldLogErrorOnConversionFailure() throws ExecutionException, InterruptedException {
+			// Given
+			HintDao hintDao = HintTestDataGenerator.createHintDaoWithId("conversion-fail-id");
+			Document document = HintTestDataGenerator.createDocumentFromHintDao(hintDao);
+
+			when(mongoTemplate.getCollectionName(HintDao.class)).thenReturn("Hint");
+			when(mongoTemplate.find(any(Query.class), eq(Document.class), eq("Hint")))
+					.thenReturn(List.of(document))
+					.thenReturn(Collections.emptyList());
+
+			MongoConverter converter = mock(MongoConverter.class);
+			when(mongoTemplate.getConverter()).thenReturn(converter);
+			when(converter.read(HintDao.class, document)).thenThrow(new RuntimeException("Test conversion exception"));
+
+			when(mongoTemplate.count(any(Query.class), eq(HintDao.class))).thenReturn(1L);
+
+			// When
+			migrationService.startMigration(testJob).get();
+
+			// Then
+			verify(hintRepository, never()).save(any()); // Should not attempt to save
+			ArgumentCaptor<MigrationErrorEntity> errorCaptor = ArgumentCaptor.forClass(MigrationErrorEntity.class);
+			verify(migrationErrorRepo).save(errorCaptor.capture());
+			MigrationErrorEntity capturedError = errorCaptor.getValue();
+			assertThat(capturedError.getMongoUUID()).isEqualTo(hintDao.id());
+			assertThat(capturedError.getMessage()).contains("Test conversion exception");
+		}
+
 		@Test
 		@DisplayName("should handle general exception and set job to broken")
 		void shouldHandleGeneralException() throws ExecutionException, InterruptedException {
@@ -525,6 +585,49 @@ class MigrationServiceTest {
 			verify(migrationJobRepo, atLeastOnce()).save(jobCaptor.capture());
 			assertThat(jobCaptor.getValue().getState()).isEqualTo(MigrationJobEntity.STATE.BROKEN);
 			assertThat(jobCaptor.getValue().getMessage()).contains("Mismatch id between mongo und postgres element");
+		}
+
+		// NEW TEST CASE
+		@Test
+		@DisplayName("should log error on ID mismatch within compareHintAfterMigration")
+		void shouldLogErrorOnIdMismatchInComparison() throws ExecutionException, InterruptedException {
+			// Given
+			MigrationJobEntity validationJob = MigrationJobEntity.builder()
+					.id(1L).type(MigrationJobEntity.TYPE.VALIDATION).build();
+
+			HintDao mongoHint1 = HintTestDataGenerator.createHintDaoWithId("id1");
+			HintDao mongoHint2 = HintTestDataGenerator.createHintDaoWithId("id2");
+			// Note: The order is swapped for the Postgres entities to force the ID mismatch
+			HintEntity postgresHint1 = HintTestDataGenerator.createHintEntityWithMongoId("id2");
+			HintEntity postgresHint2 = HintTestDataGenerator.createHintEntityWithMongoId("id1");
+
+			// Match all other fields to isolate the ID mismatch logic
+			postgresHint1.setProcessId(mongoHint2.processId());
+			postgresHint2.setProcessId(mongoHint1.processId());
+
+			when(mongoTemplate.count(any(Query.class), eq(HintDao.class))).thenReturn(2L);
+			when(mongoTemplate.find(any(Query.class), eq(HintDao.class))).thenReturn(List.of(mongoHint1, mongoHint2));
+			when(hintRepository.findByCreationDateBetweenAndMongoUUIDIsNotNull(any(), any(), any()))
+					.thenReturn(new PageImpl<>(List.of(postgresHint1, postgresHint2)));
+
+			// When
+			CompletableFuture<Boolean> result = migrationService.startValidation(validationJob);
+			result.get();
+
+			// Then
+			ArgumentCaptor<MigrationErrorEntity> errorCaptor = ArgumentCaptor.forClass(MigrationErrorEntity.class);
+			// It should capture two errors, one for each mismatch
+			verify(migrationErrorRepo, times(2)).save(errorCaptor.capture());
+			List<MigrationErrorEntity> capturedErrors = errorCaptor.getAllValues();
+
+			assertThat(capturedErrors.getFirst().getMessage()).contains("Id mismatch: Sort or Query from DBs are not identical");
+			assertThat(capturedErrors.getFirst().getMongoUUID()).isEqualTo("id1");
+			assertThat(capturedErrors.get(1).getMessage()).contains("Id mismatch: Sort or Query from DBs are not identical");
+			assertThat(capturedErrors.get(1).getMongoUUID()).isEqualTo("id2");
+
+			ArgumentCaptor<MigrationJobEntity> jobCaptor = ArgumentCaptor.forClass(MigrationJobEntity.class);
+			verify(migrationJobRepo, atLeastOnce()).save(jobCaptor.capture());
+			assertThat(jobCaptor.getValue().getState()).isEqualTo(MigrationJobEntity.STATE.BROKEN);
 		}
 
 		private static Stream<Arguments> provideFieldMismatchScenarios() {
