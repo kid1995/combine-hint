@@ -1,8 +1,6 @@
 #!/bin/bash
-
 set -e  # Exit on error
 
-# Configuration
 BLUEPRINT_DIR="blueprint_temp"
 ENVS_DIR="envs"
 
@@ -23,7 +21,6 @@ prompt_yes_no() {
         # Convert the input to lowercase for case-insensitivity
         response=$(echo "$response" | tr '[:upper:]' '[:lower:]')
 
-        # Check for valid "yes" or "no" input
         if [[ "$response" =~ ^(ja|j|true|y)$ ]]; then
             return 0 # Return 0 (true)
         elif [[ "$response" =~ ^(nein|ne|n|false|jein|jain)$ ]]; then
@@ -49,7 +46,7 @@ prompt_value() {
 
 select_environment() {
     echo "In welcher Umgebung soll der Service bereitgestellt werden? (Bitte Option Nummer eingeben)"
-    select env in "dev" "abn" "prod"; do
+    select env in "dev" "prod"; do
         if [ -n "$env" ]; then
             echo "Sie haben die Umgebung '$env' ausgewählt."
             break
@@ -105,14 +102,12 @@ prepare_blueprint() {
     mkdir -p "$TARGET_DIR"
 }
 
-replace_placeholders() {
-    # Use portable sed commands that work on both Linux and macOS
+replace_placeholders() {    
     local files=$(find "$BLUEPRINT_DIR" -type f -name "*.yaml")
     
-    for file in $files; do
-        # Create backup and perform replacements
-        if [[ "$OSTYPE" == "darwin"* ]]; then
-            # macOS sed requires empty string after -i
+    for file in $files; do        
+        if [[ "$OSTYPE" == "darwin"* ]]; then   #(macos use BSD, linux use GNU)
+            # macOS sed requires empty string after -i  
             sed -i '' "s|<env>|$env|g" "$file"
             sed -i '' "s|<service-name>|$service_name|g" "$file"
             sed -i '' "s|<image-name>|$image_name|g" "$file"
@@ -205,8 +200,7 @@ update_kustomization_image() {
     cd "$BLUEPRINT_DIR"
     
     # Check if kustomize is available
-    if command -v kustomize &> /dev/null; then
-        # Use kustomize edit to set the image
+    if command -v kustomize &> /dev/null; then        
         kustomize edit set image "app-image=$image_name:$image_tag"
     else
         echo "Warning: kustomize command not found. Image settings were applied via sed."
@@ -248,7 +242,7 @@ main() {
     echo "=== Service Initialization Script ==="
     echo
     
-    # Gather all inputs
+    # Gather all configuration
     select_environment
     gather_requirements
     gather_service_details
@@ -261,7 +255,7 @@ main() {
     build_components_list
     build_literals_list
     
-    # Process kustomization file
+    # Apply configuration into kustomization
     process_kustomization_file
     update_kustomization_image
     

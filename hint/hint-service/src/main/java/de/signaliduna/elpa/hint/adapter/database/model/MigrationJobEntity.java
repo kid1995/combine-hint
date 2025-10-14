@@ -34,9 +34,11 @@ public class MigrationJobEntity {
 	@Column(name = "processed_items")
 	private Long processedItems;
 
+	@Column(name = "state")
 	@Enumerated(value=EnumType.STRING)
 	private MigrationJobEntity.STATE state;
 
+	@Column(name = "type")
 	@Enumerated(value=EnumType.STRING)
 	private MigrationJobEntity.TYPE type;
 
@@ -50,7 +52,7 @@ public class MigrationJobEntity {
 	}
 
 	public enum TYPE{
-		MIGRATION, FIXING, VALIDATION
+		MIGRATION, FIXING, VALIDATION, UNKNOWN
 	}
 
 	public long getId() {
