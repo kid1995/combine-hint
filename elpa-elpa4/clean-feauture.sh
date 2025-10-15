@@ -1,11 +1,16 @@
 #!/bin/bash
 set -e # Exit on error
 
-JIRA_SUFFIX="ELPA4-123"
-SERVICE_NAME="hint-service" # This assumes the base service name for the feature
+#DEBUG
+# SERVICE_NAME="hint-service" 
+# JIRA_TICKET="ELPA4-123"
+
+SERVICE_NAME=$1
+JIRA_TICKET=$2
+
 
 DEV_PATH="./envs/dev"
-FEATURE_NAME="$SERVICE_NAME-$JIRA_SUFFIX"
+FEATURE_NAME="$SERVICE_NAME-$JIRA_TICKET"
 FEATURE_PATH="$DEV_PATH/$FEATURE_NAME"
 
 # Function to remove the feature directory
@@ -22,7 +27,6 @@ remove_feature_directory() {
 # Function to remove the feature entry from envs/dev/kustomization.yaml
 remove_feature_from_resources() {
     local kustomization_file="$DEV_PATH/kustomization.yaml"
-    # The exact line format to remove, including indentation
     local feature_resource_line="  - $FEATURE_NAME"
 
     echo "Attempting to remove '$feature_resource_line' from $kustomization_file resources."
@@ -46,11 +50,9 @@ remove_feature_from_resources() {
     echo "Successfully removed '$FEATURE_NAME' from $kustomization_file resources."
 }
 
-# Main Execution for clean-feature
-main_clean() {
+main() {
     remove_feature_from_resources
     remove_feature_directory
 }
 
-# Run main clean function
-main_clean
+main

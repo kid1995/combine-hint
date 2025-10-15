@@ -1,13 +1,19 @@
 #!/bin/bash
 set -e  # Exit on error
 
-SERVICE_NAME="hint-service"
-SERVICE_SUFFIX="-hint"
-JIRA_SUFFIX="ELPA4-123"
-FULL_IMAGE_NAME="docker.system.local/elpa-hint-ELPA4-123-tst/hint:abcdef.12"
+#DEBUG
+# SERVICE_NAME="hint-service"
+# SERVICE_SUFFIX="-hint"
+# JIRA_TICKET="ELPA4-123"
+# IMAGE_NAME="docker.system.local/elpa-hint-ELPA4-123-tst/hint:abcdef.12"
+
+SERVICE_NAME=$1
+SERVICE_SUFFIX=$2
+JIRA_TICKET=$3
+IMAGE_NAME=$4
 
 DEV_PATH="./envs/dev"
-FEATURE_NAME="$SERVICE_NAME-$JIRA_SUFFIX"
+FEATURE_NAME="$SERVICE_NAME-$JIRA_TICKET"
 SERVICE_PATH="$DEV_PATH/$SERVICE_NAME"
 FEATURE_PATH="$DEV_PATH/$FEATURE_NAME"
 
@@ -16,25 +22,9 @@ clone_original_service(){
     cp -r "$SERVICE_PATH" "$FEATURE_PATH"
 }
 
-extract_image_tag() {
-  local full_image_name="$1"
-  if [[ -z "$full_image_name" ]]; then
-    echo "Error: No full image name provided." >&2
-    return 1
-  fi
-  
-  # Extracts everything after the last colon
-  echo "${full_image_name##*:}"
-}
-
-extract_image_name_without_tag() {
-  local full_image_name="$1"
-  echo "${full_image_name%:*}"
-}
-
 replace_suffix_name() {    
     local file="$FEATURE_PATH/kustomization.yaml"
-    local replace_string="${SERVICE_SUFFIX}-${JIRA_SUFFIX}"
+    local replace_string="${SERVICE_SUFFIX}-${JIRA_TICKET}"
     
     if [[ "$OSTYPE" == "darwin"* ]]; then   #(macos use BSD, linux use GNU)
         sed -i '' "s|${SERVICE_SUFFIX}|$replace_string|g" "$file"
@@ -48,15 +38,13 @@ update_kustomization_image() {
     cd "$FEATURE_PATH" || exit 1
     # Check if kustomize is available
     if command -v kustomize &> /dev/null; then
-        kustomize edit set image "app-image=$FULL_IMAGE_NAME"
+        kustomize edit set image "app-image=$IMAGE_NAME"
     else
-        echo "Warning: kustomize command not found. Image settings were applied via sed."
-        # Fallback to sed if kustomize is not found
-        # (This sed command is a generic example, you might need to tailor it to your specific kustomization structure)
+        echo "Warning: kustomize command not found. Image settings were applied via sed."        
         if [[ "$OSTYPE" == "darwin"* ]]; then
-            sed -i '' "s|app-image:.*|app-image=$FULL_IMAGE_NAME|" "$FEATURE_PATH/kustomization.yaml"
+            sed -i '' "s|app-image:.*|app-image=$IMAGE_NAME|" "$FEATURE_PATH/kustomization.yaml"
         else
-            sed -i "s|app-image:.*|app-image=$FULL_IMAGE_NAME|" "$FEATURE_PATH/kustomization.yaml"
+            sed -i "s|app-image:.*|app-image=$IMAGE_NAME|" "$FEATURE_PATH/kustomization.yaml"
         fi
     fi
 

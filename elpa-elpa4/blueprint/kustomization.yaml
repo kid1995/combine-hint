@@ -8,7 +8,7 @@ resources:
   - admin-virtualservice.yaml
   - destination-rule.yaml
 
-components:
+components: 
   <components-list>
 
 images:
@@ -19,12 +19,10 @@ images:
 configMapGenerator:
   - name: backend-cm
     behavior: merge
-    literals:
+    literals: 
       <literals-list>
 
 patches:
   - path: virtualservice-patch.yaml
   - path: service-app-patch.yaml
   - path: deployment-patch.yaml
-
-

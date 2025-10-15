@@ -4,8 +4,8 @@ metadata:
   name: <service-name>-admin
 spec:
   hosts:
-    - "<env>-<service-name>-admin-elpa-elpa4.copsinop.de"           # extern FQDN
-    - "<env>-<service-name>-admin.elpa-elpa4.svc.cluster.local"     # intern FQDN
+    - "<env>-<service-name>-admin-elpa-elpa4.copsinop.de" # extern FQDN
+    - "<env>-<service-name>-admin.elpa-elpa4.svc.cluster.local" # intern FQDN
   gateways:
     - istio-system/mesh-gateway
     - mesh

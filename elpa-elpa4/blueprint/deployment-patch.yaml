@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: app
   labels:
-      app: <service-name>
+    app: <service-name>
 spec:
   selector:
     matchLabels:
@@ -19,7 +19,7 @@ spec:
           resources:
             limits:
               cpu: 4000m
-              memory: 2Gi        
+              memory: 2Gi
             requests:
-              cpu: 400m          
-              memory: 1Gi      
+              cpu: 400m
+              memory: 1Gi
