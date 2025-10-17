@@ -1,6 +1,8 @@
 #!groovy
 @Library(['si-dp-shared-libs', 'elpa-shared-lib']) _
 import de.signaliduna.TargetSegment
+import de.signaliduna.BitbucketRepo
+import de.signaliduna.CopsiEnvironment
 
 SERVICE_GROUP = "elpa"
 SERVICE_NAME = "hint"
@@ -227,32 +229,42 @@ void deployApplications(TargetSegment targetSegment) {
 				POSTGRES_SCHEMA_PREFIX
 			)
 
-            def DEPLOY_REPO = "elpa-elpa4"
-            def JIRA_TICKET = si_psql.normalizeSchemaName("${POSTGRES_SCHEMA_PREFIX}${si_git.branchName()}")
-            def FULL_SERVICE_NAME = "${APP_BACKEND_NAME}-service"
-            def SERVICE_SUFFIX = "-${APP_BACKEND_NAME}"            
-            echo "Gebautes Image: ${IMG_NAME}"
+			def featureName = si_git.featureName()
+			def parts = featureName.split('-')
+			def JIRA_TICKET = "${parts[0]}-${parts[1]}"
+			def DEPLOY_REPO = "elpa-elpa4"
+			def FULL_SERVICE_NAME = "${APP_BACKEND_NAME}-service"
+			def SERVICE_SUFFIX = "-${APP_BACKEND_NAME}"
+			BitbucketRepo repo = new BitbucketRepo("SDASVCDEPLOY", DEPLOY_REPO)
+			echo "Built Image: ${IMG_NAME}"
 
-            si_copsi.createChangeAsPullRequest(
-                new BitbucketRepo("SDASVCDEPLOY", DEPLOY_REPO), 
-                "autodeploy/job-${BUILD_NUMBER}-${JIRA_TICKET}", 
-                "${CopsiEnvironment.nop}", 
-                [:], 
-                { 
-                    echo "Führe clean-feature.sh und deploy-feature.sh aus für Feature: ${JIRA_TICKET}"
-    
-                    sh "chmod +x ./clean-feature.sh"
-                    sh "chmod +x ./deploy-feature.sh"
+			def pullRequestAttributes = [
+					title: "Autodeploy ${JIRA_TICKET} ${BUILD_NUMBER}",
+					description: "Autodeploy for ${featureName}"
+			]
+			def prId = si_copsi.createChangeAsPullRequest(
+					repo,
+					"autodeploy/${JIRA_TICKET}-job-${BUILD_NUMBER}",
+					"${CopsiEnvironment.nop}",
+					pullRequestAttributes,
+					{
+						echo "execute clean-feature.sh und deploy-feature.sh for Feature: ${JIRA_TICKET}"
+						sh "chmod +x ./clean-feature.sh"
+						sh "chmod +x ./deploy-feature.sh"
+						sh "./clean-feature.sh ${FULL_SERVICE_NAME} ${JIRA_TICKET}"
+						sh "./deploy-feature.sh ${FULL_SERVICE_NAME} ${SERVICE_SUFFIX} ${JIRA_TICKET} ${IMG_NAME}"
+						sh "git add ./envs/dev"
+						return "${JIRA_TICKET}: Deploy ${SERVICE_NAME} mit Image ${IMG_NAME}"
+					}
+			)
+			boolean abortBuildOnError = true
+			boolean deleteSourceBranch = true
+			def	timeout = 180
+			def mergeResult = si_copsi.waitForMergeChecksAndMerge(repo, prId, abortBuildOnError, deleteSourceBranch, timeout) ? "success" : "failed"
 
-                    sh "./clean-feature.sh '${FULL_SERVICE_NAME}' '${JIRA_TICKET}'"
-                    sh "./deploy-feature.sh '${FULL_SERVICE_NAME}' '${SERVICE_SUFFIX}' '${JIRA_TICKET}' '${IMG_NAME}'"
-
-                    return "feat(${JIRA_TICKET}): Deploy feature mit Image ${IMG_NAME}"
-                }
-            )
-
+			echo "Merge Feature Deploy ${mergeResult}"
 		}
-        
+
 		si_openshift.deployApplication(SERVICE_GROUP, SERVICE_NAME, APP_BACKEND_NAME, targetSegment, additionalParams)
   }
 }
