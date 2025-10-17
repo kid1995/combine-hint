@@ -3,6 +3,7 @@ kind: Kustomization
 namePrefix: "dev-"
 
 resources:
+  - hint-service-ELPA4-237
   - hint-service
 
 patches:

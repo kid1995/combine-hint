@@ -6,7 +6,7 @@ data:
   ENABLE_JSON_LOGGING: "true"
   LOG_LEVEL: "INFO"
   LOG_LEVEL_SI: "DEBUG"
-  LOGBACK_FILE: "logback-plain.xml"
+  LOGBACK_FILE: "logback-json.xml"
   JDK_JAVA_OPTIONS: " -XX:MaxRAMPercentage=50 -XX:InitialRAMPercentage=25 -XX:+UseSerialGC -XX:+UseStringDeduplication -Ddebug -Dspring.profiles.active=KoP"
   POSTGRES_SHOW_SQL: "false"
   POSTGRES_SSL_MODE: "prefer"
