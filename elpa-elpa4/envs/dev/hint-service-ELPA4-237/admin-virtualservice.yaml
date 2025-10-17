@@ -12,6 +12,6 @@ spec:
   http:
     - route:
         - destination:
-            host: dev-hint
+            host: dev-service-hint-ELPA4-237
             port:
               number: 8081

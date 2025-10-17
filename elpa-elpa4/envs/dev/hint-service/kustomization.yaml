@@ -33,5 +33,6 @@ patches:
   - path: virtualservice-patch.yaml
   - path: service-app-patch.yaml
   - path: deployment-patch.yaml
+  - path: destination-rule-patch.yaml
 
 

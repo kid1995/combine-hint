@@ -2,17 +2,21 @@
 set -e  # Exit on error
 
 #DEBUG
-# SERVICE_NAME="hint-service"
-# SERVICE_SUFFIX="-hint"
-# JIRA_TICKET="ELPA4-123"
-# IMAGE_NAME="docker.system.local/elpa-hint-ELPA4-123-tst/hint:abcdef.12"
+SERVICE_NAME="hint-service"
+SERVICE_SUFFIX="-hint"
+JIRA_TICKET="ELPA4-123"
+IMAGE_NAME="docker.system.local/elpa-hint-ELPA4-123-tst/hint:abcdef.12"
 
-SERVICE_NAME=$1
-SERVICE_SUFFIX=$2
-JIRA_TICKET=$3
-IMAGE_NAME=$4
+# SERVICE_NAME=$1
+# SERVICE_SUFFIX=$2
+# JIRA_TICKET=$3
+# IMAGE_NAME=$4
 
 DEV_PATH="./envs/dev"
+# Sanitize JIRA ticket (trim to 32 chars, allow A-Z0-9- only)
+JIRA_TICKET=$(echo "$JIRA_TICKET" | tr '[:lower:]' '[:upper:]' | tr -cd 'A-Z0-9-')
+JIRA_TICKET=${JIRA_TICKET:0:32}
+
 FEATURE_NAME="$SERVICE_NAME-$JIRA_TICKET"
 SERVICE_PATH="$DEV_PATH/$SERVICE_NAME"
 FEATURE_PATH="$DEV_PATH/$FEATURE_NAME"
@@ -31,6 +35,31 @@ replace_suffix_name() {
     else
         sed -i "s|${SERVICE_SUFFIX}|$replace_string|g" "$file"
     fi
+}
+
+update_istio_hosts() {
+    # Compute target Service DNS name used by Istio objects inside dev overlay
+    local target_host="dev-service-hint-${JIRA_TICKET}"
+
+    # Files that may contain Istio destination host definitions
+    local files=(
+        "$FEATURE_PATH/virtualservice-patch.yaml"
+        "$FEATURE_PATH/admin-virtualservice.yaml"
+        "$FEATURE_PATH/destination-rule.yaml"
+        "$FEATURE_PATH/destination-rule-patch.yaml"
+    )
+
+    for f in "${files[@]}"; do
+        [ -f "$f" ] || continue
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+            # Replace both possible base hosts with the feature-specific one
+            sed -i '' "s|host: dev-service-hint\b|host: ${target_host}|g" "$f"
+            sed -i '' "s|host: dev-hint\b|host: ${target_host}|g" "$f"
+        else
+            sed -i "s|host: dev-service-hint\b|host: ${target_host}|g" "$f"
+            sed -i "s|host: dev-hint\b|host: ${target_host}|g" "$f"
+        fi
+    done
 }
 
 update_kustomization_image() {
@@ -84,6 +113,8 @@ main(){
     replace_suffix_name
     #
     update_kustomization_image
+    #
+    update_istio_hosts
     #
     add_feature_into_resources
 

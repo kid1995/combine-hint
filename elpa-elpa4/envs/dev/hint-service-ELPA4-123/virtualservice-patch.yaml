@@ -10,6 +10,6 @@ spec:
     - name: dev-route
       route:
         - destination:
-            host: dev-service-hint-ELPA4-237
+            host: dev-service-hint-ELPA4-123
             port:
               number: 8080

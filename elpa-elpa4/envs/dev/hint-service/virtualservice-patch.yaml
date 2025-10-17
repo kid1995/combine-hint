@@ -10,6 +10,6 @@ spec:
     - name: dev-route
       route:
         - destination:
-            host: dev-hint
+            host: dev-service-hint
             port:
               number: 8080

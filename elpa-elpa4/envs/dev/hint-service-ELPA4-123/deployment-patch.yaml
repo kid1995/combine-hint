@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app
+  labels:
+      app: hint
+spec:
+  selector:
+    matchLabels:
+      app: hint
+  template:
+    metadata:
+      labels:
+        app: hint
+    spec:
+      containers:
+        - name: app
+          resources:
+            limits:
+              cpu: 4000m
+              memory: 2Gi        
+            requests:
+              cpu: 400m          
+              memory: 1Gi      
