@@ -52,12 +52,17 @@ update_istio_hosts() {
     for f in "${files[@]}"; do
         [ -f "$f" ] || continue
         if [[ "$OSTYPE" == "darwin"* ]]; then
-            # Replace both possible base hosts with the feature-specific one
-            sed -i '' "s|host: dev-service-hint\b|host: ${target_host}|g" "$f"
-            sed -i '' "s|host: dev-hint\b|host: ${target_host}|g" "$f"
+            # BSD sed doesn't support \b; replace exact tokens
+            sed -i '' "s|host: dev-service-hint$|host: ${target_host}|g" "$f"
+            sed -i '' "s|host: dev-hint$|host: ${target_host}|g" "$f"
+            # Fallback for possible trailing spaces
+            sed -i '' "s|host: dev-service-hint |host: ${target_host} |g" "$f"
+            sed -i '' "s|host: dev-hint |host: ${target_host} |g" "$f"
         else
-            sed -i "s|host: dev-service-hint\b|host: ${target_host}|g" "$f"
-            sed -i "s|host: dev-hint\b|host: ${target_host}|g" "$f"
+            sed -i "s|host: dev-service-hint$|host: ${target_host}|g" "$f"
+            sed -i "s|host: dev-hint$|host: ${target_host}|g" "$f"
+            sed -i "s|host: dev-service-hint |host: ${target_host} |g" "$f"
+            sed -i "s|host: dev-hint |host: ${target_host} |g" "$f"
         fi
     done
 }
