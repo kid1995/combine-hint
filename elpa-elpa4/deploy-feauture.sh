@@ -2,8 +2,8 @@
 set -e  # Exit on error
 
 #DEBUG
-SERVICE_NAME="hint-service"
-SERVICE_SUFFIX="-hint"
+SERVICE_NAME="hint"
+SERVICE_SUFFIX="-${SERVICE_NAME}"
 JIRA_TICKET="ELPA4-123"
 IMAGE_NAME="docker.system.local/elpa-hint-ELPA4-123-tst/hint:abcdef.12"
 
@@ -39,30 +39,23 @@ replace_suffix_name() {
 
 update_istio_hosts() {
     # Compute target Service DNS name used by Istio objects inside dev overlay
-    local target_host="dev-service-hint-${JIRA_TICKET}"
+    local feature_suffix="${SERVICE_SUFFIX}-${JIRA_TICKET}"
 
     # Files that may contain Istio destination host definitions
     local files=(
         "$FEATURE_PATH/virtualservice-patch.yaml"
         "$FEATURE_PATH/admin-virtualservice.yaml"
-        "$FEATURE_PATH/destination-rule.yaml"
-        "$FEATURE_PATH/destination-rule-patch.yaml"
+        "$FEATURE_PATH/destination-rule.yaml"        
     )
 
     for f in "${files[@]}"; do
         [ -f "$f" ] || continue
         if [[ "$OSTYPE" == "darwin"* ]]; then
             # BSD sed doesn't support \b; replace exact tokens
-            sed -i '' "s|host: dev-service-hint$|host: ${target_host}|g" "$f"
-            sed -i '' "s|host: dev-hint$|host: ${target_host}|g" "$f"
-            # Fallback for possible trailing spaces
-            sed -i '' "s|host: dev-service-hint |host: ${target_host} |g" "$f"
-            sed -i '' "s|host: dev-hint |host: ${target_host} |g" "$f"
-        else
-            sed -i "s|host: dev-service-hint$|host: ${target_host}|g" "$f"
-            sed -i "s|host: dev-hint$|host: ${target_host}|g" "$f"
-            sed -i "s|host: dev-service-hint |host: ${target_host} |g" "$f"
-            sed -i "s|host: dev-hint |host: ${target_host} |g" "$f"
+            sed -i '' "s|${SERVICE_SUFFIX}$|${feature_suffix}|g" "$f"        
+        else            
+            sed -i "s|${SERVICE_SUFFIX}$|${feature_suffix}|g" "$f"
+            
         fi
     done
 }

@@ -1,11 +1,11 @@
 apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:
-  name: hint-admin
+  name: virtualservice-admin
 spec:
   hosts:
-    - "dev-hint-admin-elpa-elpa4.copsinop.de"
-    - "dev-hint-admin.elpa-elpa4.svc.cluster.local"
+    - "dev-hint-ELPA4-123-admin-elpa-elpa4.copsinop.de"
+    - "dev-hint-ELPA4-123-admin.elpa-elpa4.svc.cluster.local"
   gateways:
     - istio-system/mesh-gateway
     - mesh
