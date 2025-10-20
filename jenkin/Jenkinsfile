@@ -235,13 +235,19 @@ void deployApplications(TargetSegment targetSegment) {
 			def DEPLOY_REPO = "elpa-elpa4"
 			def FULL_SERVICE_NAME = "${APP_BACKEND_NAME}-service"
 			def SERVICE_SUFFIX = "-${APP_BACKEND_NAME}"
+			BitbucketRepo repo = new BitbucketRepo("SDASVCDEPLOY", DEPLOY_REPO)
 			echo "Built Image: ${IMG_NAME}"
 
-			si_copsi.createChange(
-					new BitbucketRepo("SDASVCDEPLOY", DEPLOY_REPO),
+			def pullRequestAttributes = [
+					title: "Autodeploy ${JIRA_TICKET} ${BUILD_NUMBER}",
+					description: "Autodeploy for ${featureName}"
+			]
+			def prId = si_copsi.createChangeAsPullRequest(
+					repo,
+					"autodeploy/${JIRA_TICKET}-job-${BUILD_NUMBER}",
 					"${CopsiEnvironment.nop}",
+					pullRequestAttributes,
 					{
-						sh "git checkout -b '${sourceBranch}'"
 						echo "Führe clean-feature.sh und deploy-feature.sh aus für Feature: ${JIRA_TICKET}"
 						sh "chmod +x ./clean-feature.sh"
 						sh "chmod +x ./deploy-feature.sh"
@@ -251,6 +257,12 @@ void deployApplications(TargetSegment targetSegment) {
 						return "${JIRA_TICKET}: Deploy ${SERVICE_NAME} mit Image ${IMG_NAME}"
 					}
 			)
+			boolean abortBuildOnError = true
+			boolean deleteSourceBranch = true
+			def	timeout = 180
+			def mergeResult = si_copsi.waitForMergeChecksAndMerge(repo, prId, abortBuildOnError, deleteSourceBranch, timeout) ? "success" : "failed"
+
+			echo "Merge Feature Deploy ${mergeResult}"
 		}
 
 		si_openshift.deployApplication(SERVICE_GROUP, SERVICE_NAME, APP_BACKEND_NAME, targetSegment, additionalParams)

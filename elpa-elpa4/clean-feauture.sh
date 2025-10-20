@@ -2,14 +2,17 @@
 set -e # Exit on error
 
 #DEBUG
-# SERVICE_NAME="hint-service" 
+# SERVICE_NAME="hint" 
 # JIRA_TICKET="ELPA4-123"
 
 SERVICE_NAME=$1
 JIRA_TICKET=$2
 
-
 DEV_PATH="./envs/dev"
+
+JIRA_TICKET=$(echo "$JIRA_TICKET" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9-')
+JIRA_TICKET=${JIRA_TICKET:0:32}
+
 FEATURE_NAME="$SERVICE_NAME-$JIRA_TICKET"
 FEATURE_PATH="$DEV_PATH/$FEATURE_NAME"
 

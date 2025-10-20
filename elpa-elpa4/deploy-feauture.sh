@@ -2,19 +2,19 @@
 set -e  # Exit on error
 
 #DEBUG
-SERVICE_NAME="hint"
-SERVICE_SUFFIX="-${SERVICE_NAME}"
-JIRA_TICKET="ELPA4-123"
-IMAGE_NAME="docker.system.local/elpa-hint-ELPA4-123-tst/hint:abcdef.12"
+# SERVICE_NAME="hint"
+# SERVICE_SUFFIX="-${SERVICE_NAME}"
+# JIRA_TICKET="ELPA4-123"
+# IMAGE_NAME="docker.system.local/elpa-hint-ELPA4-123-tst/hint:abcdef.12"
 
-# SERVICE_NAME=$1
-# SERVICE_SUFFIX=$2
-# JIRA_TICKET=$3
-# IMAGE_NAME=$4
+SERVICE_NAME=$1
+SERVICE_SUFFIX=$2
+JIRA_TICKET=$3
+IMAGE_NAME=$4
 
 DEV_PATH="./envs/dev"
 # Sanitize JIRA ticket (trim to 32 chars, allow A-Z0-9- only)
-JIRA_TICKET=$(echo "$JIRA_TICKET" | tr '[:lower:]' '[:upper:]' | tr -cd 'A-Z0-9-')
+JIRA_TICKET=$(echo "$JIRA_TICKET" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9-')
 JIRA_TICKET=${JIRA_TICKET:0:32}
 
 FEATURE_NAME="$SERVICE_NAME-$JIRA_TICKET"
@@ -44,18 +44,19 @@ update_istio_hosts() {
     # Files that may contain Istio destination host definitions
     local files=(
         "$FEATURE_PATH/virtualservice-patch.yaml"
-        "$FEATURE_PATH/admin-virtualservice.yaml"
+        "$FEATURE_PATH/metrics-virtualservice-patch.yaml"
         "$FEATURE_PATH/destination-rule.yaml"        
     )
 
     for f in "${files[@]}"; do
         [ -f "$f" ] || continue
-        if [[ "$OSTYPE" == "darwin"* ]]; then
-            # BSD sed doesn't support \b; replace exact tokens
-            sed -i '' "s|${SERVICE_SUFFIX}$|${feature_suffix}|g" "$f"        
-        else            
-            sed -i "s|${SERVICE_SUFFIX}$|${feature_suffix}|g" "$f"
-            
+        if [[ "$OSTYPE" == darwin* ]]; then   #(macos use BSD, linux use GNU)
+            # BSD sed requires an empty string for the -i argument when not creating a backup.
+            # Use a consistent delimiter (e.g., '/') and quote variables for robustness.
+            sed -i '' "s|${SERVICE_SUFFIX}|${feature_suffix}|g" "$f"
+        else
+            # GNU sed. Use a consistent delimiter (e.g., '/') and quote variables.
+            sed -i "s|${SERVICE_SUFFIX}|${feature_suffix}|g" "$f"
         fi
     done
 }

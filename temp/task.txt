@@ -1,0 +1,20 @@
+Abstract 
+Im OCP3 wenn wir schonein neu Feature oder ein Bugfix implementiert und in der Testsumgebung testen möchten, dann werden wir diese Änderung commit und pushen, damit Jenkin ein Deployment-Set im Openshift Test Umgebung erstellen können. Dies Vorgang wird wieder im OCP4 gestaltet, aber mit ein paar Änderungen. Das ist stattdessen direkt in einem Container Platform sowie Openshift bereitstellen, werden wir die Deployment-Set von neu feature im ein Deployment-Bitbucket-Repo pushen, und warten unser Argo-CD dies Deployment-Set synchronisieren. Dies Vorgang gibt es viel Aufwand wenn man selbst ausführen, deswegen in dies Wiki wird die autmomatische Vorgang demonstrieren.
+
+
+Hilfe-Skript für Deployment Prozess im  Deployment Repo
+
+Im Deployment Repo werden 2 Skripts vorbereitet, sie sind deploy-feature.sh und clean-feature.sh.
+Die erste Skript:
+<bitte hier beschreiben>
+Die zweiter Skript:
+<bitte hier beschreiben>
+ 
+Die beide werden durch Jenkins ausgeführt, um neu Deployment-Set zu erstellen. Wenn das Deployment-Set schon erstellt wird, prüft Argo-CD die Manifest nochmals und die Änderung im Container Platform bereitstellen.
+
+
+Jenkin Pipeline:
+
+Im Jenkins-shared-lib von ELPA (elpa-jenkin ) wurde deployTstFeature Funktion implementiert. <bitte hier beschreiben> (Die Info über si_copsi.createChangeAsPullRequest
+Und  si_copsi.waitForMergeChecksAndMerge du kannst im si-jenkin finden)
+
