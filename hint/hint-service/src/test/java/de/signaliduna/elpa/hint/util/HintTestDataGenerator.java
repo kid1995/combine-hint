@@ -5,13 +5,13 @@ import de.signaliduna.elpa.hint.adapter.database.model.HintEntity;
 import de.signaliduna.elpa.hint.adapter.mapper.HintMapper;
 import de.signaliduna.elpa.hint.model.HintDto;
 import org.bson.Document;
+import org.bson.types.ObjectId;
 import org.mapstruct.factory.Mappers;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Random;
+import java.time.ZoneId;
+import java.util.*;
 
 public class HintTestDataGenerator {
 
@@ -158,6 +158,13 @@ public class HintTestDataGenerator {
 			dao.processId(), dao.creationDate(), dao.processVersion(), dao.resourceId());
 	}
 
+	public static HintDao createHintDaoWithoutCreationDate(String id) {
+		HintDto dto = createInfoHintDto();
+		HintDao dao = hintMapper.dtoToDao(dto);
+		return new HintDao(id, dao.hintSource(), dao.hintTextOriginal(), dao.hintCategory(), dao.showToUser(),
+			dao.processId(), null, dao.processVersion(), dao.resourceId());
+	}
+
 	public static List<HintDao> createMultipleHintDao(int numberOfHintDao){
 		List<HintDao> hintDaos = new ArrayList<>(numberOfHintDao);
 		while (hintDaos.size() < numberOfHintDao){
@@ -194,6 +201,24 @@ public class HintTestDataGenerator {
 			doc.append("resourceId", hintDao.resourceId());
 		}
 		return doc;
+	}
+
+	public static ObjectId generateMongoUUIDFromDate(LocalDateTime localDateTime)  {
+		Date startDateAsDate = Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
+		return new ObjectId(startDateAsDate);
+	}
+
+	public static LocalDateTime getDateFromMongoUUID(String mongoUUID) {
+		try {
+			String timestampHex = mongoUUID.substring(0, 8);
+			long timestampSeconds = Long.parseLong(timestampHex, 16);
+			return LocalDateTime.ofInstant(
+				Instant.ofEpochSecond(timestampSeconds),
+				ZoneId.systemDefault()
+			);
+		} catch (NumberFormatException e) {
+			return null;
+		}
 	}
 
 	private static <T> T getRandomElement(List<T> list) {

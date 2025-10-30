@@ -11,6 +11,7 @@ import de.signaliduna.elpa.hint.adapter.mapper.HintMapper;
 import de.signaliduna.elpa.hint.core.model.ValidationResult;
 import de.signaliduna.elpa.hint.model.HintDto;
 import org.bson.Document;
+import org.bson.types.ObjectId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.*;
@@ -21,14 +22,19 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
 @Service
 public class MigrationService {
 	private static final int BATCH_SIZE = 100;
-	private static final String CREATION_DATE_KEY = "creationDate";
-	private static final Pageable FIRST_PAGE_REQUEST = PageRequest.of(0, BATCH_SIZE, Sort.by(Sort.Direction.ASC, CREATION_DATE_KEY));
+	private static final String ID_KEY = "_id";
+	private static final String PROCESS_ID_KEY = "processId";
+	private static final String HINT_CATEGORY_KEY = "hintCategory";
+	private static final String HINT_SOURCE_KEY = "hintSource";
+	private static final String HINT_TEXT_ORIGINAL_KEY = "hintTextOriginal";
+	private static final Pageable FIRST_PAGE_REQUEST = PageRequest.of(0, BATCH_SIZE, Sort.by(Sort.Direction.ASC, ID_KEY));
 	private static final String ERROR_STRING_FORMAT = "%s%n%s";
 
 	private final Logger log = LoggerFactory.getLogger(MigrationService.class);
@@ -112,7 +118,7 @@ public class MigrationService {
 		List<HintDao> hints = new java.util.ArrayList<>();
 		for (Document rawHint : rawHints) {
 			// check missing _id
-			String mongoId = rawHint.get("_id") != null ? rawHint.get("_id").toString() : "UNKNOWN_MONGO_ID";
+			String mongoId = rawHint.get(ID_KEY) != null ? rawHint.get(ID_KEY).toString() : "UNKNOWN_MONGO_ID";
 			try {
 				// Attempt to convert each raw document to HintDao
 				HintDao hintDao = mongoTemplate.getConverter().read(HintDao.class, rawHint);
@@ -162,16 +168,16 @@ public class MigrationService {
 		List<MigrationErrorEntity> migrationErrorEntities = migrationErrorRepo.findByJob_IdAndResolved(job.getId(), false);
 		if (migrationErrorEntities.isEmpty()) {
 			return new ValidationResult(true, "Migration completed successfully.");
-		} else  {
+		} else {
 			return new ValidationResult(false, "There are errors in migration process");
 		}
 	}
 
 	private void compareHintAfterMigration(MigrationJobEntity job, HintDao hintDao, HintEntity hintEntity) {
 		StringBuilder diffs = new StringBuilder();
-		appendIfDifferent(diffs, "processId", hintDao.processId(), hintEntity.getProcessId());
-		appendIfDifferent(diffs, "hintCategory", hintDao.hintCategory(), hintEntity.getHintCategory());
-		appendIfDifferent(diffs, "hintSource", hintDao.hintSource(), hintEntity.getHintSource());
+		appendIfDifferent(diffs, PROCESS_ID_KEY, hintDao.processId(), hintEntity.getProcessId());
+		appendIfDifferent(diffs, HINT_CATEGORY_KEY, hintDao.hintCategory(), hintEntity.getHintCategory());
+		appendIfDifferent(diffs, HINT_SOURCE_KEY, hintDao.hintSource(), hintEntity.getHintSource());
 		appendIfDifferent(diffs, "message", hintDao.hintTextOriginal(), hintEntity.getMessage());
 		if (!diffs.isEmpty()) {
 			logAndSaveError(job, String.format("Field mismatches for mongo_uuid %s: %s", hintDao.id(), diffs), hintDao.id());
@@ -198,8 +204,9 @@ public class MigrationService {
 				logAndSaveError(job, String.format("Hint with mongoUUID %s not found in MongoDB.", mongoId), mongoId);
 				return;
 			}
-			HintEntity hintEntity = hintMapper.dtoToEntity(hintMapper.daoToDto(hintDao));
-			hintEntity.setMongoUUID(hintDao.id());
+			HintDao assignedCreationDateHintDao = assignNewCreationDateFromObjectIdIfNotExist(hintDao);
+			HintEntity hintEntity = hintMapper.dtoToEntity(hintMapper.daoToDto(assignedCreationDateHintDao));
+			hintEntity.setMongoUUID(assignedCreationDateHintDao.id());
 			hintRepository.save(hintEntity);
 			existingError.ifPresent(this::resolveError);
 		} catch (Exception e) {
@@ -233,20 +240,49 @@ public class MigrationService {
 	private Query createQueryByStartAndEndDate(LocalDateTime dataSetStartDate, LocalDateTime dataSetStopDate, Optional<Pageable> pageable) {
 		Query query = new Query();
 
-		query.addCriteria(Criteria.where("hintSource").ne(null))
-			.addCriteria(Criteria.where("hintTextOriginal").ne(null))
-			.addCriteria(Criteria.where("hintCategory").in(List.of(HintDto.Category.values())).ne(null))
-			.addCriteria(Criteria.where("processId").ne(null));
+		query.addCriteria(Criteria.where(HINT_SOURCE_KEY).ne(null))
+			.addCriteria(Criteria.where(HINT_TEXT_ORIGINAL_KEY).ne(null))
+			.addCriteria(Criteria.where(HINT_CATEGORY_KEY).in(List.of(HintDto.Category.values())).ne(null))
+			.addCriteria(Criteria.where(PROCESS_ID_KEY).ne(null));
 
-		Criteria dateCriteria = Criteria.where(CREATION_DATE_KEY).ne(null);
+		Criteria dateByObjectIdCriteria = Criteria.where(ID_KEY);
 		if (dataSetStartDate != null) {
-			dateCriteria.gte(dataSetStartDate);
+			Date startDateAsDate = Date.from(dataSetStartDate.atZone(ZoneId.systemDefault()).toInstant());
+			ObjectId startId = new ObjectId(startDateAsDate);
+			dateByObjectIdCriteria.gte(startId);
 		}
 		if (dataSetStopDate != null) {
-			dateCriteria.lte(dataSetStopDate);
+			Date endDateAsDate = Date.from(dataSetStopDate.atZone(ZoneId.systemDefault()).toInstant());
+			ObjectId endId = new ObjectId(endDateAsDate);
+			dateByObjectIdCriteria.lte(endId);
 		}
-		query.addCriteria(dateCriteria);
+		query.addCriteria(dateByObjectIdCriteria);
 		pageable.ifPresent(query::with);
 		return query;
+	}
+
+	private HintDao assignNewCreationDateFromObjectIdIfNotExist(HintDao hintDao) {
+		if (hintDao.creationDate() == null) {
+			return new HintDao(
+				hintDao.id(),
+				hintDao.hintSource(),
+				hintDao.hintTextOriginal(),
+				hintDao.hintCategory(),
+				hintDao.showToUser(),
+				hintDao.processId(),
+				extractCreationDateFromId(hintDao),
+				hintDao.processVersion(),
+				hintDao.resourceId()
+			);
+		}
+		return hintDao;
+	}
+
+	private static LocalDateTime extractCreationDateFromId(HintDao hintDao) {
+		ObjectId hintDaoObjectId = new ObjectId(hintDao.id());
+		Date hintCreationDate = hintDaoObjectId.getDate();
+		return hintCreationDate.toInstant()
+			.atZone(ZoneId.systemDefault())
+			.toLocalDateTime();
 	}
 }

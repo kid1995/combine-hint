@@ -11,7 +11,8 @@ import de.signaliduna.elpa.hint.adapter.mapper.HintMapper;
 import de.signaliduna.elpa.hint.model.HintDto;
 import de.signaliduna.elpa.hint.util.HintTestDataGenerator;
 import de.signaliduna.elpa.hint.util.MigrationTestDataGenerator;
-import org.bson.Document;
+import org.bson.*;
+import org.bson.types.ObjectId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -61,6 +62,8 @@ class MigrationServiceTest {
 	@InjectMocks
 	private MigrationService migrationService;
 	private MigrationJobEntity testJob;
+	private static final String ID_KEY = "_id";
+
 
 	@BeforeEach
 	void setUp() {
@@ -76,7 +79,7 @@ class MigrationServiceTest {
 			// Given
 			List<HintDao> hintDaos = List.of(
 				HintTestDataGenerator.createHintDaoWithId("mongoId1"),
-				HintTestDataGenerator.createHintDaoWithId("mongoId2")
+				HintTestDataGenerator.createHintDaoWithoutCreationDate(HintTestDataGenerator.generateMongoUUIDFromDate(LocalDateTime.now()).toString())
 			);
 
 			List<Document> documents = hintDaos.stream().map(HintTestDataGenerator::createDocumentFromHintDao).toList();
@@ -90,7 +93,7 @@ class MigrationServiceTest {
 			when(converter.read(eq(HintDao.class), any(Document.class)))
 				.thenAnswer(invocation -> {
 					Document doc = invocation.getArgument(1);
-					return hintDaos.stream().filter(h -> h.id().equals(doc.get("_id").toString())).findFirst().orElse(null);
+					return hintDaos.stream().filter(h -> h.id().equals(doc.get(ID_KEY).toString())).findFirst().orElse(null);
 				});
 
 			when(mongoTemplate.count(any(Query.class), eq(HintDao.class))).thenReturn((long) hintDaos.size());
@@ -290,18 +293,21 @@ class MigrationServiceTest {
 			ArgumentCaptor<Query> queryCaptor = ArgumentCaptor.forClass(Query.class);
 			verify(mongoTemplate, atLeast(1)).find(queryCaptor.capture(), eq(Document.class), eq("Hint"));
 			Query capturedQuery = queryCaptor.getValue();
-			// Spring Data MongoDB's Query.getQueryObject() returns a org.bson.Document
-			org.bson.Document queryObject = capturedQuery.getQueryObject();
+			// Spring Data MongoDB's Query.getQueryObject() returns a Document
+			Document queryObject = capturedQuery.getQueryObject();
 
 			// If at least one date is provided, the 'creationDate' filter should exist
-			assertThat(queryObject).containsKey("creationDate");
-			assertThat(queryObject.get("creationDate")).isInstanceOf(org.bson.Document.class);
+			assertThat(queryObject).containsKey(ID_KEY);
+			assertThat(queryObject.get(ID_KEY)).isInstanceOf(Document.class);
 
-			org.bson.Document creationDateFilter = (org.bson.Document) queryObject.get("creationDate");
+			Document creationDateFilter = (Document) queryObject.get(ID_KEY);
 
 			if (startDate != null) {
 				// If startDate is provided, it should contain the $gte operator
-				assertThat(creationDateFilter).containsEntry("$gte", startDate);
+				assertThat(creationDateFilter).containsKey("$gte");
+				ObjectId startId = (ObjectId) creationDateFilter.get("$gte");
+				LocalDateTime localDateFromStartId = HintTestDataGenerator.getDateFromMongoUUID(startId.toString());
+				assertThat(localDateFromStartId).isEqualTo(startDate);
 			} else {
 				// If startDate is null, it should not contain the $gte operator
 				assertThat(creationDateFilter).doesNotContainKey("$gte");
@@ -309,7 +315,10 @@ class MigrationServiceTest {
 
 			if (stopDate != null) {
 				// If stopDate is provided, it should contain the $lte operator
-				assertThat(creationDateFilter).containsEntry("$lte", stopDate);
+				assertThat(creationDateFilter).containsKey("$lte");
+				ObjectId stopId = (ObjectId) creationDateFilter.get("$lte");
+				LocalDateTime localDateFromStartId = HintTestDataGenerator.getDateFromMongoUUID(stopId.toString());
+				assertThat(localDateFromStartId).isEqualTo(stopDate);
 			} else {
 				// If stopDate is null, it should not contain the $lte operator
 				assertThat(creationDateFilter).doesNotContainKey("$lte");
