@@ -5,11 +5,6 @@ spring:
     default-property-inclusion: non_null
     serialization:
       write-dates-as-timestamps: false
-  data:
-    mongodb:
-      uri: mongodb://${MONGODB_USER:mongouser}:${MONGODB_PASSWORD:mongopass}@${MONGODB_HOSTS:localhost:27017}/mongodb?${MONGODB_OPTIONS:=}
-      database: mongodb
-      uuid-representation: standard
   cloud:
     function:
       definition: hintCreated
@@ -111,7 +106,6 @@ com:
 
 authorization:
   users: ${AUTH_USERS:S000325}
-  migration_users: ${MIGRATION_USERS:U167653}
 
 management:
   tracing:

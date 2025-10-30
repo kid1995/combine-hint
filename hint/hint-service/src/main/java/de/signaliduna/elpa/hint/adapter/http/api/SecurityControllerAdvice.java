@@ -11,16 +11,25 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.context.request.WebRequest;
 
+import java.security.Principal;
+
 @ControllerAdvice
 public class SecurityControllerAdvice {
 	private static final Logger log = LoggerFactory.getLogger(SecurityControllerAdvice.class);
 
 	@ExceptionHandler(AccessDeniedException.class)
 	public ResponseEntity<SiErrorMessage> handleAccessDeniedException(AccessDeniedException ex, WebRequest request) {
-		if (request != null && request.getUserPrincipal() != null) {
-			log.warn("Access denied for user: '{}'.", request.getUserPrincipal().getName(), ex);
+		if (request != null) {
+			Principal principal = request.getUserPrincipal();
+			if (principal != null) {
+				log.warn("Access denied for user: {}.", principal.getName(), ex);
+			} else {
+				// request is not null, but getUserPrincipal() returned null (e.g., unauthenticated access)
+				log.warn("Access denied for unauthenticated access.", ex);
+			}
 		} else {
-			log.warn("Access denied for '{}'.", request);
+			// request object itself is null
+			log.warn("Access denied. WebRequest object was null.", ex);
 		}
 		final SiErrorMessage siErrorMessage = new SiErrorMessage(ex.getMessage(), "Access denied for user.");
 		return new ResponseEntity<>(siErrorMessage, HttpStatus.FORBIDDEN);

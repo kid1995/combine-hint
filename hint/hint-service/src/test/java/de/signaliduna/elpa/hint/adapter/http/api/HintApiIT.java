@@ -148,7 +148,7 @@ class HintApiIT extends AbstractSingletonContainerTest {
 	void getHintById() throws Exception {
 		final HintDto hint = new HintDto("ELISA", "Test",  HintDto.Category.BLOCKER, true,
 			 "E1234", getTestLocalDateTime(), "1", "resourceId-1");
-		when(hintService.getHintById("123")).thenReturn(Optional.of(hint));
+		when(hintService.getHintById(123L)).thenReturn(Optional.of(hint));
 
 		MvcResult mvcResult = mockMvc.perform(get("/hints/123"))
 			.andExpect(status().isOk())
@@ -168,7 +168,7 @@ class HintApiIT extends AbstractSingletonContainerTest {
 	@Test
 	@WithMockAuthentication(name = AUTHORIZED_USER)
 	void getHintByIdNotFound() throws Exception {
-		when(hintService.getHintById("123")).thenReturn(Optional.empty());
+		when(hintService.getHintById(123L)).thenReturn(Optional.empty());
 
 		MvcResult mvcResult = mockMvc.perform(get("/hints/123"))
 			.andExpect(status().isNotFound())

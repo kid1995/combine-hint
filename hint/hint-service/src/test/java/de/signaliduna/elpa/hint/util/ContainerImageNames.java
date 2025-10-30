@@ -1,8 +1,7 @@
 package de.signaliduna.elpa.hint.util;
 
 public enum ContainerImageNames {
-	POSTGRES("hub.docker.system.local/postgres:16-alpine"),
-	MONGO("hub.docker.system.local/mongo:6");
+	POSTGRES("hub.docker.system.local/postgres:16-alpine");
 
 	private final String imageName;
 

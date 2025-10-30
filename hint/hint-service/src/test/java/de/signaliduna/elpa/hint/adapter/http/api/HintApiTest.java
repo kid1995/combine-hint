@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.ResponseEntity;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -41,8 +42,9 @@ class HintApiTest {
 			null, "ELISA", "Test1", "BLOCKER",
 			true, "E1234", "1", "resourceId-1"
 		);
-		List<HintDto> result = classUnderTest.getHints(request);
-		assertThat(result).containsExactly(createHintDTO());
+		ResponseEntity<List<HintDto>> result = classUnderTest.getHints(request);
+		List<HintDto> hintDtoList = result.getBody();
+		assertThat(hintDtoList).containsExactly(createHintDTO());
 		verify(hintServiceMock).getHints(request.toQueryParams());
 	}
 
@@ -80,8 +82,9 @@ class HintApiTest {
 		);
 		Map<HintParams, Object> expectedParams = request.toQueryParams();
 		when(hintServiceMock.getHints(expectedParams)).thenReturn(List.of(hintDTO));
-		List<HintDto> result = classUnderTest.getHints(request);
-		assertThat(result).containsExactly(createHintDTO());
+		ResponseEntity<List<HintDto>> result = classUnderTest.getHints(request);
+		List<HintDto> hintDtoList = result.getBody();
+		assertThat(hintDtoList).containsExactly(createHintDTO());
 		verify(hintServiceMock).getHints(expectedParams);
 	}
 
@@ -94,8 +97,9 @@ class HintApiTest {
 		);
 		Map<HintParams, Object> expectedParams = request.toQueryParams();
 		when(hintServiceMock.getHints(expectedParams)).thenReturn(List.of(hintDTO));
-		List<HintDto> result = classUnderTest.getHints(request);
-		assertThat(result).containsExactly(createHintDTO());
+		ResponseEntity<List<HintDto>> result = classUnderTest.getHints(request);
+		List<HintDto> hintDtoList = result.getBody();
+		assertThat(hintDtoList).containsExactly(createHintDTO());
 		verify(hintServiceMock).getHints(expectedParams);
 	}
 }

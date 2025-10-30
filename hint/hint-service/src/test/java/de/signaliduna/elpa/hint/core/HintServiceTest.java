@@ -2,9 +2,6 @@ package de.signaliduna.elpa.hint.core;
 
 import de.signaliduna.elpa.hint.adapter.database.HintRepository;
 import de.signaliduna.elpa.hint.adapter.database.HintSpecifications;
-import de.signaliduna.elpa.hint.adapter.database.legacy.HintRepositoryLegacy;
-import de.signaliduna.elpa.hint.adapter.database.legacy.HintRepositoryLegacyCustom;
-import de.signaliduna.elpa.hint.adapter.database.legacy.model.HintDao;
 import de.signaliduna.elpa.hint.adapter.database.model.HintEntity;
 import de.signaliduna.elpa.hint.adapter.mapper.HintMapper;
 import de.signaliduna.elpa.hint.model.HintDto;
@@ -25,11 +22,9 @@ import org.springframework.data.jpa.domain.Specification;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
@@ -39,12 +34,6 @@ class HintServiceTest {
 
 	@Mock
 	private HintRepository hintRepository;
-
-	@Mock
-	private HintRepositoryLegacy hintRepositoryLegacy;
-
-	@Mock
-	private HintRepositoryLegacyCustom hintRepositoryLegacyCustom;
 
 	@Spy
 	private HintMapper hintMapper = Mappers.getMapper(HintMapper.class);
@@ -59,197 +48,142 @@ class HintServiceTest {
 	@DisplayName("test getHints")
 	class GetHints {
 
-		@Nested
-		@DisplayName("with postgres")
-		class FindHintsInPostgresDB {
+		private static Stream<Arguments> provideArgs4FirstCondition() {
+			return Stream.of(
+				Arguments.of(
+					"True: Only PROCESS_ID is present",
+					Map.of(HintParams.PROCESS_ID, "E123"),
+					true
+				),
+				Arguments.of(
+					"False: PROCESS_ID key is missing",
+					Map.of(), // Empty map
+					false
+				),
+				Arguments.of(
+					"False: Size is not 1",
+					Map.of(HintParams.PROCESS_ID, "E123", HintParams.HINT_CATEGORY, "INFO"),
+					false
+				)
+			);
+		}
 
-			private static Stream<Arguments> provideArgs4FirstCondition() {
-				return Stream.of(
-					Arguments.of(
-						"True: Only PROCESS_ID is present",
-						Map.of(HintParams.PROCESS_ID, "E123"),
-						true
-					),
-					Arguments.of(
-						"False: PROCESS_ID key is missing",
-						Map.of(), // Empty map
-						false
-					),
-					Arguments.of(
-						"False: Size is not 1",
-						Map.of(HintParams.PROCESS_ID, "E123", HintParams.HINT_CATEGORY, "INFO"),
-						false
-					)
-				);
-			}
+		@DisplayName("if queryParams contains only PROCESS_ID (PROCESS_ID Path)")
+		@ParameterizedTest(name = "{0}")
+		@MethodSource("provideArgs4FirstCondition")
+		void testIfBranchWithAllCases(String caseName, Map<HintParams, Object> queryParams, boolean isConditionTrue) {
+			if (isConditionTrue) {
+				// Given - Test the successful path
+				String processId = (String) queryParams.get(HintParams.PROCESS_ID);
+				List<HintEntity> expectedEntities = List.of(HintTestDataGenerator.createInfoHintEntity());
+				when(hintRepository.findAllByProcessId(processId)).thenReturn(expectedEntities);
 
-			@DisplayName("if queryParams contains only PROCESS_ID (PROCESS_ID Path)")
-			@ParameterizedTest(name = "{0}")
-			@MethodSource("provideArgs4FirstCondition")
-			void testIfBranchWithAllCases(String caseName, Map<HintParams, Object> queryParams, boolean isConditionTrue) {
-				if (isConditionTrue) {
-					// Given - Test the successful path
-					String processId = (String) queryParams.get(HintParams.PROCESS_ID);
-					List<HintEntity> expectedEntities = List.of(HintTestDataGenerator.createWarningHintEntity());
-					when(hintRepository.findAllByProcessId(processId)).thenReturn(expectedEntities);
+				// When
+				List<HintDto> result = hintService.getHints(queryParams);
 
-					// When
-					List<HintDto> result = hintService.getHints(queryParams);
+				// Then
+				assertThat(result).hasSize(expectedEntities.size());
+				verify(hintRepository).findAllByProcessId(processId);
+				verify(hintRepository, never()).findAll(mockSpec);
 
-					// Then
-					assertThat(result).hasSize(expectedEntities.size());
-					verify(hintRepository).findAllByProcessId(processId);
-					verify(hintRepository, never()).findAll(mockSpec);
-
-				} else {
-					try (MockedStatic<HintSpecifications> mockedStatic = mockStatic(HintSpecifications.class)) {
-						mockedStatic.when(() -> HintSpecifications.fromQuery(queryParams)).thenReturn(mockSpec);
-						when(hintRepository.findAll(mockSpec)).thenReturn(Collections.emptyList());
-						when(hintRepositoryLegacyCustom.findAllByQuery(queryParams)).thenReturn(Collections.emptyList());
-
-						// When
-						hintService.getHints(queryParams);
-
-						// Then - Verify the logic fell through and did NOT use the findAllByProcessId method
-						verify(hintRepository, never()).findAllByProcessId(anyString());
-						verify(hintRepository).findAll(mockSpec); // Confirms it fell through to the end
-					}
-				}
-			}
-
-
-
-
-			private static Stream<Arguments> provideArgs4SecondCondition() {
-				return Stream.of(
-					Arguments.of(
-						"True: All conditions met",
-						Map.of(HintParams.PROCESS_ID, "E123", HintParams.HINT_SOURCE_PREFIX, "PASYNC"),
-						true
-					),
-					Arguments.of(
-						"False: PROCESS_ID is missing",
-						Map.of(HintParams.HINT_SOURCE_PREFIX, "PASYNC"),
-						false
-					),
-					Arguments.of(
-						"False: queryParams.size() is not 2",
-						Map.of(
-							HintParams.PROCESS_ID, "E123",
-							HintParams.HINT_SOURCE_PREFIX, "PASYNC",
-							HintParams.HINT_CATEGORY, "INFO"
-						),
-						false
-					)
-				);
-			}
-
-			@DisplayName("if queryParams contains only PROCESS_ID and HINT_SOURCE_PREFIX (HINT_SOURCE_PREFIX Path)")
-			@ParameterizedTest(name = "{0}")
-			@MethodSource("provideArgs4SecondCondition")
-			void testElseIfBranchWithAllCases(String caseName, Map<HintParams, Object> queryParams, boolean isConditionTrue) {
-				if (isConditionTrue) {
-					// Given - Test the successful path
-					String processId = (String) queryParams.get(HintParams.PROCESS_ID);
-					String prefix = (String) queryParams.get(HintParams.HINT_SOURCE_PREFIX);
-					List<HintEntity> expectedEntities = List.of(HintTestDataGenerator.createInfoHintEntity());
-					when(hintRepository.findAllByProcessIdAndHintSourceStartingWith(processId, prefix)).thenReturn(expectedEntities);
-
-					// When
-					List<HintDto> result = hintService.getHints(queryParams);
-
-					// Then
-					assertThat(result).hasSize(expectedEntities.size());
-					verify(hintRepository).findAllByProcessIdAndHintSourceStartingWith(processId, prefix);
-					verify(hintRepository, never()).findAll(mockSpec);
-
-				} else {
-					try (MockedStatic<HintSpecifications> mockedStatic = mockStatic(HintSpecifications.class)) {
-						mockedStatic.when(() -> HintSpecifications.fromQuery(queryParams)).thenReturn(mockSpec);
-						when(hintRepository.findAll(mockSpec)).thenReturn(Collections.emptyList());
-						when(hintRepositoryLegacyCustom.findAllByQuery(queryParams)).thenReturn(Collections.emptyList());
-
-
-						// When
-						hintService.getHints(queryParams);
-
-						// Then
-						verify(hintRepository, never()).findAllByProcessIdAndHintSourceStartingWith(anyString(), anyString());
-						verify(hintRepository).findAll(mockSpec);
-					}
-				}
-			}
-
-			@Test
-			@DisplayName("if queryParams contains any combinations (Specification Path)")
-			void shouldUseSpecificationForOtherCombinations() {
-				// Given
-				Map<HintParams, Object> queryParams = Map.of(
-					HintParams.PROCESS_ID, "E123",
-					HintParams.HINT_CATEGORY, HintDto.Category.ERROR
-				);
-				List<HintEntity> expectedEntities = List.of(HintTestDataGenerator.createErrorHintEntity());
-
+			} else {
 				try (MockedStatic<HintSpecifications> mockedStatic = mockStatic(HintSpecifications.class)) {
 					mockedStatic.when(() -> HintSpecifications.fromQuery(queryParams)).thenReturn(mockSpec);
-					when(hintRepository.findAll(mockSpec)).thenReturn(expectedEntities);
+					when(hintRepository.findAll(mockSpec)).thenReturn(Collections.emptyList());
 
 					// When
-					List<HintDto> result = hintService.getHints(queryParams);
+					hintService.getHints(queryParams);
 
-					// Then
-					assertThat(result).hasSize(expectedEntities.size());
-					verify(hintRepository).findAll(mockSpec);
+					// Then - Verify the logic fell through and did NOT use the findAllByProcessId method
 					verify(hintRepository, never()).findAllByProcessId(anyString());
-					verify(hintRepository, never()).findAllByProcessIdAndHintSourceStartingWith(anyString(), anyString());
-					verifyNoInteractions(hintRepositoryLegacyCustom);
+					verify(hintRepository).findAll(mockSpec); // Confirms it fell through to the end
 				}
 			}
 		}
 
-		@Nested
-		@DisplayName("with mongo (legacy db)")
-		class FallbackToLegacyDB {
+		private static Stream<Arguments> provideArgs4SecondCondition() {
+			return Stream.of(
+				Arguments.of(
+					"True: All conditions met",
+					Map.of(HintParams.PROCESS_ID, "E123", HintParams.HINT_SOURCE_PREFIX, "PASYNC"),
+					true
+				),
+				Arguments.of(
+					"False: PROCESS_ID is missing",
+					Map.of(HintParams.HINT_SOURCE_PREFIX, "PASYNC"),
+					false
+				),
+				Arguments.of(
+					"False: queryParams.size() is not 2",
+					Map.of(
+						HintParams.PROCESS_ID, "E123",
+						HintParams.HINT_SOURCE_PREFIX, "PASYNC",
+						HintParams.HINT_CATEGORY, "INFO"
+					),
+					false
+				)
+			);
+		}
 
-			@Test
-			@DisplayName("should call legacy repository when no hints are found in Postgres")
-			void shouldFallbackToLegacyWhenPostgresReturnsEmpty() {
-				// Given
-				String processId = "E456";
-				Map<HintParams, Object> queryParams = Map.of(HintParams.PROCESS_ID, processId);
-				List<HintDao> legacyDaos = List.of(HintTestDataGenerator.createWarningHintDao());
-
-				when(hintRepository.findAllByProcessId(processId)).thenReturn(Collections.emptyList());
-				when(hintRepositoryLegacyCustom.findAllByQuery(queryParams)).thenReturn(legacyDaos);
+		@DisplayName("if queryParams contains only PROCESS_ID and HINT_SOURCE_PREFIX (HINT_SOURCE_PREFIX Path)")
+		@ParameterizedTest(name = "{0}")
+		@MethodSource("provideArgs4SecondCondition")
+		void testElseIfBranchWithAllCases(String caseName, Map<HintParams, Object> queryParams, boolean isConditionTrue) {
+			if (isConditionTrue) {
+				// Given - Test the successful path
+				String processId = (String) queryParams.get(HintParams.PROCESS_ID);
+				String prefix = (String) queryParams.get(HintParams.HINT_SOURCE_PREFIX);
+				List<HintEntity> expectedEntities = List.of(HintTestDataGenerator.createInfoHintEntity());
+				when(hintRepository.findAllByProcessIdAndHintSourceStartingWith(processId, prefix)).thenReturn(expectedEntities);
 
 				// When
 				List<HintDto> result = hintService.getHints(queryParams);
 
 				// Then
-				assertThat(result).hasSize(legacyDaos.size());
-				verify(hintRepository).findAllByProcessId(processId);
-				verify(hintRepositoryLegacyCustom).findAllByQuery(queryParams);
-			}
+				assertThat(result).hasSize(expectedEntities.size());
+				verify(hintRepository).findAllByProcessIdAndHintSourceStartingWith(processId, prefix);
+				verify(hintRepository, never()).findAll(mockSpec);
 
-			@Test
-			@DisplayName("should return empty list when both repositories find no hints")
-			void shouldReturnEmptyWhenBothRepositoriesAreEmpty() {
-				// Given
-				String processId = "p-not-exist";
-				Map<HintParams, Object> queryParams = Map.of(HintParams.PROCESS_ID, processId);
+			} else {
+				try (MockedStatic<HintSpecifications> mockedStatic = mockStatic(HintSpecifications.class)) {
+					mockedStatic.when(() -> HintSpecifications.fromQuery(queryParams)).thenReturn(mockSpec);
+					when(hintRepository.findAll(mockSpec)).thenReturn(Collections.emptyList());
 
-				when(hintRepository.findAllByProcessId(processId)).thenReturn(Collections.emptyList());
-				when(hintRepositoryLegacyCustom.findAllByQuery(queryParams)).thenReturn(Collections.emptyList());
+					// When
+					hintService.getHints(queryParams);
 
-				// When
-				List<HintDto> result = hintService.getHints(queryParams);
-
-				// Then
-				assertThat(result).isEmpty();
-				verify(hintRepository).findAllByProcessId(processId);
-				verify(hintRepositoryLegacyCustom).findAllByQuery(queryParams);
+					// Then
+					verify(hintRepository, never()).findAllByProcessIdAndHintSourceStartingWith(anyString(), anyString());
+					verify(hintRepository).findAll(mockSpec);
+				}
 			}
 		}
+
+		@Test
+		@DisplayName("if queryParams contains any combinations (Specification Path)")
+		void shouldUseSpecificationForOtherCombinations() {
+			// Given
+			Map<HintParams, Object> queryParams = Map.of(
+				HintParams.PROCESS_ID, "E123",
+				HintParams.HINT_CATEGORY, HintDto.Category.ERROR
+			);
+			List<HintEntity> expectedEntities = List.of(HintTestDataGenerator.createErrorHintEntity());
+
+			try (MockedStatic<HintSpecifications> mockedStatic = mockStatic(HintSpecifications.class)) {
+				mockedStatic.when(() -> HintSpecifications.fromQuery(queryParams)).thenReturn(mockSpec);
+				when(hintRepository.findAll(mockSpec)).thenReturn(expectedEntities);
+
+				// When
+				List<HintDto> result = hintService.getHints(queryParams);
+
+				// Then
+				assertThat(result).hasSize(expectedEntities.size());
+				verify(hintRepository).findAll(mockSpec);
+				verify(hintRepository, never()).findAllByProcessId(anyString());
+				verify(hintRepository, never()).findAllByProcessIdAndHintSourceStartingWith(anyString(), anyString());
+			}
+		}
+
 	}
 
 	@Nested
@@ -279,59 +213,41 @@ class HintServiceTest {
 	@DisplayName("test getHintById")
 	class GetHintById {
 
-		private static Stream<Arguments> provideGetHintByIdArguments() {
-			return Stream.of(
-				Arguments.of("12345", true, true, "existed in postgres"),
-				Arguments.of("507f1f77bcf86cd799439011", false, true, "existed in mongo"),
-				Arguments.of("99999", true, false, "not existed postgres"), //
-				Arguments.of("507f1f77bcf86cd799439022", false, false, "not existed mongo")
-			);
-		}
-
-		@DisplayName("with valid id")
-		@ParameterizedTest(name = "{3}")
-		@MethodSource("provideGetHintByIdArguments")
-		void shouldFindHintById(String id, boolean isPostgresId, boolean shouldBePresent, String testTitle) {
+		@Test
+		@DisplayName("successfully returns a hint when found")
+		void shouldReturnHintWhenFound() {
 			// Given
-			if (isPostgresId) {
-				Optional<HintEntity> entity = shouldBePresent ? Optional.of(HintTestDataGenerator.createInfoHintEntity()) : Optional.empty();
-				when(hintRepository.findById(Long.parseLong(id))).thenReturn(entity);
-			} else {
-				Optional<HintDao> dao = shouldBePresent ? Optional.of(HintTestDataGenerator.createErrorHintDao()) : Optional.empty();
-				when(hintRepositoryLegacy.findById(id)).thenReturn(dao);
-			}
+			Long hintId = 1L;
+			HintEntity hintEntity = HintTestDataGenerator.createInfoHintEntity();
+			hintEntity.setId(hintId);
+
+			when(hintRepository.findById(hintId)).thenReturn(java.util.Optional.of(hintEntity));
+			when(hintMapper.entityToDto(any(HintEntity.class))).thenCallRealMethod();
 
 			// When
-			Optional<HintDto> result = hintService.getHintById(id);
+			java.util.Optional<HintDto> result = hintService.getHintById(hintId);
 
 			// Then
-			assertThat(result.isPresent()).isEqualTo(shouldBePresent);
-			if (isPostgresId) {
-				verify(hintRepository).findById(Long.parseLong(id));
-				verifyNoInteractions(hintRepositoryLegacy);
-			} else {
-				verify(hintRepositoryLegacy).findById(id);
-				verifyNoInteractions(hintRepository);
-			}
+			assertThat(result).isPresent();
+			assertThat(result.get().message()).isEqualTo(hintEntity.getMessage());
+			verify(hintRepository).findById(hintId);
+			verify(hintMapper).entityToDto(hintEntity);
 		}
 
-		private static Stream<Arguments> provideInvalidIdArguments() {
-			String invalidFormatId = "invalid-id-format-123";
-			return Stream.of(
-				Arguments.of(null, "ID cannot be null or empty", "null-value"),
-				Arguments.of("  ", "ID cannot be null or empty", "empty-value"),
-				Arguments.of(invalidFormatId, "Unknown hint ID: " + invalidFormatId, "invalid-format-value")
-			);
-		}
+		@Test
+		@DisplayName("returns empty optional when hint not found")
+		void shouldReturnEmptyOptionalWhenNotFound() {
+			// Given
+			Long hintId = 99L;
+			when(hintRepository.findById(hintId)).thenReturn(java.util.Optional.empty());
 
-		@DisplayName("with invalid id")
-		@ParameterizedTest(name = "{2}")
-		@MethodSource("provideInvalidIdArguments")
-		void shouldThrowExceptionForInvalidId(String invalidId, String expectedMessage, String testTitle) {
-			// When & Then
-			assertThatThrownBy(() -> hintService.getHintById(invalidId))
-				.isInstanceOf(IllegalArgumentException.class)
-				.hasMessage(expectedMessage);
+			// When
+			java.util.Optional<HintDto> result = hintService.getHintById(hintId);
+
+			// Then
+			assertThat(result).isNotPresent();
+			verify(hintRepository).findById(hintId);
+			verify(hintMapper, never()).entityToDto(any(HintEntity.class));
 		}
 	}
 }

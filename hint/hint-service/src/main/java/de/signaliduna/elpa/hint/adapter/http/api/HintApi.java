@@ -13,7 +13,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.HttpStatusCode;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
@@ -38,46 +38,37 @@ public class HintApi {
 	@GetMapping
 	@Operation(summary = "Returns all hints.")
 	@ApiResponses(value = {
-		@ApiResponse(responseCode = "200",
-			description = "OK",
-			content = @Content(schema = @Schema(implementation = HintDto.class))),
-		@ApiResponse(responseCode = "500",
-			description = "Internal server error")
+		@ApiResponse(responseCode = "200", description = "OK", content = @Content(schema = @Schema(implementation = HintDto.class))),
+		@ApiResponse(responseCode = "500", description = "Internal server error")
 	})
-	public List<HintDto> getHints(@ModelAttribute HintQueryRequest request) {
+	public ResponseEntity<List<HintDto>> getHints(@ModelAttribute HintQueryRequest request) {
 		Map<HintParams, Object> queryParams = request.toQueryParams();
 		log.info("Fetching hints with query params: {}", queryParams);
-		return hintService.getHints(queryParams);
+		List<HintDto> hints = hintService.getHints(queryParams);
+		return ResponseEntity.ok(hints);
 	}
 
 	@GetMapping("/{id}")
 	@Operation(summary = "Returns hint by id.")
 	@ApiResponses(value = {
-		@ApiResponse(responseCode = "200",
-			description = "OK",
-			content = @Content(schema = @Schema(implementation = HintDto.class))),
-		@ApiResponse(responseCode = "404",
-			description = "No hint for id"),
-		@ApiResponse(responseCode = "500",
-			description = "Internal server error")
-	})
-	public ResponseEntity<HintDto> getHintById(@PathVariable("id") String id) {
-		log.info("Request for hint with id: '{}'", id);
-		return this.hintService.getHintById(id).map(ResponseEntity::ok)
-			.orElse(ResponseEntity.notFound().build());
-	}
+    @ApiResponse(responseCode = "200",description = "OK",content = @Content(schema = @Schema(implementation = HintDto.class))),
+    @ApiResponse(responseCode = "404",description = "No hint for id"),
+    @ApiResponse(responseCode = "500",description = "Internal server error")
+})
+public ResponseEntity<HintDto> getHintById(@PathVariable("id") @NotNull Long id) {
+  log.info("Request for hint with id: {}", id);
+  return this.hintService.getHintById(id).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
+}
 
 	@PostMapping
 	@Operation(summary = "Saves given hints.")
 	@ApiResponses(value = {
-		@ApiResponse(responseCode = "201",
-			description = "CREATED"),
-		@ApiResponse(responseCode = "500",
-			description = "Internal server error")
+		@ApiResponse(responseCode = "201", description = "CREATED"),
+		@ApiResponse(responseCode = "500", description = "Internal server error")
 	})
 	public ResponseEntity<List<HintDto>> saveHints(@NotNull @RequestBody @Size(max = 100, message = "List size must be between 0 and 100") List<HintDto> hintDtos) {
 		log.info("Going to save received hints with process ids: '{}', .", hintDtos.stream().map(HintDto::processId).toList());
 		this.hintService.saveHints(hintDtos);
-		return ResponseEntity.status(HttpStatusCode.valueOf(201)).body(hintDtos);
+		return ResponseEntity.status(HttpStatus.CREATED).body(hintDtos);
 	}
 }
