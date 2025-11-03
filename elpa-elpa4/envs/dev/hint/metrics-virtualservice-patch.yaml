@@ -1,17 +1,17 @@
 apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:
-  name: hint-admin
+  name: virtualservice-metrics
 spec:
   hosts:
-    - "dev-hint-admin-elpa-elpa4.copsinop.de"
-    - "dev-hint-admin.elpa-elpa4.svc.cluster.local"
+    - "dev-hint-metrics-elpa-elpa4.copsinop.de"
+    - "dev-hint-metrics.elpa-elpa4.svc.cluster.local"
   gateways:
     - istio-system/mesh-gateway
     - mesh
   http:
     - route:
         - destination:
-            host: dev-service-hint-ELPA4-123
+            host: dev-metrics-hint
             port:
               number: 8081

@@ -5,7 +5,6 @@ nameSuffix: "-hint"
 
 resources:
   - ../../base
-  - admin-virtualservice.yaml
   - destination-rule.yaml
 
 components:
@@ -33,6 +32,6 @@ patches:
   - path: virtualservice-patch.yaml
   - path: service-app-patch.yaml
   - path: deployment-patch.yaml
-  - path: destination-rule-patch.yaml
+  - path: metrics-virtualservice-patch.yaml
 
 
