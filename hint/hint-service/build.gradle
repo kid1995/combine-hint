@@ -31,15 +31,15 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	implementation 'org.springframework.boot:spring-boot-starter-security'
-	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.13'
+	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.14'
 
 	// Überschreiben transitiver Abhängigkeiten von springdoc-openapi-starter-webmvc-ui,
 	// um CVEs in älteren Versionen (z.B. commons-compress, commons-lang3) zu beheben.
 	implementation 'org.apache.commons:commons-compress:1.28.0'
-	implementation 'org.apache.commons:commons-lang3:3.19.0'
+	implementation 'org.apache.commons:commons-lang3:3.20.0'
 
-	implementation 'io.github.springwolf:springwolf-kafka:1.18.0'
-	implementation 'com.c4-soft.springaddons:spring-addons-starter-oidc:8.1.23'
+	implementation 'io.github.springwolf:springwolf-kafka:1.20.0'
+	implementation 'com.c4-soft.springaddons:spring-addons-starter-oidc:8.1.24'
 	implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
 
 	implementation 'org.springframework.cloud:spring-cloud-stream'
@@ -48,7 +48,7 @@ dependencies {
 	implementation 'io.micrometer:micrometer-tracing'
 	implementation 'io.micrometer:micrometer-tracing-bridge-otel'
 	implementation 'org.mapstruct:mapstruct:1.6.3'
-	implementation('net.logstash.logback:logstash-logback-encoder:8.1') {
+	implementation('net.logstash.logback:logstash-logback-encoder:9.0') {
 		// Provided by Spring Boot
 		exclude group: 'com.fasterxml.jackson.core', module: 'jackson-databind'
 	}
@@ -62,9 +62,9 @@ dependencies {
 		exclude group: "io.micrometer", module: "micrometer-tracing-bridge-brave"
 	}
 	testImplementation 'org.springframework.kafka:spring-kafka-test'
-	testImplementation 'com.c4-soft.springaddons:spring-addons-starter-oidc-test:8.1.23'
+	testImplementation 'com.c4-soft.springaddons:spring-addons-starter-oidc-test:8.1.24'
 	testImplementation 'org.springframework.boot:spring-boot-testcontainers'
 	testImplementation 'org.testcontainers:junit-jupiter'
 	testImplementation 'org.testcontainers:postgresql'
-	testImplementation 'org.testcontainers:testcontainers'
+	testImplementation 'org.testcontainers:testcontainers:2.0.2'
 }

@@ -5,9 +5,7 @@ import de.signaliduna.elpa.hint.adapter.mapper.HintMapper;
 import de.signaliduna.elpa.hint.model.HintDto;
 import org.mapstruct.factory.Mappers;
 
-import java.time.Instant;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.*;
 
 public class HintTestDataGenerator {
