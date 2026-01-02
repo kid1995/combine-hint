@@ -1,0 +1,32 @@
+sequenceDiagram
+    participant Client
+    participant HintApi
+    participant HintService
+    participant HintRepository
+    participant PostgreSQL
+    
+    Client->>+HintApi: GET /api/hints?processId=E123
+    HintApi->>HintApi: @PreAuthorize checks
+    HintApi->>+HintService: getHints(queryParams)
+    
+    alt Only processId
+        HintService->>+HintRepository: findAllByProcessId("E123")
+        HintRepository->>+PostgreSQL: SELECT * WHERE process_id = 'E123'
+        PostgreSQL-->>-HintRepository: List<HintEntity>
+        HintRepository-->>-HintService: List<HintEntity>
+    else processId + hintSourcePrefix
+        HintService->>+HintRepository: findAllByProcessIdAndHintSourceStartingWith(...)
+        HintRepository->>+PostgreSQL: SELECT * WHERE process_id = ? AND hint_source LIKE ?
+        PostgreSQL-->>-HintRepository: List<HintEntity>
+        HintRepository-->>-HintService: List<HintEntity>
+    else Other combinations
+        HintService->>HintService: Build Specification
+        HintService->>+HintRepository: findAll(spec)
+        HintRepository->>+PostgreSQL: SELECT * WHERE ...
+        PostgreSQL-->>-HintRepository: List<HintEntity>
+        HintRepository-->>-HintService: List<HintEntity>
+    end
+    
+    HintService->>HintService: Map to DTOs
+    HintService-->>-HintApi: List<HintDto>
+    HintApi-->>-Client: 200 OK + JSON

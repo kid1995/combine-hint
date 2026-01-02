@@ -19,7 +19,7 @@ dependencyManagement {
 dependencies {
 	api project(":hint-model")
 	api 'org.springframework.cloud:spring-cloud-starter-openfeign'
-	api 'de.signaliduna.elpa:jwt-adapter:2.4.0'
+	api 'de.signaliduna.elpa:jwt-adapter:2.4.1'
 	implementation("com.fasterxml.jackson.core:jackson-annotations:${jacksonVersion}")
 	implementation 'jakarta.validation:jakarta.validation-api:3.1.1'
 
@@ -40,14 +40,6 @@ publishing {
 	}
 
 	repositories {
-		maven {
-			name = 'SILocal'
-			credentials {
-				username project.findProperty('NEXUS_USER') as String ?: ''
-				password project.findProperty('NEXUS_PASSWORD') as String ?: ''
-			}
-			url = (project.version as String).contains("SNAPSHOT") ? 'https://m2repo.system.local/content/repositories/si-snapshot' : 'https://m2repo.system.local/content/repositories/si-release'
-			allowInsecureProtocol true
-		}
+		mavenLocal()
 	}
 }

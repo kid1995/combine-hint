@@ -1,0 +1,86 @@
+graph TB
+    subgraph hint-client["hint-client (Library)"]
+        HC[HintClient Interface]
+        HCC[HintClientConfig]
+        HCP[HintClientProperties]
+        EHC["@EnableHintClient"]
+        JI[JwtInterceptor]
+        
+        EHC -->|imports| HCC
+        HCC -->|creates| HC
+        HCC -->|uses| HCP
+        HCC -->|configures| JI
+    end
+    
+    subgraph hint-model["hint-model (Library)"]
+        HD[HintDto]
+        HSR[HintSearchRequest]
+        HQR[HintQueryRequest]
+        HM[HintMessage Enum]
+        HS[HintSource Enum]
+        HP[HintParams Enum]
+        
+        HSR -.->|uses| HD
+        HQR -.->|uses| HP
+    end
+    
+    subgraph hint-service["hint-service (Microservice)"]
+        subgraph Adapter-Layer["Adapter Layer"]
+            subgraph HTTP-API["HTTP API"]
+                HA["HintApi<br/>@RestController"]
+                SCA[SecurityControllerAdvice]
+            end
+            
+            subgraph Message-Consumer["Message Consumer"]
+                HAD["HintAdapter<br/>@AsyncListener"]
+            end
+            
+            subgraph Database
+                HR["HintRepository<br/>JpaRepository"]
+                HSP[HintSpecifications]
+                HE[HintEntity]
+            end
+            
+            subgraph Mapper
+                HMA["HintMapper<br/>MapStruct"]
+            end
+        end
+        
+        subgraph Core-Layer["Core Layer"]
+            HSV[HintService]
+        end
+        
+        subgraph Configuration
+            WSC[WebSecurityConfig]
+            HSVC[HintServiceConfig]
+        end
+        
+        HA -->|calls| HSV
+        HAD -->|calls| HSV
+        HSV -->|uses| HR
+        HSV -->|uses| HMA
+        HR -->|queries with| HSP
+        HR -->|manages| HE
+        HMA -->|maps| HE
+        HMA -->|maps| HD
+        HSVC -->|creates| HSV
+        WSC -->|secures| HA
+    end
+    
+    subgraph External-Systems["External Systems"]
+        PG[(PostgreSQL)]
+        KF["Kafka Topic<br/>elpa-hint-created"]
+        AUTH["OAuth2/OIDC<br/>Provider"]
+    end
+    
+    HC -.->|REST calls| HA
+    HR -->|persists| PG
+    KF -->|consumes| HAD
+    HA -->|authenticates| AUTH
+    HC -->|authenticates| AUTH
+    
+    style hint-client fill:#e1f5ff
+    style hint-model fill:#fff4e1
+    style hint-service fill:#f0e1ff
+    style Core-Layer fill:#d4edda
+    style Adapter-Layer fill:#fff3cd

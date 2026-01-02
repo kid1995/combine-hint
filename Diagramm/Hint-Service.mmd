@@ -1,0 +1,71 @@
+classDiagram
+    class HintService {
+        -HintRepository hintRepository
+        -HintMapper hintMapper
+        +getHints(Map) List~HintDto~
+        +saveHints(List~HintDto~) void
+        +getHintById(Long) Optional~HintDto~
+    }
+    
+    class HintRepository {
+        <<interface>>
+        +findAllByProcessId(String) List~HintEntity~
+        +findAllByProcessIdAndHintSourceStartingWith(String, String) List~HintEntity~
+        +findAll(Specification) List~HintEntity~
+    }
+    
+    class HintSpecifications {
+        <<utility>>
+        +fromQuery(Map) Specification~HintEntity~
+    }
+    
+    class HintEntity {
+        -Long id
+        -String hintSource
+        -String message
+        -Category hintCategory
+        -Boolean showToUser
+        -LocalDateTime creationDate
+        -String processId
+        -String processVersion
+        -String resourceId
+        -String mongoUUID
+        +builder() Builder
+    }
+    
+    class HintMapper {
+        <<interface>>
+        +dtoToEntity(HintDto) HintEntity
+        +entityToDto(HintEntity) HintDto
+    }
+    
+    class HintApi {
+        <<RestController>>
+        -HintService hintService
+        +getHints(HintQueryRequest) ResponseEntity
+        +getHintById(Long) ResponseEntity
+        +saveHints(List~HintDto~) ResponseEntity
+    }
+    
+    class HintAdapter {
+        <<Component>>
+        -HintService hintService
+        +hintCreated() Consumer~HintDto~
+    }
+    
+    class SecurityControllerAdvice {
+        <<ControllerAdvice>>
+        +handleAccessDeniedException(...) ResponseEntity
+        +handleRuntimeException(...) ResponseEntity
+        +handleConstraintViolationException(...) ResponseEntity
+    }
+    
+    HintService --> HintRepository : uses
+    HintService --> HintMapper : uses
+    HintRepository --> HintEntity : manages
+    HintRepository ..> HintSpecifications : queries with
+    HintMapper ..> HintEntity : maps
+    HintMapper ..> HintDto : maps
+    HintApi --> HintService : calls
+    HintAdapter --> HintService : calls
+    SecurityControllerAdvice ..> HintApi : advises

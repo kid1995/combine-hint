@@ -1,0 +1,52 @@
+graph TB
+    subgraph "Deployment Architecture"
+        subgraph "Kubernetes Cluster"
+            subgraph "hint-service Pod"
+                APP[hint-service:8080]
+                MGMT[Management Port:8081]
+            end
+            
+            subgraph "Infrastructure"
+                PG[(PostgreSQL<br/>Schema: hint)]
+                KF[Kafka Broker<br/>+ OAuth2]
+            end
+            
+            subgraph "Service Mesh"
+                ISTIO[Istio Sidecar]
+            end
+            
+            subgraph "Monitoring"
+                PROM[Prometheus]
+                TRACE[OpenTelemetry<br/>Collector]
+            end
+        end
+        
+        subgraph "External Services"
+            AUTH[OAuth2 Provider<br/>employee.login]
+            NEXUS[Nexus<br/>Artifact Repository]
+        end
+        
+        subgraph "Other Microservices"
+            MS1[Service A]
+            MS2[Service B]
+        end
+    end
+    
+    APP -->|JDBC| PG
+    APP -->|consumes| KF
+    APP -->|OAuth2| AUTH
+    ISTIO -->|wraps| APP
+    
+    MGMT -->|/metrics/prometheus| PROM
+    APP -->|traces| TRACE
+    
+    MS1 -->|HintClient| ISTIO
+    MS2 -->|HintClient| ISTIO
+    
+    NEXUS -.->|publishes| hint-client
+    NEXUS -.->|publishes| hint-model
+    
+    style APP fill:#f0e1ff
+    style PG fill:#4a90e2
+    style KF fill:#ff9800
+    style AUTH fill:#4caf50

@@ -1,0 +1,36 @@
+graph LR
+    subgraph "Module Dependencies"
+        HM[hint-model<br/>jar library]
+        HC[hint-client<br/>jar library]
+        HS[hint-service<br/>Spring Boot app]
+        
+        HC -->|depends on| HM
+        HS -->|depends on| HM
+    end
+    
+    subgraph "External Dependencies"
+        SB[Spring Boot 3]
+        SC[Spring Cloud Stream]
+        SF[Spring Security OAuth2]
+        MS[MapStruct 1.6.3]
+        FW[Flyway]
+        PG[PostgreSQL Driver]
+        OA[OpenAPI 2.8.14]
+        TC[Testcontainers 2.0.2]
+    end
+    
+    HS --> SB
+    HS --> SC
+    HS --> SF
+    HS --> MS
+    HS --> FW
+    HS --> PG
+    HS --> OA
+    HS --> TC
+    
+    HC --> SB
+    HC --> SF
+    
+    style HM fill:#fff4e1
+    style HC fill:#e1f5ff
+    style HS fill:#f0e1ff

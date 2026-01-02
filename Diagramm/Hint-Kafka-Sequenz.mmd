@@ -1,0 +1,23 @@
+sequenceDiagram
+    participant Kafka as Kafka Topic<br/>elpa-hint-created
+    participant HintAdapter
+    participant HintService
+    participant HintMapper
+    participant HintRepository
+    participant PostgreSQL
+    
+    Kafka->>+HintAdapter: HintDto message
+    Note over HintAdapter: @AsyncListener triggered
+    HintAdapter->>+HintService: saveHints(List.of(hintDto))
+    
+    loop For each HintDto
+        HintService->>+HintMapper: dtoToEntity(hintDto)
+        HintMapper-->>-HintService: HintEntity
+    end
+    
+    HintService->>+HintRepository: saveAll(hintEntities)
+    HintRepository->>+PostgreSQL: INSERT INTO hint (...)
+    PostgreSQL-->>-HintRepository: Success
+    HintRepository-->>-HintService: Saved entities
+    HintService-->>-HintAdapter: void
+    HintAdapter-->>-Kafka: ACK
