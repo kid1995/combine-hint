@@ -1,8 +1,6 @@
 package de.signaliduna.elpa.hint.http.client;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import de.signaliduna.elpa.hint.model.HintDto;
@@ -11,20 +9,21 @@ import de.signaliduna.elpa.jwtadapter.core.JwtAdapter;
 import feign.FeignException;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import org.eclipse.jetty.http.HttpStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.cloud.contract.wiremock.AutoConfigureWireMock;
 import org.springframework.context.annotation.Bean;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import wiremock.org.eclipse.jetty.http.HttpStatus;
+import org.wiremock.spring.EnableWireMock;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -37,7 +36,7 @@ import static org.mockito.Mockito.when;
 @ActiveProfiles("it")
 @SpringBootTest(classes = {HintClient.class, HintClientIT.TestConfig.class},
 	properties = "elpa.hint.client.url=http://localhost:${wiremock.server.port}")
-@AutoConfigureWireMock(port = 0)
+@EnableWireMock()
 @EnableHintClient
 class HintClientIT {
 	public static final String HINTS_ENDPOINT = "/api/hints";
@@ -53,7 +52,7 @@ class HintClientIT {
 	@MockitoBean
 	JwtAdapter jwtAdapter;
 	@Autowired
-	ObjectMapper objectMapper;
+	JsonMapper jsonMapper;
 	@Autowired
 	HintClient hintClient;
 
@@ -68,9 +67,9 @@ class HintClientIT {
 		final String hintId = "myHintId";
 
 		@Test
-		void whenHintIsFound() throws JsonProcessingException {
+		void whenHintIsFound() {
 			//given
-			final var hintDtoJson = objectMapper.writeValueAsString(HINT_DTO);
+			final var hintDtoJson = jsonMapper.writeValueAsString(HINT_DTO);
 			stubFor(get(urlPathEqualTo(HINTS_ENDPOINT + "/" + hintId))
 				.withHeader(HttpHeaders.AUTHORIZATION, equalTo("Bearer " + FAKE_JWT))
 				.willReturn(ResponseDefinitionBuilder.responseDefinition()
@@ -118,9 +117,9 @@ class HintClientIT {
 	class searchHints {
 
 		@Test
-		void happyPath_byProcessId() throws JsonProcessingException {
+		void happyPath_byProcessId() {
 			//given
-			final var hintDtoListJsonString = objectMapper.writeValueAsString(List.of(HINT_DTO));
+			final var hintDtoListJsonString = jsonMapper.writeValueAsString(List.of(HINT_DTO));
 			assertThat(hintDtoListJsonString).isEqualTo("""
 				[{"hintSource":"AppDetails","message":"Test","hintCategory":"INFO","showToUser":true,"processId":"processId-value","creationDate":[2024,5,7,12,1],"processVersion":"processVersion-value","resourceId":"resourceId-value"}]
 				""".stripTrailing());
@@ -142,9 +141,9 @@ class HintClientIT {
 		}
 
 		@Test
-		void happyPath_searchContainingAllOptionalFilterParams() throws JsonProcessingException {
+		void happyPath_searchContainingAllOptionalFilterParams() {
 			//given
-			final var hintDtoListJsonString = objectMapper.writeValueAsString(List.of(HINT_DTO));
+			final var hintDtoListJsonString = jsonMapper.writeValueAsString(List.of(HINT_DTO));
 			stubFor(get(urlPathEqualTo(HINTS_ENDPOINT))
 				.withQueryParam("hintSource", equalTo("hintSource-value"))
 				.withQueryParam("hintTextOriginal", equalTo("hintTextOriginal-value"))
@@ -194,9 +193,9 @@ class HintClientIT {
 	class saveHints {
 
 		@Test
-		void happyPath() throws JsonProcessingException {
+		void happyPath() {
 			//given
-			final var hintDtoListJsonString = objectMapper.writeValueAsString(List.of(HINT_DTO));
+			final var hintDtoListJsonString = jsonMapper.writeValueAsString(List.of(HINT_DTO));
 			stubFor(post(urlPathEqualTo(HINTS_ENDPOINT))
 				.withRequestBody(equalToJson(hintDtoListJsonString))
 				.withHeader(HttpHeaders.AUTHORIZATION, equalTo("Bearer " + FAKE_JWT))
@@ -217,8 +216,8 @@ class HintClientIT {
 	@TestConfiguration
 	public static class TestConfig {
 		@Bean
-		public ObjectMapper objectMapper() {
-			return new ObjectMapper().registerModule(new JavaTimeModule());
+		public JsonMapper objectMapper() {
+			return JsonMapper.builder().build();
 		}
 		@Bean
 		public MeterRegistry meterRegistry() {
