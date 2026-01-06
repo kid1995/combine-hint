@@ -9,9 +9,11 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
-import org.testcontainers.containers.PostgreSQLContainer;
+import org.springframework.test.context.TestPropertySource;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.utility.DockerImageName;
 
@@ -23,6 +25,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @DataJpaTest
 @DisplayName("HintRepository Integration Tests")
+@TestPropertySource(
+	properties = {
+		"spring.jpa.hibernate.ddl-auto=validate",
+		"spring.jpa.properties.hibernate.hbm2dd.create_namespaces=true"
+	}
+)
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 class HintRepositoryIT {
 
 	@Autowired
@@ -30,7 +39,7 @@ class HintRepositoryIT {
 
 	@Container
 	@ServiceConnection
-	static final PostgreSQLContainer<?> POSTGRES_CONTAINER = new PostgreSQLContainer<>(
+	static final PostgreSQLContainer POSTGRES_CONTAINER = new PostgreSQLContainer(
 		DockerImageName.parse(ContainerImageNames.POSTGRES.getImageName()).asCompatibleSubstituteFor(PostgreSQLContainer.IMAGE)
 	);
 
