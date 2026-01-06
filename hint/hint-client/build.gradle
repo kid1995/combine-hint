@@ -17,19 +17,22 @@ dependencyManagement {
 }
 
 dependencies {
+	// elpa
 	api project(":hint-model")
+	api 'de.signaliduna.elpa:jwt-adapter:2.5.1-SNAPSHOT'
+
+	// feign und metric
 	api 'org.springframework.cloud:spring-cloud-starter-openfeign'
-	api 'de.signaliduna.elpa:jwt-adapter:2.4.1'
-	implementation("com.fasterxml.jackson.core:jackson-annotations:${jacksonVersion}")
-	implementation 'jakarta.validation:jakarta.validation-api:3.1.1'
-
-
-	api 'io.micrometer:micrometer-tracing'
+	compileOnly 'org.springframework.boot:spring-boot-starter-micrometer-metrics'
 	implementation 'io.github.openfeign:feign-micrometer'
+
+
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
+	implementation 'org.springframework.boot:spring-boot-http-converter'
 
 	testImplementation 'org.springframework.boot:spring-boot-starter-web'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
-	testImplementation 'org.springframework.cloud:spring-cloud-contract-wiremock'
+	testImplementation 'org.wiremock.integrations:wiremock-spring-boot:4.0.8'
 }
 
 publishing {
