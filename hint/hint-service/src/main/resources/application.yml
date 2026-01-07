@@ -3,8 +3,6 @@ spring:
     banner-mode: off
   jackson:
     default-property-inclusion: non_null
-    serialization:
-      write-dates-as-timestamps: false
   cloud:
     function:
       definition: hintCreated
@@ -70,7 +68,6 @@ postgres:
 
 topics:
   hintCreated: elpa-hint-created${KAFKA_TOPIC_SUFFIX:}
-
 com:
   c4-soft:
     springaddons:
@@ -164,7 +161,7 @@ springdoc:
   paths-to-match: /hints,/hints/**
 
 springwolf:
-  enabled: true
+  enabled: false
   docket:
     base-package: "de.signaliduna.elpa.adapter.message"
     info:

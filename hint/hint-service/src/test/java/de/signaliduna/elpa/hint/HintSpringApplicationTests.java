@@ -1,16 +1,33 @@
 package de.signaliduna.elpa.hint;
 
-import com.c4_soft.springaddons.security.oauth2.test.webmvc.AutoConfigureAddonsWebmvcResourceServerSecurity;
-import de.signaliduna.elpa.hint.util.AbstractSingletonContainerTest;
+import de.signaliduna.elpa.hint.util.ContainerImageNames;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.Import;
+import org.springframework.test.context.TestPropertySource;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.postgresql.PostgreSQLContainer;
+import org.testcontainers.utility.DockerImageName;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
-@AutoConfigureAddonsWebmvcResourceServerSecurity
-class HintSpringApplicationTests extends AbstractSingletonContainerTest {
+@TestPropertySource(
+	properties = {
+		"spring.jpa.hibernate.ddl-auto=create-drop",
+	}
+)
+@Import(TestChannelBinderConfiguration.class)
+class HintSpringApplicationTests{
+
+	@Container
+	@ServiceConnection
+	static final PostgreSQLContainer POSTGRES_CONTAINER = new PostgreSQLContainer(
+		DockerImageName.parse(ContainerImageNames.POSTGRES.getImageName()).asCompatibleSubstituteFor(PostgreSQLContainer.IMAGE)
+	).withInitScript("db/init-hint-schema.sql");
 
 	@Test
 	void contextLoads(ApplicationContext context) {

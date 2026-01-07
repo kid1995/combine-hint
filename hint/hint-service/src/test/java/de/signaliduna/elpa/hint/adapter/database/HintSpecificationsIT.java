@@ -9,10 +9,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+
+import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.data.jpa.domain.Specification;
-import org.testcontainers.containers.PostgreSQLContainer;
+import org.springframework.test.context.TestPropertySource;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.utility.DockerImageName;
 import java.util.EnumMap;
@@ -22,6 +24,11 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @DataJpaTest
+@TestPropertySource(
+	properties = {
+		"spring.jpa.hibernate.ddl-auto=create-drop",
+	}
+)
 class HintSpecificationsIT{
 
 	@Autowired
@@ -29,9 +36,9 @@ class HintSpecificationsIT{
 
 	@Container
 	@ServiceConnection
-	static final PostgreSQLContainer<?> POSTGRES_CONTAINER = new PostgreSQLContainer<>(
+	static final PostgreSQLContainer POSTGRES_CONTAINER = new PostgreSQLContainer(
 		DockerImageName.parse(ContainerImageNames.POSTGRES.getImageName()).asCompatibleSubstituteFor(PostgreSQLContainer.IMAGE)
-	);
+	).withInitScript("db/init-hint-schema.sql");
 
 	@BeforeEach
 	void setUp() {

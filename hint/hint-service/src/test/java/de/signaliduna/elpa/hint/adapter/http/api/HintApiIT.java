@@ -2,22 +2,22 @@ package de.signaliduna.elpa.hint.adapter.http.api;
 
 import com.c4_soft.springaddons.security.oauth2.test.annotations.WithMockAuthentication;
 import com.c4_soft.springaddons.security.oauth2.test.webmvc.AutoConfigureAddonsWebmvcResourceServerSecurity;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import de.signaliduna.elpa.hint.adapter.database.HintRepository;
 import de.signaliduna.elpa.hint.core.HintService;
 import de.signaliduna.elpa.hint.model.HintDto;
 import de.signaliduna.elpa.hint.config.WebSecurityConfig;
 import de.signaliduna.elpa.hint.model.HintParams;
-import de.signaliduna.elpa.hint.util.AbstractSingletonContainerTest;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.core.io.Resource;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -37,8 +37,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(controllers = HintApi.class, properties = "authorization.users=S12345")
 @MockitoBean(types = HintRepository.class)
 @AutoConfigureAddonsWebmvcResourceServerSecurity
+@ActiveProfiles("nodb")
 @Import({WebSecurityConfig.class})
-class HintApiIT extends AbstractSingletonContainerTest {
+class HintApiIT {
 	public static final String AUTHORIZED_USER = "S12345";
 
 	@Autowired
@@ -46,7 +47,7 @@ class HintApiIT extends AbstractSingletonContainerTest {
 	@Autowired
 	WebSecurityConfig webSecurityConfig;
 	@Autowired
-	ObjectMapper objectMapper;
+	JsonMapper jsonMapper;
 	@Value("classpath:HintDtos.json")
 	private Resource hintDtosJson;
 	@Value("classpath:HintDto.json")
@@ -222,10 +223,10 @@ class HintApiIT extends AbstractSingletonContainerTest {
 	@WithMockAuthentication(name = AUTHORIZED_USER)
 	void shouldRejectSavingMoreThan100Hints() throws Exception {
 		final String hintDtoJsonContentAsString = getHintDtoJsonContentAsString();
-		HintDto hint = objectMapper.readValue(hintDtoJsonContentAsString, HintDto.class);
+		HintDto hint = jsonMapper.readValue(hintDtoJsonContentAsString, HintDto.class);
 		List<HintDto> hints = IntStream.rangeClosed(1, 101).boxed().map(i -> hint).toList();
 		MvcResult mvcResult = mockMvc.perform(post("/hints")
-				.content(objectMapper.writeValueAsString(hints))
+				.content(jsonMapper.writeValueAsString(hints))
 				.contentType("application/json"))
 			.andExpect(status().isBadRequest())
 			.andReturn();
@@ -236,9 +237,9 @@ class HintApiIT extends AbstractSingletonContainerTest {
 	@Test
 	@WithMockAuthentication(name = "S12345")
 	void shouldSaveHintsEvenWhenFieldIdSourceIsNull() throws Exception {
-		HintDto hintDto = objectMapper.readValue(getHintDtoJsonContentAsString(), HintDto.class);
+		HintDto hintDto = jsonMapper.readValue(getHintDtoJsonContentAsString(), HintDto.class);
 		mockMvc.perform(post("/hints")
-				.content(objectMapper.writeValueAsString(List.of(hintDto)))
+				.content(jsonMapper.writeValueAsString(List.of(hintDto)))
 				.contentType("application/json"))
 			.andExpect(status().isCreated())
 			.andReturn();

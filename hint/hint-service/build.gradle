@@ -15,7 +15,6 @@ configurations {
 dependencyManagement {
 	imports {
 		mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
-		mavenBom "io.micrometer:micrometer-tracing-bom:${micrometerTracingVersion}"
 	}
 }
 
@@ -30,16 +29,12 @@ dependencies {
 	implementation project(":hint-model")
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'org.springframework.boot:spring-boot-starter-webmvc'
 	implementation 'org.springframework.boot:spring-boot-starter-security'
-	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.14'
-
-	// Überschreiben transitiver Abhängigkeiten von springdoc-openapi-starter-webmvc-ui,
-	// um CVEs in älteren Versionen (z.B. commons-compress, commons-lang3) zu beheben.
-	implementation 'org.apache.commons:commons-compress:1.28.0'
-	implementation 'org.apache.commons:commons-lang3:3.20.0'
+	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.1'
 
 	implementation 'io.github.springwolf:springwolf-kafka:1.20.0'
-	implementation 'com.c4-soft.springaddons:spring-addons-starter-oidc:8.1.24'
+	implementation 'com.c4-soft.springaddons:spring-addons-starter-oidc:9.1.0'
 	implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
 
 	implementation 'org.springframework.cloud:spring-cloud-stream'
@@ -58,13 +53,15 @@ dependencies {
 	implementation 'org.flywaydb:flyway-database-postgresql'
 
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa-test'
+	testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
 	testImplementation ('org.springframework.cloud:spring-cloud-stream-test-binder') {
 		exclude group: "io.micrometer", module: "micrometer-tracing-bridge-brave"
 	}
 	testImplementation 'org.springframework.kafka:spring-kafka-test'
-	testImplementation 'com.c4-soft.springaddons:spring-addons-starter-oidc-test:8.1.24'
+	testImplementation 'com.c4-soft.springaddons:spring-addons-starter-oidc-test:9.1.0'
 	testImplementation 'org.springframework.boot:spring-boot-testcontainers'
-	testImplementation 'org.testcontainers:junit-jupiter'
-	testImplementation 'org.testcontainers:postgresql'
-	testImplementation 'org.testcontainers:testcontainers:2.0.2'
+	testImplementation 'org.testcontainers:testcontainers-junit-jupiter'
+	testImplementation 'org.testcontainers:testcontainers-postgresql'
+	testImplementation 'org.testcontainers:testcontainers'
 }
