@@ -2,7 +2,6 @@ package de.signaliduna.elpa.hint.adapter.message.consumer;
 
 import de.signaliduna.elpa.hint.model.HintDto;
 import de.signaliduna.elpa.hint.core.HintService;
-import de.signaliduna.elpa.hint.util.AbstractSingletonContainerTest;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -12,12 +11,13 @@ import org.springframework.cloud.stream.binder.test.TestChannelBinderConfigurati
 import org.springframework.context.annotation.Import;
 import org.springframework.integration.support.MessageBuilder;
 import org.springframework.messaging.Message;
-import org.springframework.security.oauth2.client.registration.InMemoryClientRegistrationRepository;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import java.time.LocalDateTime;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
+
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE,
 	properties = {
@@ -25,9 +25,9 @@ import static org.mockito.Mockito.verify;
 		"com.c4-soft.springaddons.oidc.resourceserver.enabled=false"
 	}
 )
-@MockitoBean(types = InMemoryClientRegistrationRepository.class)
+@ActiveProfiles("nodb")
 @Import(TestChannelBinderConfiguration.class)
-class HintAdapterIT extends AbstractSingletonContainerTest {
+class HintAdapterIT{
 
 	@Autowired
 	InputDestination inputDestination;
