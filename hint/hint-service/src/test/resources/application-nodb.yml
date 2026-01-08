@@ -2,16 +2,7 @@ spring:
   data:
     jpa:
       repositories:
-        enabled: off
+        enabled: false
   flyway:
     enabled: false
-  autoconfigure:
-    exclude:
-      - org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration
-      - org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration
-      - org.springframework.boot.jdbc.autoconfigure.DataSourceTransactionManagerAutoConfiguration
-      - org.springframework.boot.data.jpa.autoconfigure.DataJpaRepositoriesAutoConfiguration
-logging:
-  level:
-    root: ERROR
 
