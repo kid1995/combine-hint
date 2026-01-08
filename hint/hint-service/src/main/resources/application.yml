@@ -68,6 +68,7 @@ postgres:
 
 topics:
   hintCreated: elpa-hint-created${KAFKA_TOPIC_SUFFIX:}
+
 com:
   c4-soft:
     springaddons:
