@@ -16,16 +16,15 @@ dependencyManagement {
 }
 
 dependencies {
+	annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
 	// elpa
 	api project(":hint-model")
 	implementation  'de.signaliduna.elpa:jwt-adapter:2.5.0'
 	// feign und metric
-	compileOnly 'org.springframework.cloud:spring-cloud-starter-openfeign'
-	api 'org.springframework.cloud:spring-cloud-starter-openfeign'
-	api 'io.micrometer:micrometer-core'
-	api 'io.micrometer:micrometer-tracing'
+	implementation 'io.micrometer:micrometer-core'
+	implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
 	implementation 'io.github.openfeign:feign-micrometer'
-	implementation 'jakarta.validation:jakarta.validation-api:3.1.1'
+	implementation 'jakarta.validation:jakarta.validation-api'
 
 	testImplementation 'org.springframework.boot:spring-boot-starter-webmvc'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
@@ -34,8 +33,16 @@ dependencies {
 
 publishing {
 	publications {
-		HintClient(MavenPublication) {
+		create("HintClient", MavenPublication) {
 			from components.java
+			versionMapping {
+				usage('java-api') {
+					fromResolutionOf('runtimeClasspath')
+				}
+				usage('java-runtime') {
+					fromResolutionOf('runtimeClasspath')
+				}
+			}
 		}
 	}
 
