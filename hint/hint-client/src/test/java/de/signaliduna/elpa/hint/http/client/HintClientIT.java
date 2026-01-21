@@ -1,6 +1,5 @@
 package de.signaliduna.elpa.hint.http.client;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import de.signaliduna.elpa.hint.model.HintDto;
@@ -24,7 +23,6 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.wiremock.spring.EnableWireMock;
 import tools.jackson.databind.json.JsonMapper;
-
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -44,7 +42,7 @@ class HintClientIT {
 	public static final String PROCESS_ID = "processId-value";
 	public static final String PROCESS_VERSION = "processVersion-value";
 	public static final String RESOURCE_ID = "resourceId-value";
-	public static final HintDto HINT_DTO = HintDto.builder().hintSource("AppDetails").message("Test")
+	public static final HintDto HINT_DTO_TEST_DATA = HintDto.builder().hintSource("AppDetails").message("Test")
 		.hintCategory(HintDto.Category.INFO).showToUser(true).processId(PROCESS_ID)
 		.creationDate(LocalDateTime.of(2024, 5, 7, 12, 1, 0, 0))
 		.processVersion(PROCESS_VERSION).resourceId(RESOURCE_ID).build();
@@ -69,7 +67,7 @@ class HintClientIT {
 		@Test
 		void whenHintIsFound() {
 			//given
-			final var hintDtoJson = jsonMapper.writeValueAsString(HINT_DTO);
+			final var hintDtoJson = jsonMapper.writeValueAsString(HINT_DTO_TEST_DATA);
 			stubFor(get(urlPathEqualTo(HINTS_ENDPOINT + "/" + hintId))
 				.withHeader(HttpHeaders.AUTHORIZATION, equalTo("Bearer " + FAKE_JWT))
 				.willReturn(ResponseDefinitionBuilder.responseDefinition()
@@ -83,7 +81,7 @@ class HintClientIT {
 
 			//then
 			assertThat(response.getStatusCode().value()).isEqualTo(HttpStatus.OK_200);
-			assertThat(response.getBody()).isEqualTo(HINT_DTO);
+			assertThat(response.getBody()).isEqualTo(HINT_DTO_TEST_DATA);
 		}
 
 		@Test
@@ -119,9 +117,9 @@ class HintClientIT {
 		@Test
 		void happyPath_byProcessId() {
 			//given
-			final var hintDtoListJsonString = jsonMapper.writeValueAsString(List.of(HINT_DTO));
+			final var hintDtoListJsonString = jsonMapper.writeValueAsString(List.of(HINT_DTO_TEST_DATA));
 			assertThat(hintDtoListJsonString).isEqualTo("""
-				[{"hintSource":"AppDetails","message":"Test","hintCategory":"INFO","showToUser":true,"processId":"processId-value","creationDate":[2024,5,7,12,1],"processVersion":"processVersion-value","resourceId":"resourceId-value"}]
+				[{"hintSource":"AppDetails","message":"Test","hintCategory":"INFO","showToUser":true,"processId":"processId-value","creationDate":"2024-05-07T12:01:00","processVersion":"processVersion-value","resourceId":"resourceId-value"}]
 				""".stripTrailing());
 			stubFor(get(urlPathEqualTo(HINTS_ENDPOINT))
 				.withQueryParam("processId", equalTo(PROCESS_ID))
@@ -137,13 +135,13 @@ class HintClientIT {
 
 			//then
 			assertThat(response.getStatusCode().value()).isEqualTo(HttpStatus.OK_200);
-			assertThat(response.getBody()).isEqualTo(List.of(HINT_DTO));
+			assertThat(response.getBody()).isEqualTo(List.of(HINT_DTO_TEST_DATA));
 		}
 
 		@Test
 		void happyPath_searchContainingAllOptionalFilterParams() {
 			//given
-			final var hintDtoListJsonString = jsonMapper.writeValueAsString(List.of(HINT_DTO));
+			final var hintDtoListJsonString = jsonMapper.writeValueAsString(List.of(HINT_DTO_TEST_DATA));
 			stubFor(get(urlPathEqualTo(HINTS_ENDPOINT))
 				.withQueryParam("hintSource", equalTo("hintSource-value"))
 				.withQueryParam("hintTextOriginal", equalTo("hintTextOriginal-value"))
@@ -170,7 +168,7 @@ class HintClientIT {
 
 			//then
 			assertThat(response.getStatusCode().value()).isEqualTo(HttpStatus.OK_200);
-			assertThat(response.getBody()).isEqualTo(List.of(HINT_DTO));
+			assertThat(response.getBody()).isEqualTo(List.of(HINT_DTO_TEST_DATA));
 		}
 
 		@Test
@@ -195,7 +193,7 @@ class HintClientIT {
 		@Test
 		void happyPath() {
 			//given
-			final var hintDtoListJsonString = jsonMapper.writeValueAsString(List.of(HINT_DTO));
+			final var hintDtoListJsonString = jsonMapper.writeValueAsString(List.of(HINT_DTO_TEST_DATA));
 			stubFor(post(urlPathEqualTo(HINTS_ENDPOINT))
 				.withRequestBody(equalToJson(hintDtoListJsonString))
 				.withHeader(HttpHeaders.AUTHORIZATION, equalTo("Bearer " + FAKE_JWT))
@@ -206,7 +204,7 @@ class HintClientIT {
 			);
 
 			//when
-			final ResponseEntity<Void> response = hintClient.saveHints(List.of(HINT_DTO));
+			final ResponseEntity<Void> response = hintClient.saveHints(List.of(HINT_DTO_TEST_DATA));
 
 			//then
 			assertThat(response.getStatusCode()).isEqualTo(org.springframework.http.HttpStatus.CREATED);
@@ -216,8 +214,8 @@ class HintClientIT {
 	@TestConfiguration
 	public static class TestConfig {
 		@Bean
-		public JsonMapper objectMapper() {
-			return JsonMapper.builder().build();
+		public JsonMapper jsonMapper() {
+			return JsonMapper.builder().findAndAddModules().build();
 		}
 		@Bean
 		public MeterRegistry meterRegistry() {

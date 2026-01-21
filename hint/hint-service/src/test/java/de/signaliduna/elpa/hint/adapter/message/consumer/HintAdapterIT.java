@@ -2,11 +2,10 @@ package de.signaliduna.elpa.hint.adapter.message.consumer;
 
 import de.signaliduna.elpa.hint.model.HintDto;
 import de.signaliduna.elpa.hint.core.HintService;
-import de.signaliduna.elpa.hint.util.ContainerImageNames;
+import de.signaliduna.elpa.hint.util.AbstractSingletonContainerTest;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.cloud.stream.binder.test.InputDestination;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
@@ -14,10 +13,6 @@ import org.springframework.context.annotation.Import;
 import org.springframework.integration.support.MessageBuilder;
 import org.springframework.messaging.Message;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.postgresql.PostgreSQLContainer;
-import org.testcontainers.utility.DockerImageName;
-
 import java.time.LocalDateTime;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -31,7 +26,7 @@ import static org.mockito.Mockito.verify;
 	}
 )
 @Import(TestChannelBinderConfiguration.class)
-class HintAdapterIT{
+class HintAdapterIT extends AbstractSingletonContainerTest {
 
 	@Autowired
 	InputDestination inputDestination;
@@ -39,11 +34,6 @@ class HintAdapterIT{
 	OutputDestination outputDestination;
 	@MockitoBean
 	HintService hintServiceMock;
-	@Container
-	@ServiceConnection
-	static final PostgreSQLContainer POSTGRES_CONTAINER = new PostgreSQLContainer(
-		DockerImageName.parse(ContainerImageNames.POSTGRES.getImageName()).asCompatibleSubstituteFor(PostgreSQLContainer.IMAGE)
-	);
 
 	@Test
 	void shouldCallApplicationReceived() {

@@ -1,27 +1,18 @@
 package de.signaliduna.elpa.hint;
 
-import de.signaliduna.elpa.hint.util.ContainerImageNames;
+import de.signaliduna.elpa.hint.util.AbstractSingletonContainerTest;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Import;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.postgresql.PostgreSQLContainer;
-import org.testcontainers.utility.DockerImageName;
+
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
 @Import(TestChannelBinderConfiguration.class)
-class HintSpringApplicationTests{
-
-	@Container
-	@ServiceConnection
-	static final PostgreSQLContainer POSTGRES_CONTAINER = new PostgreSQLContainer(
-		DockerImageName.parse(ContainerImageNames.POSTGRES.getImageName()).asCompatibleSubstituteFor(PostgreSQLContainer.IMAGE)
-	);
+class HintSpringApplicationTests extends AbstractSingletonContainerTest {
 
 	@Test
 	void contextLoads(ApplicationContext context) {

@@ -19,7 +19,6 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
-import org.springframework.boot.http.converter.autoconfigure.HttpMessageConvertersAutoConfiguration;
 import org.springframework.cloud.openfeign.FeignAutoConfiguration;
 import org.springframework.cloud.openfeign.FeignClientsConfiguration;
 import org.springframework.context.annotation.Bean;
@@ -33,7 +32,7 @@ import java.util.concurrent.TimeUnit;
 @ComponentScan(basePackages = "de.signaliduna.elpa.hint.http.client")
 @ConfigurationPropertiesScan(basePackages = "de.signaliduna.elpa.hint.http.client.config.properties")
 @Import(FeignClientsConfiguration.class)
-@ImportAutoConfiguration({FeignAutoConfiguration.class, HttpMessageConvertersAutoConfiguration.class})
+@ImportAutoConfiguration(FeignAutoConfiguration.class)
 @EnableJwtAdapter
 public class HintClientConfig {
 
@@ -73,7 +72,7 @@ public class HintClientConfig {
 		MeterRegistry meterRegistry = meterRegistryProvider.getIfAvailable();
 
 		if(meterRegistry == null) {
-			log.warn("No MeterRegistry for HintClient found - Metric will be disable");
+			log.error("No MeterRegistry for HintClient found - Metric will be disable");
 		} else {
 			builder.addCapability(new MicrometerCapability(meterRegistry));
 		}
