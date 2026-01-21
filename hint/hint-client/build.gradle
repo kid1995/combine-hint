@@ -28,13 +28,13 @@ dependencies {
 
 	testImplementation 'org.springframework.boot:spring-boot-starter-webmvc'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
-	testImplementation 'org.wiremock.integrations:wiremock-spring-boot:4.0.8'
+	testImplementation 'org.wiremock.integrations:wiremock-spring-boot:4.0.9'
 }
 
 publishing {
 	publications {
 		create("HintClient", MavenPublication) {
-			from components.java
+			from (components['java'] as SoftwareComponent)
 			versionMapping {
 				usage('java-api') {
 					fromResolutionOf('runtimeClasspath')

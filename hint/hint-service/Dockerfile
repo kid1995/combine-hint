@@ -1,4 +1,4 @@
-FROM prod.docker.system.local/baseimages/sda-jre21-alpine:88
+FROM prod.docker.system.local/baseimages/sda-jre21-alpine:94
 
 COPY ./build/install/* /java/
 COPY ./src/main/resources/application.yml /java/config/

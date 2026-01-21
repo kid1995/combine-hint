@@ -1,4 +1,8 @@
 spring:
+  web:
+    error:
+      whitelabel:
+        enabled: false
   main:
     banner-mode: off
   jackson:
@@ -73,8 +77,8 @@ com:
   c4-soft:
     springaddons:
       oidc:
-        resourceserver:
-          cors[0]:
+        cors:
+          - path: /**
             allowed-methods:
               - POST
               - GET
@@ -88,6 +92,7 @@ com:
               - consumer-name
               - consumer-token
               - consumer
+        resourceserver:
           permit-all:
             - /docs/swagger-ui/**
             - /api-docs/**
@@ -107,7 +112,8 @@ authorization:
 
 management:
   tracing:
-    enabled: true
+    export:
+      enabled: true
   endpoints:
     web:
       base-path: /
@@ -134,21 +140,18 @@ management:
 
 server:
   servlet:
+    session:
+      cookie:
+        same-site: strict
+        secure: true
+        http-only: true
     context-path: /api
     jsp:
       init-parameters:
         listings: false
   port: '8080'
-  error:
-    whitelabel:
-      enabled: 'false'
   tomcat:
     basedir: ${java.io.tmpdir}/tomcat
-  session:
-    cookie:
-      same-site: strict
-      secure: true
-      http-only: true
   forward-headers-strategy: native
   server-header:
 

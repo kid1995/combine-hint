@@ -47,5 +47,4 @@ public class SecurityControllerAdvice {
 		final SiErrorMessage siErrorMessage = new SiErrorMessage("Request invalid", ex.getMessage());
 		return new ResponseEntity<>(siErrorMessage, HttpStatus.BAD_REQUEST);
 	}
-
 }
