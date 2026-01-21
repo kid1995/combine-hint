@@ -1,0 +1,36 @@
+	
+{ [-]
+   @timestamp: 2026-01-21T10:25:58.440666825+01:00
+   @version: 1
+   level: WARN
+   level_value: 30000
+   logger_name: com.zaxxer.hikari.pool.PoolBase
+   message: HikariPool-1 - Pool is empty, failed to create/setup connection (239c7aec-0a88-4f8e-8b5d-ed3d6f3da490)
+   stack_trace: org.postgresql.util.PSQLException: FATAL: LDAP authentication failed for user "ZA-SVC-ELPAPG-T"
+	at org.postgresql.core.v3.ConnectionFactoryImpl.doAuthentication(ConnectionFactoryImpl.java:777)
+	at org.postgresql.core.v3.ConnectionFactoryImpl.tryConnect(ConnectionFactoryImpl.java:234)
+	at org.postgresql.core.v3.ConnectionFactoryImpl.openConnectionImpl(ConnectionFactoryImpl.java:289)
+	at org.postgresql.core.ConnectionFactory.openConnection(ConnectionFactory.java:57)
+	at org.postgresql.jdbc.PgConnection.<init>(PgConnection.java:277)
+	at org.postgresql.Driver.makeConnection(Driver.java:448)
+	at org.postgresql.Driver.connect(Driver.java:298)
+	at com.zaxxer.hikari.util.DriverDataSource.getConnection(DriverDataSource.java:144)
+	at com.zaxxer.hikari.pool.PoolBase.newConnection(PoolBase.java:370)
+	at com.zaxxer.hikari.pool.PoolBase.newPoolEntry(PoolBase.java:207)
+	at com.zaxxer.hikari.pool.HikariPool.createPoolEntry(HikariPool.java:488)
+	at com.zaxxer.hikari.pool.HikariPool$PoolEntryCreator.call(HikariPool.java:752)
+	at com.zaxxer.hikari.pool.HikariPool$PoolEntryCreator.call(HikariPool.java:731)
+	at java.util.concurrent.FutureTask.run(Unknown Source)
+	at java.util.concurrent.ThreadPoolExecutor.runWorker(Unknown Source)
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(Unknown Source)
+	... 1 frames excluded
+	Suppressed: org.postgresql.util.PSQLException: FATAL: no pg_hba.conf entry for host "172.19.112.50", user "ZA-SVC-ELPAPG-T", database "elpapgt", no encryption
+		at org.postgresql.core.v3.ConnectionFactoryImpl.doAuthentication(ConnectionFactoryImpl.java:777)
+		at org.postgresql.core.v3.ConnectionFactoryImpl.tryConnect(ConnectionFactoryImpl.java:234)
+		at org.postgresql.core.v3.ConnectionFactoryImpl.openConnectionImpl(ConnectionFactoryImpl.java:298)
+		... 14 common frames omitted
+
+   thread_name: HikariPool-1:connection-adder
+}
+Als Rohtext anzeigen
+host = osot-node-016.system.localsource = /var/log/containers/fix-up-metric-backend-2-wfh5l_elpa-applicationstore-tst_fix-up-metric-backend-8f03f263526e6d3f35d2dd1c1c5cd972884c05679f398b0ca151cb6bc200e07b.logsourcetype = kube:container:fix-up-metric-backend
