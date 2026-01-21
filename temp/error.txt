@@ -1,0 +1,33 @@
+{ [-]
+   @timestamp: 2026-01-21T10:26:08.256530391+01:00
+   @version: 1
+   level: WARN
+   level_value: 30000
+   logger_name: io.micrometer.registry.otlp.OtlpMeterRegistry
+   message: Failed to publish metrics to OTLP receiver (context: url=http://localhost:4318/v1/metrics, resource-attributes={service.name=unknown_service})
+   stack_trace: java.net.ConnectException: Connection refused
+	at sun.nio.ch.Net.pollConnect(Unknown Source)
+	at sun.nio.ch.Net.pollConnectNow(Unknown Source)
+	at sun.nio.ch.NioSocketImpl.timedFinishConnect(Unknown Source)
+	at sun.nio.ch.NioSocketImpl.connect(Unknown Source)
+	at java.net.Socket.connect(Unknown Source)
+	... 12 frames excluded
+	at io.micrometer.core.ipc.http.HttpUrlConnectionSender.send(HttpUrlConnectionSender.java:99)
+	at io.micrometer.core.ipc.http.HttpSender$Request$Builder.send(HttpSender.java:306)
+	at io.micrometer.registry.otlp.OtlpHttpMetricsSender.send(OtlpHttpMetricsSender.java:58)
+	... 8 common frames omitted
+Wrapped by: java.lang.Exception: java.net.ConnectException: Connection refused
+	at io.micrometer.registry.otlp.OtlpHttpMetricsSender.send(OtlpHttpMetricsSender.java:61)
+	at io.micrometer.registry.otlp.OtlpMeterRegistry.publish(OtlpMeterRegistry.java:190)
+	at io.micrometer.core.instrument.push.PushMeterRegistry.publishSafelyOrSkipIfInProgress(PushMeterRegistry.java:63)
+	at java.util.concurrent.Executors$RunnableAdapter.call(Unknown Source)
+	at java.util.concurrent.FutureTask.runAndReset(Unknown Source)
+	at java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask.run(Unknown Source)
+	at java.util.concurrent.ThreadPoolExecutor.runWorker(Unknown Source)
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(Unknown Source)
+	... 1 frames excluded
+
+   thread_name: otlp-metrics-publisher
+}
+Als Rohtext anzeigen
+host = app600100.system.localsource = /var/log/containers/abn-hint-1097-2s8w8_elpa-hint-abn_abn-hint-c2eb9ca0064f4260697797b7c42b1d02e556d4c94ff15f33748dc6bb69338773.logsourcetype = kube:container:abn-hint:
