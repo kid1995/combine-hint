@@ -4,7 +4,7 @@ namePrefix: "dev-"
 
 resources:
   - hint
-
+  
 patches:
   - path: deployment-patch.yaml
     target:

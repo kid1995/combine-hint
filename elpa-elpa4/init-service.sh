@@ -60,13 +60,11 @@ gather_requirements() {
     echo
     prompt_yes_no "Wird PostgreSQL verwendet?" && use_postgres=true || use_postgres=false
     prompt_yes_no "Wird Kafka verwendet?" && use_kafka=true || use_kafka=false
-    prompt_yes_no "Wird MongoDB verwendet?" && use_mongodb=true || use_mongodb=false
     prompt_yes_no "Wird eine AUTH_URL benötigt?" && use_auth_url=true || use_auth_url=false
 
     #debug
     # use_postgres=true
     # use_kafka=true
-    # use_mongodb=false
     # use_auth_url=true
 }
 
@@ -127,7 +125,6 @@ build_components_list() {
     
     $use_postgres && components+=("postgres")
     $use_kafka && components+=("kafka")
-    $use_mongodb && components+=("mongo")
     
     if [[ ${#components[@]} -eq 0 ]]; then
         COMPONENTS_LIST=""

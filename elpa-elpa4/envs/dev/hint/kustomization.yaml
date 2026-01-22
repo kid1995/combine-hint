@@ -10,15 +10,13 @@ resources:
 components:
   - ../../base/components/postgres
   - ../components/postgres
-  - ../../base/components/mongo
-  - ../components/mongo
   - ../../base/components/kafka
   - ../components/kafka
 
 images:
   - name: app-image
     newName: dev.docker.system.local/elpa-hint-tst/hint
-    newTag: aee6dd3.18
+    newTag: bbf8e92.1533
 
 configMapGenerator:
   - name: backend-cm
@@ -28,10 +26,10 @@ configMapGenerator:
       - POSTGRES_SCHEMA_NAME=hin_develop
       - AUTH_URL=https://employee.login.int.signal-iduna.org/
 
-patches:
-  - path: virtualservice-patch.yaml
+patches:  
   - path: service-app-patch.yaml
   - path: deployment-patch.yaml
+  - path: virtualservice-patch.yaml
   - path: metrics-virtualservice-patch.yaml
 
 
