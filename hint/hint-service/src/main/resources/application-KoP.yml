@@ -24,17 +24,15 @@ management:
   tracing:
     sampling:
       probability: ${MANAGEMENT_TRACING_SAMPLING_PROBABILITY:1.0}
+    enabled: ${MANAGEMENT_TRACING_ENABLED:true}
     export:
       otlp:
         enabled: ${MANAGEMENT_OTLP_TRACING_EXPORT_ENABLED:true}
-      enabled: ${MANAGEMENT_TRACING_ENABLED:true}
   otlp:
+    tracing:
+      endpoint: ${MANAGEMENT_OTLP_TRACING_EXPORT_URL:http://splunk-otel-collector-agent.splunk-otel-collector.svc.cluster.local:4318/v1/traces}
     metrics:
       export:
+        # Correct Micrometer Metrics Endpoint
         url: ${MANAGEMENT_OTLP_METRICS_EXPORT_URL:http://splunk-otel-collector-agent.splunk-otel-collector.svc.cluster.local:4318/v1/metrics}
-        enabled: ${MANAGEMENT_OTLP_METRICS_EXPORT_ENABLED:true}
-  opentelemetry:
-    tracing:
-      export:
-        otlp:
-          endpoint: ${MANAGEMENT_OTLP_TRACING_EXPORT_URL:http://splunk-otel-collector-agent.splunk-otel-collector.svc.cluster.local:4318/v1/traces}
+        enabled: true
