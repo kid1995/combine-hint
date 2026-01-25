@@ -1,0 +1,5 @@
+         resourcequota:
+            requests_cpu: '6'
+            requests_memory: '30Gi'
+            limits_cpu: '20'
+            limits_memory: '40Gi'

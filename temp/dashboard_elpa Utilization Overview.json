@@ -1,0 +1,1516 @@
+{
+  "chartExports": [
+    {
+      "chart": {
+        "autoDetectRelatedDetectorIds": [],
+        "created": 0,
+        "creator": null,
+        "customProperties": {},
+        "description": "Heatmap view of CPU limit utilization. Red indicates containers at risk of CPU throttling.",
+        "id": "G9U13FaAEAA",
+        "lastUpdated": 0,
+        "lastUpdatedBy": null,
+        "name": "CPU Limit Utilization (Heatmap)",
+        "options": {
+          "colorBy": "Scale",
+          "colorRange": null,
+          "colorScale": null,
+          "colorScale2": [
+            {
+              "gt": 80,
+              "gte": null,
+              "lt": null,
+              "lte": null,
+              "paletteIndex": 16
+            },
+            {
+              "gt": 10,
+              "gte": null,
+              "lt": null,
+              "lte": 80,
+              "paletteIndex": 19
+            },
+            {
+              "gt": null,
+              "gte": null,
+              "lt": null,
+              "lte": 10,
+              "paletteIndex": 6
+            }
+          ],
+          "groupBy": [
+            "k8s.namespace.name",
+            "k8s.deployment.name"
+          ],
+          "noDataOptions": null,
+          "programOptions": {
+            "disableSampling": false,
+            "maxDelay": null,
+            "minimumResolution": null,
+            "timezone": "UTC"
+          },
+          "publishLabelOptions": null,
+          "refreshInterval": null,
+          "sortDirection": "Ascending",
+          "sortProperty": null,
+          "time": null,
+          "timestampHidden": false,
+          "type": "Heatmap",
+          "unitPrefix": "Metric"
+        },
+        "packageSpecifications": "",
+        "programText": "A = data('k8s.container.cpu_limit_utilization', filter=filter('k8s.namespace.name', 'elpa-*')and filter('deployment.environment', 'nop')).max(by=['k8s.pod.name']).publish(label='A', enable=False)\nB = (A*100).publish(label='pct_util')\n",
+        "relatedDetectorIds": [],
+        "tags": []
+      }
+    },
+    {
+      "chart": {
+        "autoDetectRelatedDetectorIds": [],
+        "created": 0,
+        "creator": null,
+        "customProperties": {},
+        "description": "Heatmap view of memory limit utilization. Red indicates containers at risk of being OOMKilled.",
+        "id": "G9VAUmFAEAE",
+        "lastUpdated": 0,
+        "lastUpdatedBy": null,
+        "name": "Memory Limit Utilization (Heatmap)",
+        "options": {
+          "colorBy": "Scale",
+          "colorRange": null,
+          "colorScale": null,
+          "colorScale2": [
+            {
+              "gt": 80,
+              "gte": null,
+              "lt": null,
+              "lte": null,
+              "paletteIndex": 16
+            },
+            {
+              "gt": 10,
+              "gte": null,
+              "lt": null,
+              "lte": 80,
+              "paletteIndex": 19
+            },
+            {
+              "gt": null,
+              "gte": null,
+              "lt": null,
+              "lte": 10,
+              "paletteIndex": 6
+            }
+          ],
+          "groupBy": [
+            "k8s.namespace.name",
+            "k8s.deployment.name"
+          ],
+          "noDataOptions": null,
+          "programOptions": {
+            "disableSampling": false,
+            "maxDelay": null,
+            "minimumResolution": null,
+            "timezone": "UTC"
+          },
+          "publishLabelOptions": null,
+          "refreshInterval": null,
+          "sortDirection": "Ascending",
+          "sortProperty": null,
+          "time": null,
+          "timestampHidden": false,
+          "type": "Heatmap",
+          "unitPrefix": "Metric"
+        },
+        "packageSpecifications": "",
+        "programText": "A = data('k8s.container.memory_limit_utilization', filter=filter('k8s.namespace.name', 'elpa-*')and filter('deployment.environment', 'nop')).max(by=['k8s.pod.name']).publish(label='A', enable=False)\nB = (A*100).publish(label='pct_util')\n",
+        "relatedDetectorIds": [],
+        "tags": []
+      }
+    },
+    {
+      "chart": {
+        "autoDetectRelatedDetectorIds": [],
+        "created": 0,
+        "creator": null,
+        "customProperties": {},
+        "description": "Heatmap view of namespace CPU limit quota utilization. Red indicates quotas nearing capacity.",
+        "id": "G9VAXG-AEAA",
+        "lastUpdated": 0,
+        "lastUpdatedBy": null,
+        "name": "CPU Limit Quota Utilization (Heatmap)",
+        "options": {
+          "colorBy": "Scale",
+          "colorRange": null,
+          "colorScale": null,
+          "colorScale2": [
+            {
+              "gt": 80,
+              "gte": null,
+              "lt": null,
+              "lte": null,
+              "paletteIndex": 16
+            },
+            {
+              "gt": 10,
+              "gte": null,
+              "lt": null,
+              "lte": 80,
+              "paletteIndex": 19
+            },
+            {
+              "gt": null,
+              "gte": null,
+              "lt": null,
+              "lte": 10,
+              "paletteIndex": 6
+            }
+          ],
+          "groupBy": [],
+          "noDataOptions": null,
+          "programOptions": {
+            "disableSampling": false,
+            "maxDelay": null,
+            "minimumResolution": null,
+            "timezone": "UTC"
+          },
+          "publishLabelOptions": null,
+          "refreshInterval": null,
+          "sortDirection": "Ascending",
+          "sortProperty": null,
+          "time": null,
+          "timestampHidden": false,
+          "type": "Heatmap",
+          "unitPrefix": "Metric"
+        },
+        "packageSpecifications": "",
+        "programText": "used = data('k8s.resource_quota.used', filter=filter('k8s.namespace.name', 'elpa-*')and filter('deployment.environment', 'nop') and filter('resource', 'limits.cpu'))\nlimit = data('k8s.resource_quota.hard_limit', filter=filter('k8s.namespace.name', 'elpa-*')and filter('deployment.environment', 'nop') and filter('resource', 'limits.cpu'))\n((used / limit) * 100).publish(label='% CPU Limit Quota')\n",
+        "relatedDetectorIds": [],
+        "tags": []
+      }
+    },
+    {
+      "chart": {
+        "autoDetectRelatedDetectorIds": [],
+        "created": 0,
+        "creator": null,
+        "customProperties": {},
+        "description": "Heatmap view of namespace CPU request quota utilization. Red indicates quotas nearing capacity.",
+        "id": "G9VAeOjAEAA",
+        "lastUpdated": 0,
+        "lastUpdatedBy": null,
+        "name": "CPU Request Quota Utilization (Heatmap)",
+        "options": {
+          "colorBy": "Scale",
+          "colorRange": null,
+          "colorScale": null,
+          "colorScale2": [
+            {
+              "gt": 80,
+              "gte": null,
+              "lt": null,
+              "lte": null,
+              "paletteIndex": 16
+            },
+            {
+              "gt": 10,
+              "gte": null,
+              "lt": null,
+              "lte": 80,
+              "paletteIndex": 19
+            },
+            {
+              "gt": null,
+              "gte": null,
+              "lt": null,
+              "lte": 10,
+              "paletteIndex": 6
+            }
+          ],
+          "groupBy": [],
+          "noDataOptions": null,
+          "programOptions": {
+            "disableSampling": false,
+            "maxDelay": null,
+            "minimumResolution": null,
+            "timezone": "UTC"
+          },
+          "publishLabelOptions": null,
+          "refreshInterval": null,
+          "sortDirection": "Ascending",
+          "sortProperty": null,
+          "time": null,
+          "timestampHidden": false,
+          "type": "Heatmap",
+          "unitPrefix": "Metric"
+        },
+        "packageSpecifications": "",
+        "programText": "used = data('k8s.resource_quota.used', filter=filter('k8s.namespace.name', 'elpa-*')and filter('deployment.environment', 'nop') and filter('resource', 'requests.cpu'))\nlimit = data('k8s.resource_quota.hard_limit', filter=filter('k8s.namespace.name', 'elpa-*')and filter('deployment.environment', 'nop') and filter('resource', 'requests.cpu'))\n((used / limit) * 100).publish(label='% CPU Request Quota')\n",
+        "relatedDetectorIds": [],
+        "tags": []
+      }
+    },
+    {
+      "chart": {
+        "autoDetectRelatedDetectorIds": [],
+        "created": 0,
+        "creator": null,
+        "customProperties": {},
+        "description": "Heatmap view of namespace Memory limit quota utilization. Red indicates quotas nearing capacity.",
+        "id": "G9VAex8AAAA",
+        "lastUpdated": 0,
+        "lastUpdatedBy": null,
+        "name": "Memory Limit Quota Utilization (Heatmap)",
+        "options": {
+          "colorBy": "Scale",
+          "colorRange": null,
+          "colorScale": null,
+          "colorScale2": [
+            {
+              "gt": 80,
+              "gte": null,
+              "lt": null,
+              "lte": null,
+              "paletteIndex": 16
+            },
+            {
+              "gt": 10,
+              "gte": null,
+              "lt": null,
+              "lte": 80,
+              "paletteIndex": 19
+            },
+            {
+              "gt": null,
+              "gte": null,
+              "lt": null,
+              "lte": 10,
+              "paletteIndex": 6
+            }
+          ],
+          "groupBy": [],
+          "noDataOptions": null,
+          "programOptions": {
+            "disableSampling": false,
+            "maxDelay": null,
+            "minimumResolution": null,
+            "timezone": "UTC"
+          },
+          "publishLabelOptions": null,
+          "refreshInterval": null,
+          "sortDirection": "Ascending",
+          "sortProperty": null,
+          "time": null,
+          "timestampHidden": false,
+          "type": "Heatmap",
+          "unitPrefix": "Metric"
+        },
+        "packageSpecifications": "",
+        "programText": "used = data('k8s.resource_quota.used', filter=filter('k8s.namespace.name', 'elpa-*')and filter('deployment.environment', 'nop') and filter('resource', 'limits.memory'))\nlimit = data('k8s.resource_quota.hard_limit', filter=filter('k8s.namespace.name', 'elpa-*')and filter('deployment.environment', 'nop') and filter('resource', 'limits.memory'))\n((used / limit) * 100).publish(label='% Memory Limit Quota')\n",
+        "relatedDetectorIds": [],
+        "tags": []
+      }
+    },
+    {
+      "chart": {
+        "autoDetectRelatedDetectorIds": [],
+        "created": 0,
+        "creator": null,
+        "customProperties": {},
+        "description": "Heatmap view of CPU request utilization. Red indicates over-provisioned containers.",
+        "id": "G9VAp0jAIAA",
+        "lastUpdated": 0,
+        "lastUpdatedBy": null,
+        "name": "CPU Request Utilization (Heatmap)",
+        "options": {
+          "colorBy": "Scale",
+          "colorRange": null,
+          "colorScale": null,
+          "colorScale2": [
+            {
+              "gt": 100,
+              "gte": null,
+              "lt": null,
+              "lte": null,
+              "paletteIndex": 19
+            },
+            {
+              "gt": null,
+              "gte": null,
+              "lt": null,
+              "lte": 100,
+              "paletteIndex": 16
+            }
+          ],
+          "groupBy": [
+            "k8s.namespace.name",
+            "k8s.deployment.name"
+          ],
+          "noDataOptions": null,
+          "programOptions": {
+            "disableSampling": false,
+            "maxDelay": null,
+            "minimumResolution": null,
+            "timezone": "UTC"
+          },
+          "publishLabelOptions": null,
+          "refreshInterval": null,
+          "sortDirection": "Ascending",
+          "sortProperty": null,
+          "time": null,
+          "timestampHidden": false,
+          "type": "Heatmap",
+          "unitPrefix": "Metric"
+        },
+        "packageSpecifications": "",
+        "programText": "A = data('k8s.container.cpu_request_utilization', filter=filter('k8s.namespace.name', 'elpa-*')and filter('deployment.environment', 'nop')).max(by=['k8s.pod.name']).publish(label='A', enable=False)\nB = (A*100).publish(label='pct_util')\n",
+        "relatedDetectorIds": [],
+        "tags": []
+      }
+    },
+    {
+      "chart": {
+        "autoDetectRelatedDetectorIds": [],
+        "created": 0,
+        "creator": null,
+        "customProperties": {},
+        "description": "Shows how much of the *requested* memory each container is using. **Red is bad** because it indicates significant over-provisioning (usage is below 100% of the request).\n**Action:** Lower the `resources.requests.memory` in your deployment to improve cluster efficiency.\n",
+        "id": "G9VAq5lAIAA",
+        "lastUpdated": 0,
+        "lastUpdatedBy": null,
+        "name": "Memory Request Utilization (List)",
+        "options": {
+          "colorBy": "Scale",
+          "colorScale2": [
+            {
+              "gt": 100,
+              "gte": null,
+              "lt": null,
+              "lte": 400,
+              "paletteIndex": 19
+            },
+            {
+              "gt": 0,
+              "gte": null,
+              "lt": null,
+              "lte": 100,
+              "paletteIndex": 16
+            }
+          ],
+          "hideMissingValues": false,
+          "legendOptions": {
+            "fields": [
+              {
+                "enabled": false,
+                "property": "sf_originatingMetric"
+              },
+              {
+                "enabled": false,
+                "property": "sf_metric"
+              }
+            ]
+          },
+          "maximumPrecision": null,
+          "noDataOptions": null,
+          "programOptions": {
+            "disableSampling": false,
+            "maxDelay": null,
+            "minimumResolution": null,
+            "timezone": "UTC"
+          },
+          "publishLabelOptions": null,
+          "refreshInterval": null,
+          "secondaryVisualization": "Radial",
+          "sortBy": "-value",
+          "time": null,
+          "type": "List",
+          "unitPrefix": "Metric"
+        },
+        "packageSpecifications": "",
+        "programText": "A = data('k8s.container.memory_request_utilization', filter=filter('k8s.namespace.name', 'elpa-*')and filter('deployment.environment', 'nop')).max(by=['k8s.pod.name']).publish(label='A', enable=False)\nB = (A*100).publish(label='pct_util')\n",
+        "relatedDetectorIds": [],
+        "tags": []
+      }
+    },
+    {
+      "chart": {
+        "autoDetectRelatedDetectorIds": [],
+        "created": 0,
+        "creator": null,
+        "customProperties": {},
+        "description": "Heatmap view of namespace Memory request quota utilization. Red indicates quotas nearing capacity.",
+        "id": "G9VAsG-AAAA",
+        "lastUpdated": 0,
+        "lastUpdatedBy": null,
+        "name": "Memory Request Quota Utilization (Heatmap)",
+        "options": {
+          "colorBy": "Scale",
+          "colorRange": null,
+          "colorScale": null,
+          "colorScale2": [
+            {
+              "gt": 80,
+              "gte": null,
+              "lt": null,
+              "lte": null,
+              "paletteIndex": 16
+            },
+            {
+              "gt": 10,
+              "gte": null,
+              "lt": null,
+              "lte": 80,
+              "paletteIndex": 19
+            },
+            {
+              "gt": null,
+              "gte": null,
+              "lt": null,
+              "lte": 10,
+              "paletteIndex": 6
+            }
+          ],
+          "groupBy": [],
+          "noDataOptions": null,
+          "programOptions": {
+            "disableSampling": false,
+            "maxDelay": null,
+            "minimumResolution": null,
+            "timezone": "UTC"
+          },
+          "publishLabelOptions": null,
+          "refreshInterval": null,
+          "sortDirection": "Ascending",
+          "sortProperty": null,
+          "time": null,
+          "timestampHidden": false,
+          "type": "Heatmap",
+          "unitPrefix": "Metric"
+        },
+        "packageSpecifications": "",
+        "programText": "used = data('k8s.resource_quota.used', filter=filter('k8s.namespace.name', 'elpa-*')and filter('deployment.environment', 'nop') and filter('resource', 'requests.memory'))\nlimit = data('k8s.resource_quota.hard_limit', filter=filter('k8s.namespace.name', 'elpa-*')and filter('deployment.environment', 'nop') and filter('resource', 'requests.memory'))\n((used / limit) * 100).publish(label='% Memory Request Quota')\n",
+        "relatedDetectorIds": [],
+        "tags": []
+      }
+    },
+    {
+      "chart": {
+        "autoDetectRelatedDetectorIds": [],
+        "created": 0,
+        "creator": null,
+        "customProperties": {},
+        "description": "Shows how much of the total namespace Memory *limit quota* is used. **Red is bad** because at >80% you risk being unable to schedule new pods.\n**Action:** Clean up unused resources or request an increase in the namespace's `ResourceQuota`.\n",
+        "id": "G9VA0b1AAAA",
+        "lastUpdated": 0,
+        "lastUpdatedBy": null,
+        "name": "Memory Limit Quota Utilization (Namespace)",
+        "options": {
+          "colorBy": "Scale",
+          "colorScale2": [
+            {
+              "gt": 80,
+              "gte": null,
+              "lt": null,
+              "lte": 100,
+              "paletteIndex": 16
+            },
+            {
+              "gt": 10,
+              "gte": null,
+              "lt": null,
+              "lte": 80,
+              "paletteIndex": 19
+            },
+            {
+              "gt": 0,
+              "gte": null,
+              "lt": null,
+              "lte": 10,
+              "paletteIndex": 6
+            }
+          ],
+          "hideMissingValues": false,
+          "legendOptions": {
+            "fields": [
+              {
+                "enabled": false,
+                "property": "deployment.environment"
+              },
+              {
+                "enabled": false,
+                "property": "sf_originatingMetric"
+              },
+              {
+                "enabled": false,
+                "property": "receiver"
+              },
+              {
+                "enabled": false,
+                "property": "k8s.resourcequota.uid"
+              },
+              {
+                "enabled": false,
+                "property": "metric_source"
+              },
+              {
+                "enabled": false,
+                "property": "si.clustername"
+              },
+              {
+                "enabled": false,
+                "property": "resource"
+              },
+              {
+                "enabled": false,
+                "property": "sf_metric"
+              },
+              {
+                "enabled": false,
+                "property": "k8s.namespace.labels.ciid"
+              },
+              {
+                "enabled": false,
+                "property": "k8s.resourcequota.name"
+              },
+              {
+                "enabled": false,
+                "property": "k8s.cluster.name"
+              },
+              {
+                "enabled": false,
+                "property": "si.platform"
+              },
+              {
+                "enabled": false,
+                "property": "k8s.namespace.labels.si.pipeline"
+              }
+            ]
+          },
+          "maximumPrecision": null,
+          "noDataOptions": null,
+          "programOptions": {
+            "disableSampling": false,
+            "maxDelay": null,
+            "minimumResolution": null,
+            "timezone": "UTC"
+          },
+          "publishLabelOptions": null,
+          "refreshInterval": null,
+          "secondaryVisualization": "Radial",
+          "sortBy": "-value",
+          "time": null,
+          "type": "List",
+          "unitPrefix": "Metric"
+        },
+        "packageSpecifications": "",
+        "programText": "used = data('k8s.resource_quota.used', filter=filter('k8s.namespace.name', 'elpa-*')and filter('deployment.environment', 'nop') and filter('resource', 'limits.memory'))\nlimit = data('k8s.resource_quota.hard_limit', filter=filter('k8s.namespace.name', 'elpa-*')and filter('deployment.environment', 'nop') and filter('resource', 'limits.memory'))\n((used / limit) * 100).publish(label='% Memory Limit Quota')\n",
+        "relatedDetectorIds": [],
+        "tags": []
+      }
+    },
+    {
+      "chart": {
+        "autoDetectRelatedDetectorIds": [],
+        "created": 0,
+        "creator": null,
+        "customProperties": {},
+        "description": "Shows how much of the total namespace CPU *limit quota* is used. **Red is bad** because at >80% you risk being unable to schedule new pods.\n**Action:** Clean up unused resources or request an increase in the namespace's `ResourceQuota`.\n",
+        "id": "G9VA1i1AIAA",
+        "lastUpdated": 0,
+        "lastUpdatedBy": null,
+        "name": "CPU Limit Quota Utilization (Namespace)",
+        "options": {
+          "colorBy": "Scale",
+          "colorScale2": [
+            {
+              "gt": 80,
+              "gte": null,
+              "lt": null,
+              "lte": 100,
+              "paletteIndex": 16
+            },
+            {
+              "gt": 10,
+              "gte": null,
+              "lt": null,
+              "lte": 80,
+              "paletteIndex": 19
+            },
+            {
+              "gt": 0,
+              "gte": null,
+              "lt": null,
+              "lte": 10,
+              "paletteIndex": 6
+            }
+          ],
+          "hideMissingValues": false,
+          "legendOptions": {
+            "fields": [
+              {
+                "enabled": false,
+                "property": "deployment.environment"
+              },
+              {
+                "enabled": false,
+                "property": "sf_originatingMetric"
+              },
+              {
+                "enabled": false,
+                "property": "receiver"
+              },
+              {
+                "enabled": false,
+                "property": "k8s.resourcequota.uid"
+              },
+              {
+                "enabled": false,
+                "property": "metric_source"
+              },
+              {
+                "enabled": false,
+                "property": "si.clustername"
+              },
+              {
+                "enabled": false,
+                "property": "resource"
+              },
+              {
+                "enabled": false,
+                "property": "sf_metric"
+              },
+              {
+                "enabled": false,
+                "property": "k8s.namespace.labels.ciid"
+              },
+              {
+                "enabled": false,
+                "property": "k8s.resourcequota.name"
+              },
+              {
+                "enabled": false,
+                "property": "k8s.cluster.name"
+              },
+              {
+                "enabled": false,
+                "property": "si.platform"
+              },
+              {
+                "enabled": false,
+                "property": "k8s.namespace.labels.si.pipeline"
+              }
+            ]
+          },
+          "maximumPrecision": null,
+          "noDataOptions": null,
+          "programOptions": {
+            "disableSampling": false,
+            "maxDelay": null,
+            "minimumResolution": null,
+            "timezone": "UTC"
+          },
+          "publishLabelOptions": null,
+          "refreshInterval": null,
+          "secondaryVisualization": "Radial",
+          "sortBy": "-value",
+          "time": null,
+          "type": "List",
+          "unitPrefix": "Metric"
+        },
+        "packageSpecifications": "",
+        "programText": "used = data('k8s.resource_quota.used', filter=filter('k8s.namespace.name', 'elpa-*')and filter('deployment.environment', 'nop') and filter('resource', 'limits.cpu'))\nlimit = data('k8s.resource_quota.hard_limit', filter=filter('k8s.namespace.name', 'elpa-*')and filter('deployment.environment', 'nop') and filter('resource', 'limits.cpu'))\n((used / limit) * 100).publish(label='% CPU Limit Quota')\n",
+        "relatedDetectorIds": [],
+        "tags": []
+      }
+    },
+    {
+      "chart": {
+        "autoDetectRelatedDetectorIds": [],
+        "created": 0,
+        "creator": null,
+        "customProperties": {},
+        "description": "Heatmap view of memory request utilization. Red indicates over-provisioned containers.",
+        "id": "G9VA47PAEAA",
+        "lastUpdated": 0,
+        "lastUpdatedBy": null,
+        "name": "Memory Request Utilization (Heatmap)",
+        "options": {
+          "colorBy": "Scale",
+          "colorRange": null,
+          "colorScale": null,
+          "colorScale2": [
+            {
+              "gt": 100,
+              "gte": null,
+              "lt": null,
+              "lte": null,
+              "paletteIndex": 19
+            },
+            {
+              "gt": null,
+              "gte": null,
+              "lt": null,
+              "lte": 100,
+              "paletteIndex": 16
+            }
+          ],
+          "groupBy": [
+            "k8s.namespace.name",
+            "k8s.deployment.name"
+          ],
+          "noDataOptions": null,
+          "programOptions": {
+            "disableSampling": false,
+            "maxDelay": null,
+            "minimumResolution": null,
+            "timezone": "UTC"
+          },
+          "publishLabelOptions": null,
+          "refreshInterval": null,
+          "sortDirection": "Ascending",
+          "sortProperty": null,
+          "time": null,
+          "timestampHidden": false,
+          "type": "Heatmap",
+          "unitPrefix": "Metric"
+        },
+        "packageSpecifications": "",
+        "programText": "A = data('k8s.container.memory_request_utilization', filter=filter('k8s.namespace.name', 'elpa-*')and filter('deployment.environment', 'nop')).max(by=['k8s.pod.name']).publish(label='A', enable=False)\nB = (A*100).publish(label='pct_util')\n",
+        "relatedDetectorIds": [],
+        "tags": []
+      }
+    },
+    {
+      "chart": {
+        "autoDetectRelatedDetectorIds": [],
+        "created": 0,
+        "creator": null,
+        "customProperties": {},
+        "description": "Shows how much of the *requested* CPU each container is using. **Red is bad** because it indicates significant over-provisioning (usage is below 100% of the request).\n**Action:** Lower the `resources.requests.cpu` in your deployment to improve cluster efficiency.\n",
+        "id": "G9VBKYWAIAA",
+        "lastUpdated": 0,
+        "lastUpdatedBy": null,
+        "name": "CPU Request Utilization (List)",
+        "options": {
+          "colorBy": "Scale",
+          "colorScale2": [
+            {
+              "gt": 100,
+              "gte": null,
+              "lt": null,
+              "lte": 400,
+              "paletteIndex": 19
+            },
+            {
+              "gt": 0,
+              "gte": null,
+              "lt": null,
+              "lte": 100,
+              "paletteIndex": 16
+            }
+          ],
+          "hideMissingValues": false,
+          "legendOptions": {
+            "fields": [
+              {
+                "enabled": false,
+                "property": "sf_originatingMetric"
+              },
+              {
+                "enabled": false,
+                "property": "sf_metric"
+              }
+            ]
+          },
+          "maximumPrecision": null,
+          "noDataOptions": null,
+          "programOptions": {
+            "disableSampling": false,
+            "maxDelay": null,
+            "minimumResolution": null,
+            "timezone": "UTC"
+          },
+          "publishLabelOptions": null,
+          "refreshInterval": null,
+          "secondaryVisualization": "Radial",
+          "sortBy": "-value",
+          "time": null,
+          "type": "List",
+          "unitPrefix": "Metric"
+        },
+        "packageSpecifications": "",
+        "programText": "A = data('k8s.container.cpu_request_utilization', filter=filter('k8s.namespace.name', 'elpa-*')and filter('deployment.environment', 'nop')).max(by=['k8s.pod.name']).publish(label='A', enable=False)\nB = (A*100).publish(label='pct_util')\n",
+        "relatedDetectorIds": [],
+        "tags": []
+      }
+    },
+    {
+      "chart": {
+        "autoDetectRelatedDetectorIds": [],
+        "created": 0,
+        "creator": null,
+        "customProperties": {},
+        "description": "Shows how much of the total namespace Memory *request quota* is used. **Red is bad** because at >80% you risk being unable to schedule new pods.\n**Action:** Clean up unused resources or request an increase in the namespace's `ResourceQuota`.\n",
+        "id": "G9VBLY2AAAA",
+        "lastUpdated": 0,
+        "lastUpdatedBy": null,
+        "name": "Memory Request Quota Utilization (Namespace)",
+        "options": {
+          "colorBy": "Scale",
+          "colorScale2": [
+            {
+              "gt": 80,
+              "gte": null,
+              "lt": null,
+              "lte": 100,
+              "paletteIndex": 16
+            },
+            {
+              "gt": 10,
+              "gte": null,
+              "lt": null,
+              "lte": 80,
+              "paletteIndex": 19
+            },
+            {
+              "gt": 0,
+              "gte": null,
+              "lt": null,
+              "lte": 10,
+              "paletteIndex": 6
+            }
+          ],
+          "hideMissingValues": false,
+          "legendOptions": {
+            "fields": [
+              {
+                "enabled": false,
+                "property": "deployment.environment"
+              },
+              {
+                "enabled": false,
+                "property": "sf_originatingMetric"
+              },
+              {
+                "enabled": false,
+                "property": "receiver"
+              },
+              {
+                "enabled": false,
+                "property": "k8s.resourcequota.uid"
+              },
+              {
+                "enabled": false,
+                "property": "metric_source"
+              },
+              {
+                "enabled": false,
+                "property": "si.clustername"
+              },
+              {
+                "enabled": false,
+                "property": "resource"
+              },
+              {
+                "enabled": false,
+                "property": "sf_metric"
+              },
+              {
+                "enabled": false,
+                "property": "k8s.namespace.labels.ciid"
+              },
+              {
+                "enabled": false,
+                "property": "k8s.resourcequota.name"
+              },
+              {
+                "enabled": false,
+                "property": "k8s.cluster.name"
+              },
+              {
+                "enabled": false,
+                "property": "si.platform"
+              },
+              {
+                "enabled": false,
+                "property": "k8s.namespace.labels.si.pipeline"
+              }
+            ]
+          },
+          "maximumPrecision": null,
+          "noDataOptions": null,
+          "programOptions": {
+            "disableSampling": false,
+            "maxDelay": null,
+            "minimumResolution": null,
+            "timezone": "UTC"
+          },
+          "publishLabelOptions": null,
+          "refreshInterval": null,
+          "secondaryVisualization": "Radial",
+          "sortBy": "-value",
+          "time": null,
+          "type": "List",
+          "unitPrefix": "Metric"
+        },
+        "packageSpecifications": "",
+        "programText": "used = data('k8s.resource_quota.used', filter=filter('k8s.namespace.name', 'elpa-*')and filter('deployment.environment', 'nop') and filter('resource', 'requests.memory'))\nlimit = data('k8s.resource_quota.hard_limit', filter=filter('k8s.namespace.name', 'elpa-*')and filter('deployment.environment', 'nop') and filter('resource', 'requests.memory'))\n((used / limit) * 100).publish(label='% Memory Request Quota')\n",
+        "relatedDetectorIds": [],
+        "tags": []
+      }
+    },
+    {
+      "chart": {
+        "autoDetectRelatedDetectorIds": [],
+        "created": 0,
+        "creator": null,
+        "customProperties": {},
+        "description": "Shows how close each container is to its memory *limit*. **Red is bad** because usage >80% puts it at high risk of being terminated (OOMKilled).\n**Action:** Investigate the high memory usage. If legitimate, increase the `resources.limits.memory` in your deployment to prevent crashes.\n",
+        "id": "G9VBL6OAIAA",
+        "lastUpdated": 0,
+        "lastUpdatedBy": null,
+        "name": "Memory Limit Utilization (List)",
+        "options": {
+          "colorBy": "Scale",
+          "colorScale2": [
+            {
+              "gt": 80,
+              "gte": null,
+              "lt": null,
+              "lte": 100,
+              "paletteIndex": 16
+            },
+            {
+              "gt": 10,
+              "gte": null,
+              "lt": null,
+              "lte": 80,
+              "paletteIndex": 19
+            },
+            {
+              "gt": 0,
+              "gte": null,
+              "lt": null,
+              "lte": 10,
+              "paletteIndex": 6
+            }
+          ],
+          "hideMissingValues": false,
+          "legendOptions": {
+            "fields": [
+              {
+                "enabled": false,
+                "property": "sf_originatingMetric"
+              },
+              {
+                "enabled": false,
+                "property": "sf_metric"
+              }
+            ]
+          },
+          "maximumPrecision": null,
+          "noDataOptions": null,
+          "programOptions": {
+            "disableSampling": false,
+            "maxDelay": null,
+            "minimumResolution": null,
+            "timezone": "UTC"
+          },
+          "publishLabelOptions": null,
+          "refreshInterval": null,
+          "secondaryVisualization": "Radial",
+          "sortBy": "-value",
+          "time": null,
+          "type": "List",
+          "unitPrefix": "Metric"
+        },
+        "packageSpecifications": "",
+        "programText": "A = data('k8s.container.memory_limit_utilization', filter=filter('k8s.namespace.name', 'elpa-*')and filter('deployment.environment', 'nop')).max(by=['k8s.pod.name']).publish(label='A', enable=False)\nB = (A*100).publish(label='pct_util')\n",
+        "relatedDetectorIds": [],
+        "tags": []
+      }
+    },
+    {
+      "chart": {
+        "autoDetectRelatedDetectorIds": [],
+        "created": 0,
+        "creator": null,
+        "customProperties": {},
+        "description": "Shows how close each container is to its CPU *limit*. **Red is bad** because usage >80% puts it at high risk of being CPU throttled, causing performance issues.\n**Action:** Investigate high CPU usage. If legitimate, increase the `resources.limits.cpu` in your deployment to prevent throttling.\n",
+        "id": "G9VBPjxAAAA",
+        "lastUpdated": 0,
+        "lastUpdatedBy": null,
+        "name": "CPU Limit Utilization (List)",
+        "options": {
+          "colorBy": "Scale",
+          "colorScale2": [
+            {
+              "gt": 80,
+              "gte": null,
+              "lt": null,
+              "lte": 100,
+              "paletteIndex": 16
+            },
+            {
+              "gt": 10,
+              "gte": null,
+              "lt": null,
+              "lte": 80,
+              "paletteIndex": 19
+            },
+            {
+              "gt": 0,
+              "gte": null,
+              "lt": null,
+              "lte": 10,
+              "paletteIndex": 6
+            }
+          ],
+          "hideMissingValues": false,
+          "legendOptions": {
+            "fields": [
+              {
+                "enabled": false,
+                "property": "sf_originatingMetric"
+              },
+              {
+                "enabled": false,
+                "property": "sf_metric"
+              }
+            ]
+          },
+          "maximumPrecision": null,
+          "noDataOptions": null,
+          "programOptions": {
+            "disableSampling": false,
+            "maxDelay": null,
+            "minimumResolution": null,
+            "timezone": "UTC"
+          },
+          "publishLabelOptions": null,
+          "refreshInterval": null,
+          "secondaryVisualization": "Radial",
+          "sortBy": "-value",
+          "time": null,
+          "type": "List",
+          "unitPrefix": "Metric"
+        },
+        "packageSpecifications": "",
+        "programText": "A = data('k8s.container.cpu_limit_utilization', filter=filter('k8s.namespace.name', 'elpa-*')and filter('deployment.environment', 'nop')).max(by=['k8s.pod.name']).publish(label='A', enable=False)\nB = (A*100).publish(label='pct_util')\n",
+        "relatedDetectorIds": [],
+        "tags": []
+      }
+    },
+    {
+      "chart": {
+        "autoDetectRelatedDetectorIds": [],
+        "created": 0,
+        "creator": null,
+        "customProperties": {},
+        "description": "Shows how much of the total namespace CPU *request quota* is used. **Red is bad** because at >80% you risk being unable to schedule new pods.\n**Action:** Clean up unused resources or request an increase in the namespace's `ResourceQuota`.\n",
+        "id": "G9VBZDzAEAA",
+        "lastUpdated": 0,
+        "lastUpdatedBy": null,
+        "name": "CPU Request Quota Utilization (Namespace)",
+        "options": {
+          "colorBy": "Scale",
+          "colorScale2": [
+            {
+              "gt": 80,
+              "gte": null,
+              "lt": null,
+              "lte": 100,
+              "paletteIndex": 16
+            },
+            {
+              "gt": 10,
+              "gte": null,
+              "lt": null,
+              "lte": 80,
+              "paletteIndex": 19
+            },
+            {
+              "gt": 0,
+              "gte": null,
+              "lt": null,
+              "lte": 10,
+              "paletteIndex": 6
+            }
+          ],
+          "hideMissingValues": false,
+          "legendOptions": {
+            "fields": [
+              {
+                "enabled": false,
+                "property": "deployment.environment"
+              },
+              {
+                "enabled": false,
+                "property": "sf_originatingMetric"
+              },
+              {
+                "enabled": false,
+                "property": "receiver"
+              },
+              {
+                "enabled": false,
+                "property": "k8s.resourcequota.uid"
+              },
+              {
+                "enabled": false,
+                "property": "metric_source"
+              },
+              {
+                "enabled": false,
+                "property": "si.clustername"
+              },
+              {
+                "enabled": false,
+                "property": "resource"
+              },
+              {
+                "enabled": false,
+                "property": "sf_metric"
+              },
+              {
+                "enabled": false,
+                "property": "k8s.namespace.labels.ciid"
+              },
+              {
+                "enabled": false,
+                "property": "k8s.resourcequota.name"
+              },
+              {
+                "enabled": false,
+                "property": "k8s.cluster.name"
+              },
+              {
+                "enabled": false,
+                "property": "si.platform"
+              },
+              {
+                "enabled": false,
+                "property": "k8s.namespace.labels.si.pipeline"
+              }
+            ]
+          },
+          "maximumPrecision": null,
+          "noDataOptions": null,
+          "programOptions": {
+            "disableSampling": false,
+            "maxDelay": null,
+            "minimumResolution": null,
+            "timezone": "UTC"
+          },
+          "publishLabelOptions": null,
+          "refreshInterval": null,
+          "secondaryVisualization": "Radial",
+          "sortBy": "-value",
+          "time": null,
+          "type": "List",
+          "unitPrefix": "Metric"
+        },
+        "packageSpecifications": "",
+        "programText": "used = data('k8s.resource_quota.used', filter=filter('k8s.namespace.name', 'elpa-*')and filter('deployment.environment', 'nop') and filter('resource', 'requests.cpu'))\nlimit = data('k8s.resource_quota.hard_limit', filter=filter('k8s.namespace.name', 'elpa-*')and filter('deployment.environment', 'nop') and filter('resource', 'requests.cpu'))\n((used / limit) * 100).publish(label='% CPU Request Quota')\n",
+        "relatedDetectorIds": [],
+        "tags": []
+      }
+    },
+    {
+      "chart": {
+        "autoDetectRelatedDetectorIds": [],
+        "created": 0,
+        "creator": null,
+        "customProperties": {},
+        "description": "A time-series view of the mean memory consumption in Mebibytes (MiB), grouped by Kubernetes namespace and application.\nThis value is derived from memory request and utilization metrics.\n",
+        "id": "G-dXNd3AIAE",
+        "lastUpdated": 0,
+        "lastUpdatedBy": null,
+        "name": "Mean Memory Usage by Namespace and App (MiB)",
+        "options": {
+          "areaChartOptions": null,
+          "axes": [
+            null,
+            null
+          ],
+          "axisPrecision": 3,
+          "colorBy": "Dimension",
+          "defaultPlotType": "LineChart",
+          "eventPublishLabelOptions": null,
+          "histogramChartOptions": null,
+          "includeZero": false,
+          "legendOptions": null,
+          "lineChartOptions": {
+            "showDataMarkers": false
+          },
+          "noDataOptions": null,
+          "onChartLegendOptions": null,
+          "programOptions": {
+            "disableSampling": false,
+            "maxDelay": null,
+            "minimumResolution": null,
+            "timezone": "UTC"
+          },
+          "publishLabelOptions": null,
+          "showEventLines": false,
+          "stacked": false,
+          "time": null,
+          "type": "TimeSeriesChart",
+          "unitPrefix": "Metric"
+        },
+        "packageSpecifications": "",
+        "programText": "A = data('k8s.container.memory_request', filter=filter('k8s.namespace.name', 'elpa-*')and filter('deployment.environment', 'nop'), rollup='average').sum(by=['k8s.deployment.name', 'k8s.pod.name']).publish(label='A', enable=False)\nB = data('k8s.pod.memory_request_utilization', filter=filter('k8s.namespace.name', 'elpa-*')and filter('deployment.environment', 'nop'), rollup='average').mean(by=['k8s.deployment.name']).publish(label='B', enable=False)\nD = (A*B/(1024*1024)).mean(by=['k8s.namespace.name','k8s.deployment.name']).publish(label='Memory Usage (MiB)')\n",
+        "relatedDetectorIds": [],
+        "tags": []
+      }
+    },
+    {
+      "chart": {
+        "autoDetectRelatedDetectorIds": [],
+        "created": 0,
+        "creator": null,
+        "customProperties": {},
+        "description": "A time-series view of the mean CPU consumption in Millicores, grouped by Kubernetes namespace and application.\nThis value is derived from CPU request and utilization metrics.\n",
+        "id": "G-dXjk5AIAA",
+        "lastUpdated": 0,
+        "lastUpdatedBy": null,
+        "name": "Mean CPU Usage by Namespace and App (Millicores)",
+        "options": {
+          "areaChartOptions": null,
+          "axes": [
+            null,
+            null
+          ],
+          "axisPrecision": 3,
+          "colorBy": "Dimension",
+          "defaultPlotType": "LineChart",
+          "eventPublishLabelOptions": null,
+          "histogramChartOptions": null,
+          "includeZero": false,
+          "legendOptions": null,
+          "lineChartOptions": {
+            "showDataMarkers": false
+          },
+          "noDataOptions": null,
+          "onChartLegendOptions": null,
+          "programOptions": {
+            "disableSampling": false,
+            "maxDelay": null,
+            "minimumResolution": null,
+            "timezone": "UTC"
+          },
+          "publishLabelOptions": null,
+          "showEventLines": false,
+          "stacked": false,
+          "time": null,
+          "type": "TimeSeriesChart",
+          "unitPrefix": "Metric"
+        },
+        "packageSpecifications": "",
+        "programText": "A = data('k8s.container.cpu_request', filter=filter('k8s.namespace.name', 'elpa-*')and filter('deployment.environment', 'nop'), rollup='average').sum(by=['k8s.deployment.name', 'k8s.pod.name']).publish(label='A', enable=False)\nB = data('k8s.pod.cpu_request_utilization', filter=filter('k8s.namespace.name', 'elpa-*')and filter('deployment.environment', 'nop'), rollup='average').mean(by=['k8s.deployment.name']).publish(label='B', enable=False)\nD = (A*B*1000).mean(by=['k8s.namespace.name','k8s.deployment.name']).publish(label='CPU Usage (Millicores)')\n",
+        "relatedDetectorIds": [],
+        "tags": []
+      }
+    }
+  ],
+  "dashboardExport": {
+    "dashboard": {
+      "authorizedWriters": null,
+      "chartDensity": "DEFAULT",
+      "charts": [
+        {
+          "chartId": "G-dXjk5AIAA",
+          "column": 6,
+          "height": 1,
+          "row": 0,
+          "width": 6
+        },
+        {
+          "chartId": "G-dXNd3AIAE",
+          "column": 0,
+          "height": 1,
+          "row": 0,
+          "width": 6
+        },
+        {
+          "chartId": "G9VA47PAEAA",
+          "column": 0,
+          "height": 1,
+          "row": 1,
+          "width": 3
+        },
+        {
+          "chartId": "G9U13FaAEAA",
+          "column": 9,
+          "height": 1,
+          "row": 1,
+          "width": 3
+        },
+        {
+          "chartId": "G9VAUmFAEAE",
+          "column": 3,
+          "height": 1,
+          "row": 1,
+          "width": 3
+        },
+        {
+          "chartId": "G9VAp0jAIAA",
+          "column": 6,
+          "height": 1,
+          "row": 1,
+          "width": 3
+        },
+        {
+          "chartId": "G9VBL6OAIAA",
+          "column": 3,
+          "height": 2,
+          "row": 2,
+          "width": 3
+        },
+        {
+          "chartId": "G9VBPjxAAAA",
+          "column": 9,
+          "height": 2,
+          "row": 2,
+          "width": 3
+        },
+        {
+          "chartId": "G9VBKYWAIAA",
+          "column": 6,
+          "height": 2,
+          "row": 2,
+          "width": 3
+        },
+        {
+          "chartId": "G9VAq5lAIAA",
+          "column": 0,
+          "height": 2,
+          "row": 2,
+          "width": 3
+        },
+        {
+          "chartId": "G9VAeOjAEAA",
+          "column": 6,
+          "height": 1,
+          "row": 4,
+          "width": 3
+        },
+        {
+          "chartId": "G9VAex8AAAA",
+          "column": 3,
+          "height": 1,
+          "row": 4,
+          "width": 3
+        },
+        {
+          "chartId": "G9VAXG-AEAA",
+          "column": 9,
+          "height": 1,
+          "row": 4,
+          "width": 3
+        },
+        {
+          "chartId": "G9VAsG-AAAA",
+          "column": 0,
+          "height": 1,
+          "row": 4,
+          "width": 3
+        },
+        {
+          "chartId": "G9VA1i1AIAA",
+          "column": 9,
+          "height": 2,
+          "row": 5,
+          "width": 3
+        },
+        {
+          "chartId": "G9VBZDzAEAA",
+          "column": 6,
+          "height": 2,
+          "row": 5,
+          "width": 3
+        },
+        {
+          "chartId": "G9VBLY2AAAA",
+          "column": 0,
+          "height": 2,
+          "row": 5,
+          "width": 3
+        },
+        {
+          "chartId": "G9VA0b1AAAA",
+          "column": 3,
+          "height": 2,
+          "row": 5,
+          "width": 3
+        }
+      ],
+      "created": 0,
+      "creator": null,
+      "customProperties": null,
+      "description": "Detailed utilization metrics for services owned by team elpa. Everything about memory to the left, everything about cpu on the right.",
+      "discoveryOptions": null,
+      "eventOverlays": null,
+      "filters": {
+        "sources": [],
+        "time": null,
+        "variables": [
+          {
+            "alias": "environment",
+            "applyIfExists": true,
+            "description": "Select the environment to view.",
+            "preferredSuggestions": [
+              "prd",
+              "dev",
+              "nop"
+            ],
+            "property": "deployment.environment",
+            "propertyMappings": [
+              "deployment.environment"
+            ],
+            "replaceOnly": false,
+            "required": false,
+            "restricted": false,
+            "value": [
+              "nop"
+            ]
+          },
+          {
+            "alias": "namespace",
+            "applyIfExists": true,
+            "description": "Select the namespace to view.",
+            "preferredSuggestions": [
+              "elpa-elpaclassic",
+              "elpa-elpa4"
+            ],
+            "property": "k8s.namespace.name",
+            "propertyMappings": [
+              "k8s.namespace.name",
+              "kubernetes_namespace"
+            ],
+            "replaceOnly": false,
+            "required": false,
+            "restricted": true,
+            "value": [
+              "elpa-elpa4"
+            ]
+          }
+        ]
+      },
+      "groupId": "G9VAZD2AEAA",
+      "groupName": "Team: elpa",
+      "id": "G9VBYJOAIAA",
+      "lastUpdated": 0,
+      "lastUpdatedBy": null,
+      "maxDelayOverride": null,
+      "name": "elpa Utilization Overview",
+      "permissions": null,
+      "selectedEventOverlays": [],
+      "tags": []
+    }
+  },
+  "hashCode": 1433879212,
+  "id": "G9VBYJOAIAA",
+  "modelVersion": 1,
+  "packageType": "DASHBOARD"
+}

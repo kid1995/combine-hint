@@ -1,33 +1,49 @@
-{ [-]
-   @timestamp: 2026-01-21T10:26:08.256530391+01:00
-   @version: 1
-   level: WARN
-   level_value: 30000
-   logger_name: io.micrometer.registry.otlp.OtlpMeterRegistry
-   message: Failed to publish metrics to OTLP receiver (context: url=http://localhost:4318/v1/metrics, resource-attributes={service.name=unknown_service})
-   stack_trace: java.net.ConnectException: Connection refused
-	at sun.nio.ch.Net.pollConnect(Unknown Source)
-	at sun.nio.ch.Net.pollConnectNow(Unknown Source)
-	at sun.nio.ch.NioSocketImpl.timedFinishConnect(Unknown Source)
-	at sun.nio.ch.NioSocketImpl.connect(Unknown Source)
-	at java.net.Socket.connect(Unknown Source)
-	... 12 frames excluded
-	at io.micrometer.core.ipc.http.HttpUrlConnectionSender.send(HttpUrlConnectionSender.java:99)
-	at io.micrometer.core.ipc.http.HttpSender$Request$Builder.send(HttpSender.java:306)
-	at io.micrometer.registry.otlp.OtlpHttpMetricsSender.send(OtlpHttpMetricsSender.java:58)
-	... 8 common frames omitted
-Wrapped by: java.lang.Exception: java.net.ConnectException: Connection refused
-	at io.micrometer.registry.otlp.OtlpHttpMetricsSender.send(OtlpHttpMetricsSender.java:61)
-	at io.micrometer.registry.otlp.OtlpMeterRegistry.publish(OtlpMeterRegistry.java:190)
-	at io.micrometer.core.instrument.push.PushMeterRegistry.publishSafelyOrSkipIfInProgress(PushMeterRegistry.java:63)
+ logger_name: org.springframework.cloud.stream.binding.BindingService
+   message: Failed to create consumer binding; retrying in 30 seconds
+   stack_trace: org.apache.kafka.common.config.ConfigException: The class org.apache.kafka.common.security.oauthbearer.DefaultJwtRetriever defined in the sasl.oauthbearer.jwt.retriever.class configuration encountered an error on configure(): Invalid value http://idp-nop.kafka.svc.cluster.local:9443/token for configuration sasl.oauthbearer.token.endpoint.url: The URL cannot be accessed due to restrictions. Update the system property 'org.apache.kafka.sasl.oauthbearer.allowed.urls' to allow the URL to be accessed.
+	at org.apache.kafka.common.security.oauthbearer.internals.secured.ConfigurationUtils.getConfiguredInstance(ConfigurationUtils.java:360)
+	at org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginCallbackHandler.configure(OAuthBearerLoginCallbackHandler.java:186)
+	at org.apache.kafka.common.security.authenticator.LoginManager.<init>(LoginManager.java:67)
+	at org.apache.kafka.common.security.authenticator.LoginManager.acquireLoginManager(LoginManager.java:116)
+	at org.apache.kafka.common.network.SaslChannelBuilder.configure(SaslChannelBuilder.java:170)
+	... 22 common frames omitted
+Wrapped by: org.apache.kafka.common.KafkaException: org.apache.kafka.common.config.ConfigException: The class org.apache.kafka.common.security.oauthbearer.DefaultJwtRetriever defined in the sasl.oauthbearer.jwt.retriever.class configuration encountered an error on configure(): Invalid value http://idp-nop.kafka.svc.cluster.local:9443/token for configuration sasl.oauthbearer.token.endpoint.url: The URL cannot be accessed due to restrictions. Update the system property 'org.apache.kafka.sasl.oauthbearer.allowed.urls' to allow the URL to be accessed.
+	at org.apache.kafka.common.network.SaslChannelBuilder.configure(SaslChannelBuilder.java:184)
+	at org.apache.kafka.common.network.ChannelBuilders.create(ChannelBuilders.java:188)
+	at org.apache.kafka.common.network.ChannelBuilders.clientChannelBuilder(ChannelBuilders.java:79)
+	at org.apache.kafka.clients.ClientUtils.createChannelBuilder(ClientUtils.java:120)
+	at org.apache.kafka.clients.ClientUtils.createNetworkClient(ClientUtils.java:224)
+	... 18 common frames omitted
+Wrapped by: org.apache.kafka.common.KafkaException: Failed to create new NetworkClient
+	at org.apache.kafka.clients.ClientUtils.createNetworkClient(ClientUtils.java:256)
+	at org.apache.kafka.clients.admin.KafkaAdminClient.createInternal(KafkaAdminClient.java:552)
+	... 17 common frames omitted
+Wrapped by: org.apache.kafka.common.KafkaException: Failed to create new KafkaAdminClient
+	at org.apache.kafka.clients.admin.KafkaAdminClient.createInternal(KafkaAdminClient.java:571)
+	at org.apache.kafka.clients.admin.Admin.create(Admin.java:143)
+	at org.apache.kafka.clients.admin.AdminClient.create(AdminClient.java:49)
+	at org.springframework.cloud.stream.binder.kafka.provisioning.KafkaTopicProvisioner.createAdminClient(KafkaTopicProvisioner.java:329)
+	at org.springframework.cloud.stream.binder.kafka.provisioning.KafkaTopicProvisioner.doProvisionConsumerDestination(KafkaTopicProvisioner.java:284)
+	at org.springframework.cloud.stream.binder.kafka.provisioning.KafkaTopicProvisioner.provisionConsumerDestination(KafkaTopicProvisioner.java:250)
+	at org.springframework.cloud.stream.binder.kafka.provisioning.KafkaTopicProvisioner.provisionConsumerDestination(KafkaTopicProvisioner.java:100)
+	at org.springframework.cloud.stream.binder.AbstractMessageChannelBinder.doBindConsumer(AbstractMessageChannelBinder.java:546)
+	... 10 common frames omitted
+Wrapped by: org.springframework.cloud.stream.binder.BinderException: Exception thrown while starting consumer: 
+	at org.springframework.cloud.stream.binder.AbstractMessageChannelBinder.doBindConsumer(AbstractMessageChannelBinder.java:629)
+	at org.springframework.cloud.stream.binder.AbstractMessageChannelBinder.doBindConsumer(AbstractMessageChannelBinder.java:105)
+	at org.springframework.cloud.stream.binder.AbstractBinder.bindConsumer(AbstractBinder.java:146)
+	at org.springframework.cloud.stream.binding.BindingService.lambda$rescheduleConsumerBinding$0(BindingService.java:213)
+	at org.springframework.scheduling.support.DelegatingErrorHandlingRunnable.run(DelegatingErrorHandlingRunnable.java:54)
 	at java.util.concurrent.Executors$RunnableAdapter.call(Unknown Source)
-	at java.util.concurrent.FutureTask.runAndReset(Unknown Source)
+	at java.util.concurrent.FutureTask.run(Unknown Source)
 	at java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask.run(Unknown Source)
 	at java.util.concurrent.ThreadPoolExecutor.runWorker(Unknown Source)
 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(Unknown Source)
 	... 1 frames excluded
 
-   thread_name: otlp-metrics-publisher
+   tags: [ [+]
+   ]
+   thread_name: scheduling-1
 }
 Als Rohtext anzeigen
-host = app600100.system.localsource = /var/log/containers/abn-hint-1097-2s8w8_elpa-hint-abn_abn-hint-c2eb9ca0064f4260697797b7c42b1d02e556d4c94ff15f33748dc6bb69338773.logsourcetype = kube:container:abn-hint:
+container.id = 4fbc03f5bab59e91d5ce73f293da5290ded8ed42a3bc871e599e9aa0cad2678fhost = knw002009.cl-002.k8sop-nop.system-a.localk8s.pod.name = dev-app-hint-b899bb689-g2f2j
