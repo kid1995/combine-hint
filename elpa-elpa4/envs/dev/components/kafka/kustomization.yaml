@@ -7,3 +7,9 @@ configMapGenerator:
   literals:
     - KAFKA_BROKERS=bootstrap-nop.kafka.svc.cluster.local:9443    
     - KAFKA_OAUTH_TOKEN_ENDPOINT_URL=http://idp-nop.kafka.svc.cluster.local:9443/token
+
+patches:
+  - path: deployment-patch.yaml
+    target:
+      kind: Deployment
+      name: app

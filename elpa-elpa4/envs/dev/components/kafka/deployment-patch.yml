@@ -1,0 +1,12 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app 
+spec:
+  template:
+    spec:
+      containers:
+        - name: app
+          env:            
+            - name: JAVA_TOOL_OPTIONS
+              value: "-Dorg.apache.kafka.sasl.oauthbearer.allowed.urls=$(KAFKA_OAUTH_TOKEN_ENDPOINT_URL)"
