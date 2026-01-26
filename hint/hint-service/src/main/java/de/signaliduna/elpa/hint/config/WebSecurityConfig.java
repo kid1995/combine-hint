@@ -7,9 +7,13 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.access.expression.method.MethodSecurityExpressionHandler;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 @Configuration
 @EnableMethodSecurity
@@ -33,7 +37,20 @@ public class WebSecurityConfig {
 		}
 
 		public boolean isAuthorizedUser() {
-			return this.authorizedUsers.contains(getAuthentication().getName());
+			return this.authorizedUsers.contains(getAuthentication().getName()) || getUidFromToken()
+				.map(this.authorizedUsers::contains)
+				.orElse(false);
 		}
+
+		public Optional<String> getUidFromToken() {
+			Authentication currentAuthentication = getAuthentication();
+			if (currentAuthentication instanceof JwtAuthenticationToken jwtAuthenticationToken) {
+				Jwt jwt = jwtAuthenticationToken.getToken();
+				String uid = jwt.getClaimAsString("uid");
+				return Optional.ofNullable(uid);
+			}
+			return Optional.empty();
+		}
+
 	}
 }

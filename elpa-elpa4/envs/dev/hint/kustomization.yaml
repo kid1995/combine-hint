@@ -25,6 +25,7 @@ configMapGenerator:
       - SERVICE_NAME=hint-service
       - POSTGRES_SCHEMA_NAME=hin_develop
       - AUTH_URL=https://employee.login.int.signal-iduna.org/
+      - AUTH_USERS=S000325,U167653
 
 patches:  
   - path: service-app-patch.yaml
