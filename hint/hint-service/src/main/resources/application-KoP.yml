@@ -36,3 +36,11 @@ management:
       export:
         otlp:
           endpoint: ${MANAGEMENT_OTLP_TRACING_EXPORT_URL:http://splunk-otel-collector-agent.splunk-otel-collector.svc.cluster.local:4318/v1/traces}
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http:
+          server:
+            requests: true
+    tags:
+      application: ${spring.application.name}
