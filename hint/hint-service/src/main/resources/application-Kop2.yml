@@ -1,0 +1,182 @@
+spring:
+  application:
+    name: hint-service
+
+  # Kafka config
+  kafka:
+    consumer:
+      enable-auto-commit: false
+      auto-offset-reset: earliest
+      properties:
+        client.id: ${spring.application.name}-${HOSTNAME:local}
+        metrics.recording.level: INFO
+
+    properties:
+      # Giảm Kafka metrics noise
+      metrics.recording.level: INFO
+
+  # DataSource config
+  datasource:
+    hikari:
+      maximum-pool-size: ${DATABASE_CONNECTION_POOL_MAX_SIZE:10}
+      minimum-idle: ${DATABASE_CONNECTION_POOL_MIN_SIZE:2}
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      leak-detection-threshold: 60000
+      register-mbeans: true
+      pool-name: HintServicePool
+
+management:
+  # Endpoints
+  endpoints:
+    web:
+      base-path: /
+      exposure:
+        include: health,info,metrics,prometheus
+      path-mapping:
+        prometheus: metrics/prometheus
+
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+
+  # Health checks
+  health:
+    readinessstate:
+      enabled: true
+    livenessstate:
+      enabled: true
+    kafka:
+      enabled: true # Kafka health check
+    db:
+      enabled: true # Database health check
+
+  # Observations - TẮT noise
+  observations:
+    spring:
+      security:
+        filterchains:
+          enabled: false # ← Best practice #1
+        authentications:
+          enabled: false
+      web:
+        server:
+          observations:
+            internal:
+              enabled: false
+    annotations:
+      enabled: true # Giữ @Timed, @Counted
+
+  # Metrics
+  metrics:
+    # Enable/Disable specific metrics
+    enable:
+      jvm.gc.pause: true
+      jvm.memory.used: true
+      jvm.threads.live: true
+      hikari: true
+      jdbc: true
+      kafka.consumer: true
+
+      # Disable noise
+      jvm.buffer.count: false
+      jvm.buffer.memory.used: false
+
+    # Distribution config
+    distribution:
+      # Percentiles histogram
+      percentiles-histogram:
+        http.server.requests: true
+        spring.data.repository.invocations: true
+
+      # Custom percentiles
+      percentiles:
+        http.server.requests: 0.5, 0.9, 0.95, 0.99
+
+      # SLO boundaries
+      slo:
+        http.server.requests: 100ms, 500ms, 1s, 5s
+
+      # Value ranges
+      minimum-expected-value:
+        http.server.requests: 1ms
+      maximum-expected-value:
+        http.server.requests: 10s
+
+    # Common tags
+    tags:
+      application: ${spring.application.name}
+      environment: ${spring.profiles.active:dev}
+      version: ${HINT_VERSION:unknown}
+      pod: ${HOSTNAME:local}
+
+  # Tracing
+  tracing:
+    sampling:
+      probability: ${TRACING_SAMPLE_RATE:0.1}
+      rate-limiting:
+        max-per-second: 100
+
+    baggage:
+      enabled: true
+      remote-fields:
+        - processId
+        - userId
+      correlation:
+        enabled: true
+        fields:
+          - processId
+
+    export:
+      enabled: ${MANAGEMENT_TRACING_ENABLED:true}
+
+  # OpenTelemetry
+  opentelemetry:
+    tracing:
+      export:
+        otlp:
+          endpoint: ${MANAGEMENT_OTLP_TRACING_EXPORT_URL}
+          batch-export:
+            enabled: true
+            max-queue-size: 2048
+            max-export-batch-size: 512
+            schedule-delay: 5s
+
+  # OTLP Metrics Export
+  otlp:
+    metrics:
+      export:
+        url: ${MANAGEMENT_OTLP_METRICS_EXPORT_URL}
+        enabled: true
+        step: 60s # Batch every 60s
+        batch-size: 10000
+        connect-timeout: 10s
+        read-timeout: 10s
+        compression: gzip
+        headers:
+          X-SF-Token: ${SPLUNK_TOKEN:}
+
+  # Prometheus
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+        step: 60s
+
+# Logging
+logging:
+  level:
+    root: ${LOG_LEVEL:INFO}
+    de.signaliduna: ${LOG_LEVEL_SI:DEBUG}
+
+    # Reduce noise
+    org.springframework.kafka: WARN
+    org.apache.kafka: ERROR
+    io.micrometer: INFO
+
+  pattern:
+    # Include trace ID in logs
+    level: "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]"
