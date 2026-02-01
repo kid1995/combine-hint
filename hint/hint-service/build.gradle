@@ -14,6 +14,7 @@ configurations {
 ext {
 	set('mapstructVersion', "1.6.3")
 	set('springaddonsOidcVersion', "9.1.0")
+	set('jose4jVersion', "0.9.6")
 }
 
 compileJava {
@@ -36,11 +37,9 @@ dependencies {
 	runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
 	runtimeOnly 'org.postgresql:postgresql'
 	runtimeOnly 'org.flywaydb:flyway-database-postgresql'
-	runtimeOnly 'com.github.loki4j:loki-logback-appender:2.0.3'
 	// elpa
 	implementation project(":hint-model")
 	//spring starter
-	implementation 'com.splunk:splunk-otel-javaagent:2.15.0'
 	implementation 'org.springframework.boot:spring-boot-starter-webmvc'
 	implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
