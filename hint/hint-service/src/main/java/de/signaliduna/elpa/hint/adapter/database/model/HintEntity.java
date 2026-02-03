@@ -8,20 +8,20 @@ import java.time.LocalDateTime;
 public class HintEntity {
 	@Id
 	@GeneratedValue(strategy= GenerationType.IDENTITY)
-	@Column(name = "id")
+	@Column(name = "id", nullable = false)
 	private Long id;
-	@Column(name ="hint_source")
+	@Column(name ="hint_source", nullable = false)
 	private String hintSource;
-	@Column(name ="message")
+	@Column(name ="message", nullable = false)
 	private String message;
 	@Enumerated(EnumType.STRING)
-	@Column(name = "hint_category")
+	@Column(name = "hint_category", nullable = false)
 	private  HintDto.Category hintCategory;
 	@Column(name ="show_to_user")
 	private Boolean showToUser;
-	@Column(name = "creation_date")
+	@Column(name = "creation_date", nullable = false)
 	private LocalDateTime creationDate;
-	@Column(name ="process_id")
+	@Column(name ="process_id", nullable = false)
 	private String processId;
 	@Column(name ="process_version")
 	private String processVersion;
@@ -200,3 +200,4 @@ public class HintEntity {
 		}
 	}
 }
+

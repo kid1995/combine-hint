@@ -1,6 +1,4 @@
 spring:
-  application:
-    name: hint-service
   cloud:
     stream:
       kafka:
@@ -22,38 +20,29 @@ spring:
                 token:
                   endpoint:
                     url: ${KAFKA_OAUTH_TOKEN_ENDPOINT_URL}
+
 management:
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http:
+          server:
+            requests: true
+    tags:
+      application: ${spring.application.name}
   tracing:
     sampling:
-      probability: ${MANAGEMENT_TRACING_SAMPLING_PROBABILITY:0.1}
+      probability: ${MANAGEMENT_TRACING_SAMPLING_PROBABILITY:1.0}
     export:
-      enabled: ${MANAGEMENT_TRACING_ENABLED:true}
-  otlp:
-    metrics:
-      export:
-        url: ${MANAGEMENT_OTLP_METRICS_EXPORT_URL:http://splunk-otel-collector-agent.splunk-otel-collector.svc.cluster.local:4318/v1/metrics}
-        enabled: true
+      otlp:
+        enabled: ${MANAGEMENT_TRACING_EXPORT_OTLP_ENABLED:true}
   opentelemetry:
     tracing:
       export:
         otlp:
           endpoint: ${MANAGEMENT_OTLP_TRACING_EXPORT_URL:http://splunk-otel-collector-agent.splunk-otel-collector.svc.cluster.local:4318/v1/traces}
-    resource-attributes:
-      service.name: ${SERVICE_NAME:hint-service}
-      service.namespace: ${K8S_NAMESPACE_NAME:elpa-elpa4}
-      deployment.environment: ${DEPLOYMENT_ENV:dev}
-  metrics:
-    distribution:
-      percentiles-histogram:
-        http.server.request: true
-      percentiles:
-        http.server.request: 0.5, 0.9, 0.95, 0.99
-      slo:
-        http.value: 100ms, 500ms, 1s, 5s
-    tags:
-      application: ${SERVICE_NAME:hint-service}
-      environment: ${K8S_ENVIROMENT_LABEL:dev}
-      namespace: ${K8S_NAMESPACE_NAME:elpa-elpa4}
-      pod: ${K8S_POD_NAME:unknown}
-
-
+  otlp:
+    metrics:
+      export:
+        url: ${MANAGEMENT_OTLP_METRICS_EXPORT_URL:http://splunk-otel-collector-agent.splunk-otel-collector.svc.cluster.local:4318/v1/metrics}
+        enabled: ${MANAGEMENT_OTLP_METRICS_EXPORT_ENABLED:true}

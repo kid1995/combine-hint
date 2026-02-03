@@ -6,7 +6,7 @@ spec:
   selector:
     app: service
   ports:
-    - name: http
+    - name: http-api
       port: 8080
       targetPort: 8080
       appProtocol: http
@@ -28,7 +28,7 @@ spec:
   selector:
     app: metrics
   ports:
-    - name: http
+    - name: http-metrics
       port: 8081
       protocol: TCP
       targetPort: 8081

@@ -24,6 +24,14 @@ publishing {
 	}
 
 	repositories {
-		mavenLocal()
+		maven {
+			name = 'SILocal'
+			credentials {
+				username project.findProperty('NEXUS_USER') as String ?: ''
+				password project.findProperty('NEXUS_PASSWORD') as String ?: ''
+			}
+			url = (project.version as String).contains("SNAPSHOT") ? 'https://m2repo.system.local/content/repositories/si-snapshot' : 'https://m2repo.system.local/content/repositories/si-release'
+			allowInsecureProtocol true
+		}
 	}
 }

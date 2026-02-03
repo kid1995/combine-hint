@@ -1,9 +1,10 @@
 package de.signaliduna.elpa.hint.adapter.http.api;
 
-import de.signaliduna.elpa.hint.model.HintDto;
 import de.signaliduna.elpa.hint.core.HintService;
+import de.signaliduna.elpa.hint.model.HintDto;
 import de.signaliduna.elpa.hint.model.HintParams;
 import de.signaliduna.elpa.hint.model.HintQueryRequest;
+import io.micrometer.observation.annotation.Observed;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -51,14 +52,15 @@ public class HintApi {
 	@GetMapping("/{id}")
 	@Operation(summary = "Returns hint by id.")
 	@ApiResponses(value = {
-    @ApiResponse(responseCode = "200",description = "OK",content = @Content(schema = @Schema(implementation = HintDto.class))),
-    @ApiResponse(responseCode = "404",description = "No hint for id"),
-    @ApiResponse(responseCode = "500",description = "Internal server error")
-})
-public ResponseEntity<HintDto> getHintById(@PathVariable("id") @NotNull Long id) {
-  log.info("Request for hint with id: {}", id);
-  return this.hintService.getHintById(id).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
-}
+		@ApiResponse(responseCode = "200", description = "OK", content = @Content(schema = @Schema(implementation = HintDto.class))),
+		@ApiResponse(responseCode = "404", description = "No hint for id"),
+		@ApiResponse(responseCode = "500", description = "Internal server error")
+	})
+	@Observed(name = "getHintById")
+	public ResponseEntity<HintDto> getHintById(@PathVariable @NotNull Long id) {
+		log.info("Request for hint with id: {}", id);
+		return this.hintService.getHintById(id).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
+	}
 
 	@PostMapping
 	@Operation(summary = "Saves given hints.")

@@ -4,7 +4,13 @@ namePrefix: "dev-"
 
 resources:
   - hint
-  
+
+configMapGenerator:
+  - name: backend-cm
+    behavior: merge
+    literals:
+      - DEPLOYMENT_ENV=dev
+
 patches:
   - path: deployment-patch.yaml
     target:

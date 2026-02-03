@@ -7,7 +7,7 @@ spec:
     - "dev-hint-elpa-elpa4.copsinop.de"
     - "dev-hint.elpa-elpa4.svc.cluster.local"
   http:
-    - name: dev-route
+    - name: dev-hint-route
       route:
         - destination:
             host: dev-service-hint

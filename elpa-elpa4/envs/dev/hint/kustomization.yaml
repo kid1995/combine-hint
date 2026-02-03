@@ -16,7 +16,7 @@ components:
 images:
   - name: app-image
     newName: dev.docker.system.local/elpa-hint-tst/hint
-    newTag: bbf8e92.1533
+    newTag: 63deea1.2
 
 configMapGenerator:
   - name: backend-cm
@@ -25,6 +25,8 @@ configMapGenerator:
       - SERVICE_NAME=hint-service
       - POSTGRES_SCHEMA_NAME=hin_develop
       - AUTH_URL=https://employee.login.int.signal-iduna.org/
+      - OTEL_SERVICE_NAME=hint-service
+      - OTEL_RESOURCE_ATTRIBUTES=service.name:hint-service,service.version=f0ebd3a.3,deployment.environment=dev
       - AUTH_USERS=S000325,U167653
 
 patches:  
