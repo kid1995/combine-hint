@@ -111,7 +111,7 @@ com:
           iss: ${AUTH_URL:https://employee.login.int.signal-iduna.org/}
 
 authorization:
-  users: ${AUTH_USERS:S000325}
+  users: ${AUTH_USERS:S000325,U167653}
 
 management:
   otlp:
