@@ -9,8 +9,8 @@ spec:
       - port:
           number: 8080
         tls:
-          mode: ISTIO_MUTUAL
+          mode: DISABLE
       - port:
           number: 8081
         tls:
-          mode: ISTIO_MUTUAL
+          mode: DISABLE

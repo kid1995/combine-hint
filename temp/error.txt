@@ -1,13 +1,12 @@
- ✘ u167653@IX01839984  ~  curl -v -k --resolve dev-hint-elpa-elpa4.copsinop.de:443:172.19.227.87 --url https://dev-hint-elpa-elpa4.copsinop.de/api/hints/1 \
-  --header 'authorization: Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6ImYwNDdiNTIwLTMyMGItNDc3Zi1hZTRhLTkwMjdhNzBkODkyMyJ9.eyJjbGllbnRfaWQiOiJzaV9jbGllbnRfaWRfY2Nnand0Iiwic2NvcGUiOiJzaV9jb21tb24iLCJpc3MiOiJodHRwczovL2VtcGxveWVlLmxvZ2luLmludC5zaWduYWwtaWR1bmEub3JnLyIsImlhdCI6MTc3MDEwNDU0NCwibmJmIjoxNzcwMTA0NTQwLCJleHAiOjE3NzAxMDUxNDQsImF1ZCI6InNpX2NsaWVudF9pZF9jY2dqd3QiLCJqdGkiOiI4NjM0Yzc3MC03ODI1LTQxYmUtOGI1YS1kYTZhOTViZWIxMTMiLCJzaV9pIjoiaTA4Iiwic3ViIjoiVGhlLktpZXQuRGFuZ0BzaWduYWwtaWR1bmEuZGUiLCJ1aWQiOiJVMTY3NjUzIiwiZ3JvdXBzIjpbImF1dGhlbnRpY2F0ZWQiLCJvZmZpY2VfZW1wbG95ZWUiXX0.k-HTZICvHMuntEhL7hzyemJgv_SYqj7VUE2qf0JiyuSDSAXPFakzid0rpEc2g42ybYUBJ6XIEmEoErxU17vWIwO99t4tG0kZepFKgOBhdAqHFYJ_Vx61bzwfAtmD1RiFchH8SUUaQlJgh1YNbZMk9HaBFM_FuAk--l3HGxpAnElSx3mySoZAH4eM22XU23SoMlOB22lNYJtXLGcx7kW5GNa0I18nG_sBo-3tIV2JTdJOB_KMKS0mkI5hg3ekikPrIpu1hq5Yir5aSI0GcN_n_qJhIKRjWdOmIW89cWF871IJqryYTW41K34JaR1AFw8392R9f-twqDio8nKscw3m973fpwNViIRpurIt5Ool5i32gn-4kS6tfqvs_dgrfTeROBE-Ug7hd1xGsS-KwxLuUEII4BWjyQy1yFD0b_wm3INQoQzClX_QO1AW7v3jVZwgWOLHLBRRPM8SsUuiaIRGJrbvTWdCQ6wr3_dfvi9zqBg22WFVAmH4WPqW8jrgxHGiEdwX4FM8f0T-FOntD36N4usFGx6rMxd2dpet3ZJp8B8cdRFvmAdQfB2k59SQUOzbPb8UFseIAxVZ8OGBKxRsmsnG5i6c2c2pPoMfzoUJYD69ZY2PdTjXXL43esAOt1EzqiOzKjFg_vXDOWP0dd4QVivn2dEbMPMLkxTJhlFgR0c'
+curl -v -k --resolve dev-hint-metrics-elpa-elpa4.copsinop.de:443:172.19.227.87 \
+     https://dev-hint-metrics-elpa-elpa4.copsinop.de/health
 
 
 
-
-* Added dev-hint-elpa-elpa4.copsinop.de:443:172.19.227.87 to DNS cache
-* Hostname dev-hint-elpa-elpa4.copsinop.de was found in DNS cache
+* Added dev-hint-metrics-elpa-elpa4.copsinop.de:443:172.19.227.87 to DNS cache
+* Hostname dev-hint-metrics-elpa-elpa4.copsinop.de was found in DNS cache
 *   Trying 172.19.227.87:443...
-* Connected to dev-hint-elpa-elpa4.copsinop.de (172.19.227.87) port 443
+* Connected to dev-hint-metrics-elpa-elpa4.copsinop.de (172.19.227.87) port 443
 * ALPN: curl offers h2,http/1.1
 * (304) (OUT), TLS handshake, Client hello (1):
 * (304) (IN), TLS handshake, Server hello (2):
@@ -25,33 +24,34 @@
 *  issuer: C=de; O=SIGNAL IDUNA; CN=SIGNAL IDUNA Issuing MachineCA
 *  SSL certificate verify ok.
 * using HTTP/2
-* [HTTP/2] [1] OPENED stream for https://dev-hint-elpa-elpa4.copsinop.de/api/hints/1
+* [HTTP/2] [1] OPENED stream for https://dev-hint-metrics-elpa-elpa4.copsinop.de/health
 * [HTTP/2] [1] [:method: GET]
 * [HTTP/2] [1] [:scheme: https]
-* [HTTP/2] [1] [:authority: dev-hint-elpa-elpa4.copsinop.de]
-* [HTTP/2] [1] [:path: /api/hints/1]
+* [HTTP/2] [1] [:authority: dev-hint-metrics-elpa-elpa4.copsinop.de]
+* [HTTP/2] [1] [:path: /health]
 * [HTTP/2] [1] [user-agent: curl/8.7.1]
 * [HTTP/2] [1] [accept: */*]
-* [HTTP/2] [1] [authorization: Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6ImYwNDdiNTIwLTMyMGItNDc3Zi1hZTRhLTkwMjdhNzBkODkyMyJ9.eyJjbGllbnRfaWQiOiJzaV9jbGllbnRfaWRfY2Nnand0Iiwic2NvcGUiOiJzaV9jb21tb24iLCJpc3MiOiJodHRwczovL2VtcGxveWVlLmxvZ2luLmludC5zaWduYWwtaWR1bmEub3JnLyIsImlhdCI6MTc3MDEwNDU0NCwibmJmIjoxNzcwMTA0NTQwLCJleHAiOjE3NzAxMDUxNDQsImF1ZCI6InNpX2NsaWVudF9pZF9jY2dqd3QiLCJqdGkiOiI4NjM0Yzc3MC03ODI1LTQxYmUtOGI1YS1kYTZhOTViZWIxMTMiLCJzaV9pIjoiaTA4Iiwic3ViIjoiVGhlLktpZXQuRGFuZ0BzaWduYWwtaWR1bmEuZGUiLCJ1aWQiOiJVMTY3NjUzIiwiZ3JvdXBzIjpbImF1dGhlbnRpY2F0ZWQiLCJvZmZpY2VfZW1wbG95ZWUiXX0.k-HTZICvHMuntEhL7hzyemJgv_SYqj7VUE2qf0JiyuSDSAXPFakzid0rpEc2g42ybYUBJ6XIEmEoErxU17vWIwO99t4tG0kZepFKgOBhdAqHFYJ_Vx61bzwfAtmD1RiFchH8SUUaQlJgh1YNbZMk9HaBFM_FuAk--l3HGxpAnElSx3mySoZAH4eM22XU23SoMlOB22lNYJtXLGcx7kW5GNa0I18nG_sBo-3tIV2JTdJOB_KMKS0mkI5hg3ekikPrIpu1hq5Yir5aSI0GcN_n_qJhIKRjWdOmIW89cWF871IJqryYTW41K34JaR1AFw8392R9f-twqDio8nKscw3m973fpwNViIRpurIt5Ool5i32gn-4kS6tfqvs_dgrfTeROBE-Ug7hd1xGsS-KwxLuUEII4BWjyQy1yFD0b_wm3INQoQzClX_QO1AW7v3jVZwgWOLHLBRRPM8SsUuiaIRGJrbvTWdCQ6wr3_dfvi9zqBg22WFVAmH4WPqW8jrgxHGiEdwX4FM8f0T-FOntD36N4usFGx6rMxd2dpet3ZJp8B8cdRFvmAdQfB2k59SQUOzbPb8UFseIAxVZ8OGBKxRsmsnG5i6c2c2pPoMfzoUJYD69ZY2PdTjXXL43esAOt1EzqiOzKjFg_vXDOWP0dd4QVivn2dEbMPMLkxTJhlFgR0c]
-> GET /api/hints/1 HTTP/2
-> Host: dev-hint-elpa-elpa4.copsinop.de
+> GET /health HTTP/2
+> Host: dev-hint-metrics-elpa-elpa4.copsinop.de
 > User-Agent: curl/8.7.1
 > Accept: */*
-> authorization: Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6ImYwNDdiNTIwLTMyMGItNDc3Zi1hZTRhLTkwMjdhNzBkODkyMyJ9.eyJjbGllbnRfaWQiOiJzaV9jbGllbnRfaWRfY2Nnand0Iiwic2NvcGUiOiJzaV9jb21tb24iLCJpc3MiOiJodHRwczovL2VtcGxveWVlLmxvZ2luLmludC5zaWduYWwtaWR1bmEub3JnLyIsImlhdCI6MTc3MDEwNDU0NCwibmJmIjoxNzcwMTA0NTQwLCJleHAiOjE3NzAxMDUxNDQsImF1ZCI6InNpX2NsaWVudF9pZF9jY2dqd3QiLCJqdGkiOiI4NjM0Yzc3MC03ODI1LTQxYmUtOGI1YS1kYTZhOTViZWIxMTMiLCJzaV9pIjoiaTA4Iiwic3ViIjoiVGhlLktpZXQuRGFuZ0BzaWduYWwtaWR1bmEuZGUiLCJ1aWQiOiJVMTY3NjUzIiwiZ3JvdXBzIjpbImF1dGhlbnRpY2F0ZWQiLCJvZmZpY2VfZW1wbG95ZWUiXX0.k-HTZICvHMuntEhL7hzyemJgv_SYqj7VUE2qf0JiyuSDSAXPFakzid0rpEc2g42ybYUBJ6XIEmEoErxU17vWIwO99t4tG0kZepFKgOBhdAqHFYJ_Vx61bzwfAtmD1RiFchH8SUUaQlJgh1YNbZMk9HaBFM_FuAk--l3HGxpAnElSx3mySoZAH4eM22XU23SoMlOB22lNYJtXLGcx7kW5GNa0I18nG_sBo-3tIV2JTdJOB_KMKS0mkI5hg3ekikPrIpu1hq5Yir5aSI0GcN_n_qJhIKRjWdOmIW89cWF871IJqryYTW41K34JaR1AFw8392R9f-twqDio8nKscw3m973fpwNViIRpurIt5Ool5i32gn-4kS6tfqvs_dgrfTeROBE-Ug7hd1xGsS-KwxLuUEII4BWjyQy1yFD0b_wm3INQoQzClX_QO1AW7v3jVZwgWOLHLBRRPM8SsUuiaIRGJrbvTWdCQ6wr3_dfvi9zqBg22WFVAmH4WPqW8jrgxHGiEdwX4FM8f0T-FOntD36N4usFGx6rMxd2dpet3ZJp8B8cdRFvmAdQfB2k59SQUOzbPb8UFseIAxVZ8OGBKxRsmsnG5i6c2c2pPoMfzoUJYD69ZY2PdTjXXL43esAOt1EzqiOzKjFg_vXDOWP0dd4QVivn2dEbMPMLkxTJhlFgR0c
 >
 * Request completely sent off
-< HTTP/2 401
-< x-content-type-options: nosniff
-< x-xss-protection: 0
-< cache-control: no-cache, no-store, max-age=0, must-revalidate
-< pragma: no-cache
-< expires: 0
-< strict-transport-security: max-age=31536000 ; includeSubDomains
-< x-frame-options: DENY
-< www-authenticate: OAuth realm="https://employee.login.int.signal-iduna.org/"
-< content-length: 0
-< date: Tue, 03 Feb 2026 07:44:53 GMT
-< x-envoy-upstream-service-time: 783
+< HTTP/2 503
+< content-length: 248
+< content-type: text/plain
+< date: Tue, 03 Feb 2026 22:29:58 GMT
 < server: istio-envoy
 <
-* Connection #0 to host dev-hint-elpa-elpa4.copsinop.de left intact
+* Connection #0 to host dev-hint-metrics-elpa-elpa4.copsinop.de left intact
+upstream connect error or disconnect/reset before headers. retried and the latest reset reason: remote connection failure, transport failure reason: TLS_error:|167772427:SSL routines:OPENSSL_internal:wrong version number:TLS_error_end:TLS_error_end%
+
+
+ u167653@IX01839984  ~  nslookup dev-hint-metrics-elpa-elpa4.copsinop.de
+Server:		172.19.111.126
+Address:	172.19.111.126#53
+
+Name:	dev-hint-metrics-elpa-elpa4.copsinop.de
+Address: 172.19.227.87
+
+ u167653@IX01839984  ~ 
