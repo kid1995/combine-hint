@@ -11,7 +11,7 @@ data:
   LOG_LEVEL: INFO
   LOG_LEVEL_SI: DEBUG
   LOGBACK_FILE: logback-json.xml
-  OTEL_RESOURCE_ATTRIBUTES: service.name:hint-service,service.version=84761b5.1,deployment.environment=dev
+  OTEL_RESOURCE_ATTRIBUTES: service.name:hint-service,service.version=22ee584.2,deployment.environment=nop,k8s.namespace.name=elpa-elpa4
   OTEL_SERVICE_NAME: hint-service
   POSTGRES_SCHEMA_NAME: hin_develop
   POSTGRES_SHOW_SQL: "false"
@@ -71,6 +71,10 @@ spec:
     metadata:
       annotations:
         sidecar.istio.io/inject: "true"
+        signal-iduna.de/prometheus.path: /metrics/prometheus
+        signal-iduna.de/prometheus.port: "8081"
+        signal-iduna.de/prometheus.scrape: "true"
+        traffic.sidecar.istio.io/excludeInboundPorts: "8081"
       labels:
         app: hint
         environment: dev
@@ -138,7 +142,7 @@ spec:
         envFrom:
         - configMapRef:
             name: dev-backend-cm-hint
-        image: dev.docker.system.local/elpa-hint-tst/hint:84761b5.1
+        image: dev.docker.system.local/elpa-hint-tst/hint:22ee584.2
         livenessProbe:
           failureThreshold: 5
           httpGet:
@@ -192,11 +196,20 @@ spec:
     - port:
         number: 8080
       tls:
-        mode: ISTIO_MUTUAL
+        mode: DISABLE
+---
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: dev-dest-rule-metrics-hint
+spec:
+  host: dev-metrics-hint
+  trafficPolicy:
+    portLevelSettings:
     - port:
         number: 8081
       tls:
-        mode: ISTIO_MUTUAL
+        mode: DISABLE
 ---
 apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
