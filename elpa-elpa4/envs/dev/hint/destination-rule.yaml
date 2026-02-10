@@ -9,5 +9,5 @@ spec:
       - port:
           number: 8080
         tls:
-          mode: DISABLE
+          mode: ISTIO_MUTUAL
 

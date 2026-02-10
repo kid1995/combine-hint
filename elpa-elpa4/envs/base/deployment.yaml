@@ -59,6 +59,10 @@ spec:
             - configMapRef:
                 name: backend-cm
           env:
+            - name: NO_PROXY 
+              value: "localhost,127.0.0.1,.system.local,.system-a.local,.copsinop.de,.copsi.de,.signal-iduna.org,employee.login.int.signal-iduna.org" 
+            - name: no_proxy 
+              value: "localhost,127.0.0.1,.system.local,.system-a.local,.copsinop.de,.copsi.de,.signal-iduna.org,employee.login.int.signal-iduna.org"
             # K8s
             - name: K8S_ENVIRONMENT_LABEL
               valueFrom:
