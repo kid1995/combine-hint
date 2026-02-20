@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-cm
+data:
+  SERVICE_NAME: hint-service
+  POSTGRES_SCHEMA_NAME: hin_develop
+  AUTH_URL: https://employee.login.int.signal-iduna.org/      # this shoud be moved into envs overlay

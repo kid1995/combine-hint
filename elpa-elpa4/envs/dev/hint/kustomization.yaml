@@ -5,35 +5,27 @@ nameSuffix: "-hint"
 
 resources:
   - ../../base
-  - destination-rule.yaml
-  - destination-metrics-rule.yaml
 
 components:
+  - https://git.system.local/scm/elpa/hint.git//copsi/dev?ref=3f8e253dbd597cd89bf57f4ae2923c8242a3bde0
   - ../../base/components/postgres
   - ../components/postgres
   - ../../base/components/kafka
   - ../components/kafka
+
+configMapGenerator:
+  - name: backend-cm
+    behavior: merge
+    files:
+      - configmap.yaml
 
 images:
   - name: app-image
     newName: dev.docker.system.local/elpa-hint-tst/hint
     newTag: 8518f2a.3
 
-configMapGenerator:
-  - name: backend-cm
-    behavior: merge
-    literals:
-      - SERVICE_NAME=hint-service
-      - POSTGRES_SCHEMA_NAME=hin_develop
-      - AUTH_URL=https://employee.login.int.signal-iduna.org/
-      - OTEL_SERVICE_NAME=hint-service
-      - OTEL_RESOURCE_ATTRIBUTES=service.name:hint-service,service.version=8518f2a.3,deployment.environment=nop,k8s.namespace.name=elpa-elpa4
-      - AUTH_USERS=S000325,U167653
-
 patches:  
   - path: service-app-patch.yaml
   - path: deployment-patch.yaml
   - path: virtualservice-patch.yaml
   - path: metrics-virtualservice-patch.yaml
-
-
