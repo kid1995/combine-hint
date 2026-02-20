@@ -7,17 +7,11 @@ resources:
   - ../../base
 
 components:
-  - https://git.system.local/scm/elpa/hint.git//copsi/dev?ref=3f8e253dbd597cd89bf57f4ae2923c8242a3bde0
+  - https://git.system.local/scm/elpa/hint.git//copsi/dev?ref=dcf7f2d426cb2e9b953c10f3baca3af5e827953b
   - ../../base/components/postgres
   - ../components/postgres
   - ../../base/components/kafka
   - ../components/kafka
-
-configMapGenerator:
-  - name: backend-cm
-    behavior: merge
-    files:
-      - configmap.yaml
 
 images:
   - name: app-image
