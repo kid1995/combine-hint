@@ -7,19 +7,15 @@ resources:
   - ../../base
 
 components:
-  - https://git.system.local/scm/elpa/hint.git//copsi/dev?ref=dcf7f2d426cb2e9b953c10f3baca3af5e827953b
+  - https://git.system.local/scm/elpa/hint.git//copsi/dev?ref=85eb0be6e13199af11203fbe16eaf77a706e282d
   - ../../base/components/postgres
   - ../components/postgres
   - ../../base/components/kafka
   - ../components/kafka
+  - ../components/environments
+  - ../../base/components/environments
 
 images:
   - name: app-image
     newName: dev.docker.system.local/elpa-hint-tst/hint
     newTag: 8518f2a.3
-
-patches:  
-  - path: service-app-patch.yaml
-  - path: deployment-patch.yaml
-  - path: virtualservice-patch.yaml
-  - path: metrics-virtualservice-patch.yaml

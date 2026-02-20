@@ -60,7 +60,7 @@ gather_requirements() {
     echo
     prompt_yes_no "Wird PostgreSQL verwendet?" && use_postgres=true || use_postgres=false
     prompt_yes_no "Wird Kafka verwendet?" && use_kafka=true || use_kafka=false
-    prompt_yes_no "Wird eine AUTH_URL benötigt?" && use_auth_url=true || use_auth_url=false
+    prompt_yes_no "Wird OAUTH2 benötigt?" && use_auth_url=true || use_auth_url=false
 
     #debug
     # use_postgres=true
@@ -72,20 +72,24 @@ gather_service_details() {
     echo
     prompt_value "Wie soll der neue Service heißen? (z.B. 'neuer-service'): " service_name
     prompt_value "Wie lautet der Name des Docker-Images?: " image_name
-    prompt_value "Welchen Image-Tag soll das Image haben? (z.B. 'v1.0.0'): " image_tag
+    prompt_value "Welchen Image-Tag soll das Image haben? (z.B. '8518f2a.3'): " image_tag
     
     if $use_postgres; then
-        prompt_value "Wie lautet der PostgreSQL Schema-Name? (leer lassen für Platzhalter): " postgres_schema_name "<postgres-schema-name>"
+        prompt_value "Wie lautet der PostgreSQL Schema-Name? : " postgres_schema_name "<postgres-schema-name>"
     fi
     
-    if $use_auth_url; then
-        prompt_value "Bitte geben Sie die AUTH_URL ein (leer lassen für Platzhalter): " auth_url "<auth-url>"
+    if $use_auth_url && env="dev"; then
+        auth_url="https://employee.login.signal-iduna.org/"
+    elif $use_auth_url && env="abn"; then
+        auth_url="https://employee.login.abn.signal-iduna.org/"
+    else
+        auth_url="https://employee.login.int.signal-iduna.org/"
     fi
 
     # Debug
     # service_name=test-service
     # image_name=my-docker-image
-    # image_tag=v1.0.0
+    # image_tag=8518f2a.3
     # postgres_schema_name=my_schema
     # auth_url=https://auth.example.com
 }
@@ -214,7 +218,7 @@ finalize_setup() {
 
 display_summary() {
     echo
-    echo "✓ Der neue Service '$service_name' wurde erfolgreich im Verzeichnis '$TARGET_DIR' erstellt."
+    echo "  - ✅ ✅ ✅ Der neue Service '$service_name' wurde erfolgreich im Verzeichnis '$TARGET_DIR' erstellt. ✅ ✅ ✅"
     echo
     echo "Komponenten:"
     if [[ -n "$COMPONENTS_LIST" ]]; then
@@ -226,9 +230,27 @@ display_summary() {
     echo "Konfiguration:"
     echo "$LITERALS_LIST" | sed 's/^/  /'
     echo
-    echo "Hinweise:"
-    echo "  - Die Konfiguration wurde in '$TARGET_DIR/kustomization.yaml' erstellt"
-    echo "  - Überprüfen Sie die generierten Dateien vor dem Deployment"
+    
+    # --- Hervorgehobener Teil ---
+    if command -v figlet &> /dev/null; then
+        figlet -c "A C H T U N G ! ! !"   
+    else
+        echo "🔧 🔧 🔧 Installiere 'figlet' für extra Anzeige (brew install figlet) 🔧 🔧 🔧"
+    fi
+       # Farben definieren
+    RED_BOLD='\033[1;31m'
+    YELLOW_BOLD='\033[1;33m'
+    NC='\033[0m' # No Color
+
+    BORDER_LINE="#######################################################################################################################"
+    echo -e "${YELLOW_BOLD}$BORDER_LINE"    
+    echo
+    echo
+    echo -e "⚠️ ⚠️ ⚠️ ACHTUNG: Bitte registriere den neuen Service in '$ENVS_DIR/$env/kustomization.yaml'. Das passiert nicht automatisch.⚠️ ⚠️ ⚠️"
+    echo
+    echo
+    echo -e "$BORDER_LINE${NC}"
+    
     if ! command -v kustomize &> /dev/null; then
         echo "  - Installieren Sie 'kustomize' für erweiterte Funktionen"
     fi

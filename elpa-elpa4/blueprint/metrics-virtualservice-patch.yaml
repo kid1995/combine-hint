@@ -1,17 +1,17 @@
 apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:
-  name: <service-name>-admin
+  name: virtualservice-metrics
 spec:
   hosts:
-    - "<env>-<service-name>-admin-elpa-elpa4.copsinop.de" # extern FQDN
-    - "<env>-<service-name>-admin.elpa-elpa4.svc.cluster.local" # intern FQDN
+    - "<env>-<service-name>-metrics-elpa-elpa4.copsinop.de"
+    - "<env>-<service-name>-metrics.elpa-elpa4.svc.cluster.local"
   gateways:
     - istio-system/mesh-gateway
     - mesh
   http:
     - route:
         - destination:
-            host: <env>-<service-name>
+            host: <env>-metrics-<service-name>
             port:
               number: 8081
