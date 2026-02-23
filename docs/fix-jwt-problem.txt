@@ -1,0 +1,69 @@
+Beschreibung
+Ursprünglichen Situation:
+In einer Istio-Umgebung schlagen JWT-Authentifizierungsversuche für Workloads in bestimmten Namespaces fehl. Die Logs des Envoy-Proxys zeigen den Fehler Jwks_doesn't_have_key_to_match_kid_or_alg_from_Jwt.
+Dieser Fehler tritt auf, weil die Istio-Steuerungsebene (istiod) die öffentlichen Schlüssel (JWKS) des externen JWT-Issuers nicht abrufen kann. Der Hostname des Issuers (https://employee.login.signal-iduna.org/auth/jwks) befindet sich außerhalb des internen Netzwerks und erfordert einen HTTP/HTTPS-Proxy für ausgehende Verbindungen.
+Neue Lösungsstrategie: Dedizierter Nginx-Forward-Proxy
+Da eine direkte Konfiguration des istiod-Pods, um den globalen Unternehmens-Proxy zu nutzen, als zu komplex oder wartungsintensiv erachtet wird (wegen Istio-Upgrades), wird ein dedizierter Nginx-Dienst innerhalb des Clusters bereitgestellt.
+Dieser Nginx-Dienst wird als Forward-Proxy fungieren:
+1. Er wird Anfragen von istiod entgegennehmen.
+2. Er wird die Anfragen durch den zentralen Unternehmens-Proxy (http://mw-proxy-lb-alt.system.local:9090) leiten.
+3. Er wird die notwendigen Pfad-Anpassungen (Entfernen des lokalen Prefixes) und Header-Manipulationen (proxy_redirect) vornehmen, um die Kommunikation sicherzustellen.
+4. Der jwksUri in der RequestAuthentication wird auf diesen internen Nginx-Dienst umgestellt.
+Umsetzung 
+Umsetzungs-Details:
+1. Nginx-Proxy-Konfiguration
+Der Nginx-Proxy-Dienst muss so konfiguriert werden, dass er den lokalen Pfad-Präfix entfernt und die Anfrage über den zentralen Proxy an den externen Issuer weiterleitet.
+2. Istio-Konfigurationsanpassung
+Die RequestAuthentication-Ressource muss angepasst werden, um den neuen internen Nginx-Dienst als Quelle für den JWKS-URI zu verwenden.
+Annahme: Der Nginx-Proxy wird als Service u165622-service-nginx.devj-playground.svc.cluster.local auf Port 8080 mit dem lokalen Präfix /employee-login bereitgestellt.
+Akzeptanzkriterien:
+1. Stabile Nginx-Funktionalität: Der curl -v -L Aufruf auf den Nginx-Proxy mit der vollen Pfadangabe darf keine endlosen 302-Weiterleitungen mehr erzeugen und muss die JWKS-JSON-Daten korrekt zurückgeben.
+    1. Bash curl -v -L u165622-service-nginx.devj-playground.svc.cluster.local:8080/employee-login/auth/jwks
+2. Istio-Funktionalität: Die angepasste RequestAuthentication mit dem internen jwksUri wird erfolgreich von istiod angewendet. Die Envoy-Proxys erhalten die Schlüssel.
+3. End-to-End-Test:
+    1. Ein curl-Aufruf auf eine Workload mit einem gültigen JWT wird mit einem 200 OK beantwortet.
+    2. Ein curl-Aufruf mit einem abgelaufenen oder fehlenden JWT wird mit 401 Unauthorized oder 403 Forbidden beantwortet.
+4. Persistenz: Die Lösung ist persistent, da sie in einer separaten Deployment-Ressource gekapselt ist, die unabhängig von Istio-Upgrades verwaltet wird.
+
+
+
+Planung:
+ Update:
+Alles ist deployed hier:
+* Argo: https://argocd-nop.iigw.cl-666.k8sop-nop.system-a.local/applications/argo/devj-playground?view=tree&resource=
+* BitBucket: https://git.system.local/projects/SDASVCDEPLOY/repos/devj-playground/browse
+Es gibt 3 Deployment:
+* 1x Receiver (Ein Alpine der via RequestAuth) abgesichert ist
+* 1x Caller (Ein Alpine, von dem ich via Terminal einen curl absetzten kann)
+* 1x Custom Proxy (Ein Nginx, den ich als Proxy verwende)
+    * Der Custom Proxy (nginx) hat ein Path Param "employee-login", damit der restliche Pfad 1:1 via then SI Proxy and den employee login weitergeleitet werden kann. 
+ 
+Aktueller Stand:
+Hintergrund: Da der istiod nicht mit einem Proxy konfiguriert ist, kann dieser nicht employee login erreichen, da er sen SI Proxy benötigen würden.
+* Funktioniert der Custom Proxy? -> JA!
+    * Wenn auf dem Caller Pod, kann man über folgenden Curl die JWKs bekommen:
+        * no_proxy=.local curl -v -L u165622-service-nginx.devj-playground.svc.cluster.local:8080/employee-login/auth/jwks
+*  Funktioniert die Request Auth -> NEIN!
+    * Sofern die folgende URL in JWKS eingetragen ist, funktioniert der die JWT Validieren leider nicht
+        * jwksUri: "http://u165622-service-nginx.devj-playground.svc.cluster.local:8080/employee-login/auth/jwks"
+    * Nach dem ein Token generiert wurde (manuell) auf dem Caller Pod vie folgt vorgehen:
+        * export ACCESS_TOKEN="<TOKEN-GOES-HERE>"
+        * no_proxy=.local curl -v u165622-service-alpine.devj-playground.svc.cluster.local:8080 -H "Authorization: Bearer $ACCESS_TOKEN"
+* Funktioniert die Validieren des Token generell -> JA!
+    * Wenn in der Request Auth statt jwksUri direkt jwks eingetragen werden (manuell einmal von employee login geholt), kann der Token validiert werden.
+* Warum kann der istiod (vermutlich) NICHT auf den custom proxy zugreifen?
+    * Zum einen wird läuft der custom proxy mit "sidecar.istio.io/inject: "true"" - d.h. der Proxy Envoy erwartet eine http Verbindung via MTLS, die der istiod nicht leisten kann.
+    * Daher wurde im Nachgang im deployment vom custom proxy  mit "sidecar.istio.io/excludeInboundPorts: "*"" ausgestattet, damit auch eingehende Verbindungen ohne envoy und mtls funktionieren.
+ 
+Hinweise istiod log:
+ 
+== Wenn eine Request Auth mit "jwksUri: https://employee.login.signal-iduna.org/auth/jwks" ==
+error model Failed to fetch public key from "https://employee.login.signal-iduna.org/auth/jwks": Get "https://employee.login.signal-iduna.org/auth/iwks": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+ 
+== Wenn eine Request Auth (mit envoy aber ohne excludeInboundPorts) mit "http://u165622-service-nginx.devj-playground.svc.cluster.local:8080/employee-login/auth/jwks" ==
+Die genauen Logs habe ich nicht aber hier was der Fehler Connection Reset by Peer -> Klassiker Istio Sidecar Fehler 
+￼
+ 
+== Wenn eine Request Auth (mit envoy aber MIT excludeInboundPorts) mit "http://u165622-service-nginx.devj-playground.svc.cluster.local:8080/employee-login/auth/jwks" ==
+Die genauen Logs habe ich nicht aber hier was der Fehler ein anderer, der immerhin schonmal die Ziel IP vom employee-login beinhaltet hat, aber es konnte immer noch keine Verbindung aufgebaut werden.
+
