@@ -1,0 +1,17 @@
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: auth-pol-jwt-check-for-routes
+spec:
+  selector:
+    matchLabels:
+      app: alpine
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            requestPrincipals: ["*"]
+      to:
+        - operation:
+            methods: ["*"]
+            paths: ["*"]

@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx
+spec:
+  replicas: 1
+  revisionHistoryLimit: 0
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+      annotations:
+        sidecar.istio.io/inject: "true"
+        # sidecar.istio.io/excludeInboundPorts: "*"
+    spec:
+      containers:
+        - name: nginx
+          image: prod.docker.system.local/baseimages/coplat-nginx-1-alpine:77
+          imagePullPolicy: IfNotPresent
+          volumeMounts:
+            - name: config-gen-volume
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+          resources:
+            requests:
+              cpu: 101m
+              memory: 100Mi
+            limits:
+              cpu: 200m
+              memory: 200Mi
+          ports:
+            - containerPort: 8080
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            privileged: false
+            runAsNonRoot: true
+      volumes:
+        - name: config-gen-volume
+          configMap:
+            name: config-gen
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+        runAsNonRoot: true
+      serviceAccountName: identity

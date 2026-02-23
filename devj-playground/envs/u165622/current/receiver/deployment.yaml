@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alpine
+spec:
+  replicas: 1
+  revisionHistoryLimit: 0
+  selector:
+    matchLabels:
+      app: alpine
+  template:
+    metadata:
+      labels:
+        app: alpine
+      annotations:
+        sidecar.istio.io/inject: "true"
+    spec:
+      containers:
+        - name: alpine
+          image: prod.docker.system.local/baseimages/build-alpine3.20:40
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-c"]
+          args:
+            - while true; do echo -e 'HTTP/1.1 200 OK\n\nHello - I am up n running…' | nc -l -p 8080; done
+          resources:
+            requests:
+              cpu: 101m
+              memory: 100Mi
+            limits:
+              cpu: 200m
+              memory: 200Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            privileged: false
+            runAsNonRoot: true
+          ports:
+            - containerPort: 8080
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+        runAsNonRoot: true
+      serviceAccountName: identity

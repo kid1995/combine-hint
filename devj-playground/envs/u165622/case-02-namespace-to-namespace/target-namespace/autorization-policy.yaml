@@ -1,0 +1,11 @@
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: auth-policy-allow-from-source-namespace
+spec:
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            # Erlaube den Eingang vom namespace source ('source-namespace' ist ein Platzhalter)
+            namespaces: ["source-namespace"]

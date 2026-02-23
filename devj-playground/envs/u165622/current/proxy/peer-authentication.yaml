@@ -1,0 +1,10 @@
+apiVersion: security.istio.io/v1
+kind: PeerAuthentication
+metadata:
+  name: exclude-nginx
+spec:
+  selector:
+    matchLabels:
+      app: nginx
+  mtls:
+    mode: PERMISSIVE

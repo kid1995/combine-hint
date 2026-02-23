@@ -1,0 +1,52 @@
+apiVersion: security.istio.io/v1
+kind: RequestAuthentication
+metadata:
+  name: request-auth-jwt-si
+spec:
+  selector:
+    matchLabels:
+      app: alpine
+  jwtRules:
+    - issuer: "https://employee.login.signal-iduna.org/"
+      jwksUri: "http://u165622-service-nginx.devj-playground.svc.cluster.local:8080/employee-login/auth/jwks"
+      # jwksUri: "https://employee.login.signal-iduna.org/auth/jwks"
+      # jwks: |
+      #   {
+      #     "keys": [
+      #       {
+      #         "kty": "RSA",
+      #         "kid": "ffab531a-8a2f-4f66-bac4-64524141f607",
+      #         "use": "sig",
+      #         "n": "sLWVcArlgCMCQWcZI9aQGFusLl17dNoyqBSf1nQJnf9RI-4oCvaUJVmPQcbel7JeyGSagFh3nt3WmsiVkWbDtX8j9F39rNPb5DCZea_Cz1GZ_Uugo9Prumf43lKHOSNsy-f7FtAbZibHYLjQFmm-flJ58jbnWyFYjxccoiVubNK4wHFjWQjF1P516gVgOPI-RiDb0b7tevyg8we3mi0baeRM23n6nDOiPsy0yizjOyqVXutHArWlmbVRjhI8Y1vCAbyrtCJkhMyuwnhFMV6DeYtfbtRb3S17ZGlBnsd6q0aaPxrWCnnWVLcNsSNmCo8MZSRHZ4A06lHvtEFGFAsMMvm7f2l-qX30HYqticIyFyi45NzeMrY7sNwBEuGP6JIRU-8OETJDLCeJ8AVgXCa3Rzq-yBD2g5XhYffI03_wPjis9T9HPP82vQhZRd12tEBTto2uKcQny7KwmCsLQjF2kd-ar0DlIoK-PDS3p6vCe1iSXMZMeJxGKKsaYpLOGTF-iJAJ1dNpntrZSz-phfD2pthx4nso1WtR5yL_6UioJkW6nT6sVdWEyT7iO_PtX2_azuyn37qo3oLhZCvdxwM5pBXJoE2n5a3Al5r0o9vMcm9Ft2_GpLTxfae5KPXzpFhdhMeInLqSwCGSRPY0p9ykc9SBI6WaDIy0WwcXHJrPpqM",
+      #         "e": "AQAB",
+      #         "alg": "RS256"
+      #       },
+      #       {
+      #         "kty": "RSA",
+      #         "kid": "ecc84d64-922b-4bb4-af19-12f7c3cd97ec",
+      #         "use": "sig",
+      #         "n": "wFF6Np_wt8CehbqQuCnoTMo94eoryms3HW35p81TQBHZXuhaOFfs4ClLGFamImN5Y5lHJLfnEnBXRg4Nd2Apm1LI-q4h4qsSptw7Ho161PnjfqC075Eg3ub-7ZnvlULUVbYOfAQdhxJxz2UsevQgJHtemBOtijd1mrKOvCLOZyM1LiUFVOF7QZ6ssFo8olT5argu28RNdwWq61q_fo5G36I2W9-NbCIBHHQnii2iCwhREJO_oAa73kYRyVOJ0c9vf_JyhZmxWXv7uEWYA88Y5PbU4iF6Z4CMCKXZhgz_4CVdX0IRsBbG-Eerf64uTijGvC9bUc3THoKaPrZbO5YiDv8XbKG2xkxPU24BrugzO_W5bUqfvjuDOagLJsdqvwL2RYJ4KFmHZXuchKjMG_w4nXRxJKSWy2wizZ7xXZq7ahrFZWpFBQcHhY-esePquAOi7wEvwAwYKUbN0E3N_pLDX-JAhN8TySADiTPmTnNYd77_tsmAdhJyk5WX8ZDG6TZSmSSEWT6_QSDIQ5suQX7fqpTc8BTK3mRQ75Cu8ikYFyOhnz_i86MwxBhbYDJk8s3lVFKX_zweKkldExWf-Rz84E3eFw6I_iENni_dA8QYk5Lnlw6FLO0utO7WUowpZi10j40FWcZ_8T25z7q2ruq3OrZakViWxdbWG7_yeqUpzmE",
+      #         "e": "AQAB",
+      #         "alg": "RS256"
+      #       },
+      #       {
+      #         "kty": "RSA",
+      #         "kid": "0k6ErQ006TwbV_3IhN_BCtIltQQqVIGQSSWMeLKTPjE",
+      #         "use": "sig",
+      #         "n": "pGd_O1yK_NCr9wWcLg-Lsx7MU0oUFRvcwV4YsqFu_mIjbrobHC3giL_jQVOfNPu7gqJdK4LC13bp4PUYD_aIDqQVYLXcvPugIjTRa1hzby5akVSOK-8LaS1EXDnM0hMm7qidSAJxPFlOrggN8Xa0bkf8xEv4uIBTszjJxOk1Gh6Tz6alwlsEeoqdAz0GgoJg3MxFqRW2v9EvG1XLrP4zRsd0h7j1YZoiGuFPNhuF8uLoAZvET_Y1OlPQ8fIugS8RFiaJgFBYP4fqMAlDnVBeVv1Xh6K98ieccR-8e6Fc57u7dW8lAozrkyY7alMAbMjtEMAP0IyfkQZkhWeZooC9PWWTH1BsYs8e6oYR6skZRoWbiy3nRFC0gmfI22CW_Z4Ps25UxmLQu4dVu1Mvh8LZ8TvEJQmXfaffJ60uvd75HMrKOASWCBIePe39pMqehLr9TO1ulzTrOwn9_4P3Yng76o7CLAFOBQw-0NpR4Ca-dR11H9cUhg1H-HJASjOKPfxtZb0pxgWv_N__rtxwaQ50ChKupIt2Nbba6H8SlujcmujqV-kDteJ3NXTpGwEALh4Z6aP8QKQ0EheFg7m8J8m1zJ9x1jYsl534i-zcpmaPoemd4jDzkn-Pjek39Gz1kvPcgYWRP_yp6HSgECghtkmUmv1joJMnkbDn3PDEz4sIUkc",
+      #         "e": "AQAB",
+      #         "alg": "RS256"
+      #       },
+      #       {
+      #         "kty": "RSA",
+      #         "kid": "IYAgRbBn0TD7B9zawr6dgqS4VIEQjB4b914QQZwjc00",
+      #         "use": "sig",
+      #         "n": "mH5ujlcUa5QXwxYHN9R9qqFK-1KQQ8Pi3TbGHmQjxxIMG2C8-YuZc7f4J9K5kPOI75y67y0_-DZdb4FXJv_Hr0cYLH7QkFq4Mqe7GkDxS9nwxx0-G7ZxTzVIljxGop0_FHrMya4pA9K-aeU8aBfIhcnr0zVTGrBYOfxxKzEZDOELC3yPwL6sh_e2H5T4EAqt8FtxRSrnwda4_u0EQxjASui5uhuVFq49AJhH1i4VlBs1cq6A0NJ2XIcOztszRy9AJZdN4v8mnRVPaO3DPF7zpVG3vQ1sCGgBpUeZ9Nzwyhv4ZNecabfoK8wfx5NIeYiy2X4LZW5oln3zCrT7uX-DOw",
+      #         "e": "AQAB",
+      #         "alg": "RS256"
+      #       }
+      #     ]
+      #   }
+      fromHeaders:
+        - name: Authorization
+          prefix: Bearer

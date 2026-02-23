@@ -1,0 +1,16 @@
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: vs-proxy
+spec:
+  gateways:
+    - mesh
+  hosts:
+    - u165622-service-nginx.devj-playground.svc.cluster.local
+  http:
+    - name: proxy-route
+      route:
+        - destination:
+            host: u165622-service-nginx
+            port:
+              number: 8080

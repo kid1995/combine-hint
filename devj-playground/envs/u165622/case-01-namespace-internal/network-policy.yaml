@@ -1,0 +1,26 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: net-pol-allow-namespace-internal
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchExpressions:
+              - key: "kubernetes.io/metadata.name"
+                operator: In
+                # Erlaube dem istio control plane [damit istiod configs pushen kann]
+                # und dem namespace selbst ('my-namespace' ist ein Platzhalter)
+                values: ["istio-system", "my-namespace"]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchExpressions:
+              - key: "kubernetes.io/metadata.name"
+                operator: In
+                # Erlaube dem namespace selbst ('my-namespace' ist ein Platzhalter)
+                values: ["my-namespace"]

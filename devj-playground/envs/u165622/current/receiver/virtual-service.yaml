@@ -1,0 +1,16 @@
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: vs-alpine
+spec:
+  gateways:
+    - mesh
+  hosts:
+    - u165622-service-alpine.devj-playground.svc.cluster.local
+  http:
+    - name: dev-route
+      route:
+        - destination:
+            host: u165622-service-alpine
+            port:
+              number: 8080

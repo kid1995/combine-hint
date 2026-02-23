@@ -1,0 +1,25 @@
+resources:
+  # Caller
+  - current/caller/deployment.yaml
+  # Proxy
+  - current/proxy/deployment.yaml
+  - current/proxy/service.yaml
+  - current/proxy/virtual-service.yaml
+  - current/proxy/authorization-policy.yaml
+  - current/proxy/peer-authentication.yaml
+  # Receiver
+  - current/receiver/deployment.yaml
+  - current/receiver/service.yaml
+  - current/receiver/virtual-service.yaml
+  - current/receiver/authorization-policy.yaml
+  - current/receiver/request-authorization.yaml
+  # Shared
+  - current/network-policy.yaml
+  
+
+namePrefix: u165622-
+
+configMapGenerator:
+  - name: config-gen
+    files:
+      - current/proxy/nginx.conf
