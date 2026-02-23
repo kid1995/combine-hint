@@ -6,6 +6,9 @@ spec:
   hosts:
     - "dev-hint-elpa-elpa4.copsinop.de"
     - "dev-hint.elpa-elpa4.svc.cluster.local"
+  gateways:
+    - istio-system/mesh-gateway
+    - mesh    
   http:
     - name: dev-hint-route
       route:

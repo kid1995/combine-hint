@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app
+spec:
+  selector:
+    matchLabels:
+      message: kafka
+  template:
+    metadata:
+      labels:
+        message: kafka
+    spec:
+      containers:
+        - name: app
+          env:
+            - name: KAFKA_OAUTH_CLIENT_ID
+              value: workload-client
+            - name: KAFKA_OAUTH_CLIENT_SECRET
+              value: workload-secret
+            - name: KAFKA_SASL_MECHANISM
+              value: OAUTHBEARER
+            - name: KAFKA_JAAS_ENABLED
+              value: "true"
+            - name: KAFKA_SECURITY_PROTOCOL
+              value: SASL_PLAINTEXT
+            - name: KAFKA_BROKERS
+              valueFrom:
+                configMapKeyRef:
+                  name: backend-cm
+                  key: KAFKA_BROKERS
+            - name: KAFKA_OAUTH_TOKEN_ENDPOINT_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: backend-cm
+                  key: KAFKA_OAUTH_TOKEN_ENDPOINT_URL            
+
+

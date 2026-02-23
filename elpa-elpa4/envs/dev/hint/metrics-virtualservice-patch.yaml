@@ -10,7 +10,8 @@ spec:
     - istio-system/mesh-gateway
     - mesh
   http:
-    - route:
+    - name: dev-hint-metrics-route
+      route:
         - destination:
             host: dev-metrics-hint
             port:
