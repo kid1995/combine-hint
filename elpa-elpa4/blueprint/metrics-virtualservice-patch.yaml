@@ -4,14 +4,14 @@ metadata:
   name: virtualservice-metrics
 spec:
   hosts:
-    - "dev-hint-metrics-elpa-elpa4.copsinop.de"
-    - "dev-hint-metrics.elpa-elpa4.svc.cluster.local"
+    - "<env>-<service-name>-metrics-elpa-elpa4.copsinop.de"
+    - "<env>-<service-name>-metrics.elpa-elpa4.svc.cluster.local"
   gateways:
     - istio-system/mesh-gateway
     - mesh
   http:
     - route:
         - destination:
-            host: dev-metrics-hint
+            host: <env>-metrics-<service-name>
             port:
               number: 8081

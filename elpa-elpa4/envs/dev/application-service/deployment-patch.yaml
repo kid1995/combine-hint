@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app
+  labels:
+    app: application-service
+spec:
+  selector:
+    matchLabels:
+      app: application-service
+  template:
+    metadata:
+      annotations:
+        traffic.sidecar.istio.io/excludeInboundPorts: '8081,8080'
+      labels:
+        app: application-service
+    spec:
+      containers:
+        # Resources quotas soll anhand der anforderung von dem Service angepasst werden.
+        - name: app
+          resources:
+            requests:
+              cpu: 100m
+              memory: 500Mi
+            limits:
+              cpu: 400m
+              memory: 950Mi

@@ -1,7 +1,7 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-nameSuffix: "-hint"
+nameSuffix: "-application-service"
 
 resources:
   - ../../base
@@ -9,26 +9,26 @@ resources:
   - destination-metrics-rule.yaml
 
 components:
-  - ../../base/components/postgres
-  - ../components/postgres
-  - ../../base/components/kafka
-  - ../components/kafka
   - ../../base/components/environments
   - ../components/environments
 
 images:
   - name: app-image
-    newName: dev.docker.system.local/elpa-hint-tst/hint
-    newTag: 8518f2a.3
+    newName: dev.docker.system.local/elpa-application-tst/backend
+    newTag: 05e9ee2.1
 
 configMapGenerator:
   - name: backend-cm
     behavior: merge
     literals:
-      - SERVICE_NAME=hint-service
-      - POSTGRES_SCHEMA_NAME=hin_develop
+      - SERVICE_NAME=application-service
       - AUTH_URL=https://employee.login.int.signal-iduna.org/
-      
+      - ELPA_URL=https://elpatest.system.local
+      - ABW_AUTH_URL_CRM_ROUTING=https://employee.login.int.signal-iduna.org/
+      - AUTH_USER=S000325
+      - AUTH_USERS=S000325, U066096, S001199, S001200, S000676
+      - SWAGGER_ENABLED=true
+
 
 patches:  
   - path: service-app-patch.yaml

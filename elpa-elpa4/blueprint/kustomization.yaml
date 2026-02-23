@@ -4,9 +4,9 @@ kind: Kustomization
 nameSuffix: "-<service-name>"
 
 resources:
-  - ../../base
-  - admin-virtualservice.yaml
+  - ../../base  
   - destination-rule.yaml
+  - destination-metrics-rule.yaml
 
 components: 
   <components-list>
@@ -22,7 +22,8 @@ configMapGenerator:
     literals: 
       <literals-list>
 
-patches:
-  - path: virtualservice-patch.yaml
+patches:  
   - path: service-app-patch.yaml
   - path: deployment-patch.yaml
+  - path: virtualservice-patch.yaml
+  - path: metrics-virtualservice-patch.yaml

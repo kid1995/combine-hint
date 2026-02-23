@@ -9,16 +9,18 @@ spec:
     matchLabels:
       app: hint
   template:
-    metadata:
+    metadata:        
+      annotations:
+        traffic.sidecar.istio.io/excludeInboundPorts: "8081,8080"
       labels:
         app: hint
     spec:
       containers:
         - name: app
           resources:
-            limits:
-              cpu: 2000m
-              memory: 2Gi        
             requests:
-              cpu: 1000m          
-              memory: 1Gi      
+              cpu: 50m          
+              memory: 500Mi      
+            limits:
+              cpu: 200m
+              memory: 950Mi        

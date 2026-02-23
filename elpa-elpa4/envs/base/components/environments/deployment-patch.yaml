@@ -1,0 +1,16 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app
+spec:
+  selector:
+    matchLabels:
+      message: environments
+  template:
+    metadata:
+      labels:
+        message: environments
+    spec:
+      containers:
+        - name: app
+
