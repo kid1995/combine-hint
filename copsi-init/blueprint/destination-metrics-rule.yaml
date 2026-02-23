@@ -1,0 +1,12 @@
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: <service-name>-dest-rule-metrics
+spec:
+  host: <env>-<service-name>-metrics-host
+  trafficPolicy:
+    portLevelSettings:
+      - port:
+          number: 8081
+        tls:
+          mode: DISABLE
