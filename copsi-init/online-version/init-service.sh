@@ -314,10 +314,32 @@ YAML
     echo "  📄  Kustomization geschrieben: ${TARGET_FILE}"
 }
 
-# Copy generated file into deploy repo and register it
+# Update only the copsi ref and image tag in an existing kustomization.yaml.
+# All other content (custom patches, extra literals, etc.) is preserved.
+update_existing_kustomization() {
+    local target_file="$1"
+    local new_ref="${copsi_git_link##*ref=}"
+
+    # Update copsi git-link: replace the old ref= hash with the new one
+    # Update image tag: replace the newTag line
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        sed -i '' "s|//copsi/${env}?ref=[a-f0-9]*|//copsi/${env}?ref=${new_ref}|g" "$target_file"
+        sed -i '' "s|newTag:.*|newTag: ${image_tag}|" "$target_file"
+    else
+        sed -i "s|//copsi/${env}?ref=[a-f0-9]*|//copsi/${env}?ref=${new_ref}|g" "$target_file"
+        sed -i "s|newTag:.*|newTag: ${image_tag}|" "$target_file"
+    fi
+
+    echo "  🔄  Aktualisiert: ref   → ${new_ref}"
+    echo "  🔄  Aktualisiert: newTag → ${image_tag}"
+}
+
+# Copy generated file into deploy repo and register it.
+# If kustomization.yaml already exists, only ref and image tag are updated.
 deploy_to_repo() {
     local deploy_repo="$1"
     local overlay_dir="${deploy_repo}/envs/${env}/${service_name}"
+    local overlay_file="${overlay_dir}/kustomization.yaml"
     local env_kustomization="${deploy_repo}/envs/${env}/kustomization.yaml"
 
     if [[ ! -f "$env_kustomization" ]]; then
@@ -333,11 +355,19 @@ deploy_to_repo() {
     fi
 
     mkdir -p "$overlay_dir"
-    cp "$TARGET_FILE" "${overlay_dir}/kustomization.yaml"
-    echo "  ✅  Kopiert nach: ${overlay_dir}/kustomization.yaml"
+
+    if [[ -f "$overlay_file" ]]; then
+        # Service already deployed before – preserve manual changes, only update what changed
+        echo "  ♻️   Kustomization existiert bereits – aktualisiere ref und image tag."
+        update_existing_kustomization "$overlay_file"
+    else
+        # First deployment – write the full generated file
+        cp "$TARGET_FILE" "$overlay_file"
+        echo "  ✅  Kopiert nach: ${overlay_file}"
+    fi
 
     local entry="  - ${service_name}"
-    if grep -q "^${entry}\$" "$env_kustomization" 2>/dev/null; then
+    if grep -q "^${entry}$" "$env_kustomization" 2>/dev/null; then
         echo "  ⏭️   '${service_name}' bereits in ${env_kustomization} registriert."
     else
         awk -v res="$entry" '/resources:/{print; print res; next} {print}' \
@@ -372,6 +402,36 @@ main() {
     echo "  Registry : ${REGISTRY}"
     echo "  Image    : ${image_name}:${image_tag}"
     echo "  Copsi    : ${copsi_git_link}"
+    echo
+
+    # Warn about manual steps that must be done before ArgoCD deploys
+    local kafka_warning=()
+    local deploy_warning=()
+
+    if $use_kafka; then
+        kafka_warning=(
+            "⚠️  KAFKA: Alle Topics von '${service_name}' müssen in"
+            "   kafka/values.yaml registriert werden, bevor der Service"
+            "   deployed wird – sonst schlägt die Kafka-Verbindung fehl."
+            ""
+            "   Datei: ${deploy_repo_path}/kafka/values.yaml"
+        )
+    fi
+
+    deploy_warning=(
+        "⚠️  DEPLOY: Service '${service_name}' muss in der Umgebungs-"
+        "   Kustomization registriert werden (falls nicht automatisch):"
+        ""
+        "   Datei : ${deploy_repo_path}/envs/${env}/kustomization.yaml"
+        "   Eintrag unter resources:"
+        "     - ${service_name}"
+    )
+
+    if $use_kafka; then
+        print_box "${kafka_warning[@]}"
+        echo
+    fi
+    print_box "${deploy_warning[@]}"
     echo
 }
 
