@@ -18,6 +18,12 @@ spec:
       containers:
         # Resources quotas soll anhand der anforderung von dem Service angepasst werden.
         - name: app
+          env:
+            - name: AUTH_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: dev-elpa-user-secret
+                  key: PASSWORD
           resources:
             requests:
               cpu: 100m

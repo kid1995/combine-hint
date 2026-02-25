@@ -10,4 +10,4 @@ resources:
   - netpol-allow-to-apm-egress.yaml
   - netpol-allow-to-postgres.yaml
   - netpol-allow-to-employee-login.yaml
-  
+  - netpol-allow-to-websphere.yaml

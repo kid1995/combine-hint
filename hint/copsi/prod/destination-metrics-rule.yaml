@@ -1,12 +1,12 @@
 apiVersion: networking.istio.io/v1beta1
 kind: DestinationRule
 metadata:
-  name: application-service-dest-rule
+  name: hint-dest-rule-metrics
 spec:
-  host: dev-service-application-service
+  host: prod-hint-metrics-host
   trafficPolicy:
     portLevelSettings:
       - port:
-          number: 8080
+          number: 8081
         tls:
           mode: DISABLE

@@ -12,6 +12,7 @@ spec:
     metadata:        
       annotations:
         traffic.sidecar.istio.io/excludeInboundPorts: "8081,8080"
+        traffic.sidecar.istio.io/excludeOutboundPorts: "443"   
       labels:
         app: hint
     spec:

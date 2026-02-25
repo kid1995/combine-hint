@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app
+  labels:
+    app: hint
+spec:
+  selector:
+    matchLabels:
+      app: hint
+  template:
+    metadata:
+      labels:
+        app: hint
+    spec:
+      containers:
+        # Resources quotas soll anhand der anforderung von dem Service angepasst werden.
+        - name: app
+          resources:
+            limits:
+              cpu: 400m
+              memory: 950Mi
+            requests:
+              cpu: 100m
+              memory: 500Mi

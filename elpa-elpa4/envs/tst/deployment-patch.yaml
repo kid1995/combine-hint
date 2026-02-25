@@ -1,0 +1,15 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app
+  labels:
+      environment: tst
+spec:
+  selector:
+    matchLabels:
+      environment: tst
+  template:
+    metadata:
+      labels:
+        environment: tst
+        

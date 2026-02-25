@@ -15,7 +15,7 @@ components:
 images:
   - name: app-image
     newName: dev.docker.system.local/elpa-application-tst/backend
-    newTag: 05e9ee2.1
+    newTag: 40ae632.2
 
 configMapGenerator:
   - name: backend-cm
@@ -23,8 +23,8 @@ configMapGenerator:
     literals:
       - SERVICE_NAME=application-service
       - AUTH_URL=https://employee.login.int.signal-iduna.org/
-      - ELPA_URL=https://elpatest.system.local
-      - ABW_AUTH_URL_CRM_ROUTING=https://employee.login.int.signal-iduna.org/
+      - ELPA_URL=https://elpaint.system.local
+      - ABW_AUTH_URL_CRM_ROUTING=https://employee.login.abn.signal-iduna.org/
       - AUTH_USER=S000325
       - AUTH_USERS=S000325, U066096, S001199, S001200, S000676
       - SWAGGER_ENABLED=true
