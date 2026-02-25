@@ -1,11 +1,13 @@
 #!/bin/bash
-set -e  # Exit on error
+set -e
 
 BLUEPRINT_DIR="blueprint"
 COPSI_DIR="copsi"
-ENVS=("dev" "abn" "prod")
+ENVS=("tst" "abn" "prod")
 
+# ---------------------------------------------------------------------------
 # Helpers
+# ---------------------------------------------------------------------------
 
 prompt_yes_no() {
     local prompt="$1"
@@ -17,7 +19,7 @@ prompt_yes_no() {
             return 1
         fi
         response=$(echo "$response" | tr '[:upper:]' '[:lower:]')
-        if [[ "$response" =~ ^(ja|j|true|y)$ ]];  then return 0
+        if   [[ "$response" =~ ^(ja|j|true|y)$ ]];               then return 0
         elif [[ "$response" =~ ^(nein|ne|n|false|jein|jain)$ ]]; then return 1
         else echo "Ungültige Eingabe. Bitte geben Sie 'ja' oder 'nein' ein."
         fi
@@ -36,36 +38,136 @@ prompt_value() {
     eval "$var_name='$value'"
 }
 
-# Input
+
+# ---------------------------------------------------------------------------
+# Draws a box around the given lines, auto-fitting to the longest line.
+# Usage: print_box "line1" "line2" ...
+# Empty string "" as argument renders an empty line inside the box.
+# ---------------------------------------------------------------------------
+
+print_box() {
+    local lines=("$@")
+    local max_len=0
+    for line in "${lines[@]}"; do
+        local len=${#line}
+        (( len > max_len )) && max_len=$len
+    done
+    local inner=$((max_len + 2))
+    local top="  ┌$(printf '─%.0s' $(seq 1 $inner))┐"
+    local bot="  └$(printf '─%.0s' $(seq 1 $inner))┘"
+    local empty="  │$(printf ' %.0s' $(seq 1 $inner))│"
+    echo "$top"
+    echo "$empty"
+    for line in "${lines[@]}"; do
+        local pad=$(( inner - ${#line} - 1 ))
+        printf "  │ %s%${pad}s│\n" "$line" ""
+    done
+    echo "$empty"
+    echo "$bot"
+}
+
+# ---------------------------------------------------------------------------
+# Pre-flight: ensure working tree is clean before we start
+#
+# Why: the final step reads 'git rev-parse HEAD' to generate the copsi
+# git-links. If uncommitted changes exist the resulting hash would not
+# match the actual pushed state, making the links point to a wrong ref.
+# ---------------------------------------------------------------------------
+
+check_git_clean() {
+    echo "--- Git-Status Prüfung ---"
+
+    # Not inside a git repo at all?
+    if ! git rev-parse --is-inside-work-tree > /dev/null 2>&1; then
+        echo "  ❌  Dieses Verzeichnis ist kein Git-Repository."
+        echo "      Bitte in das Service-Repository wechseln und erneut starten."
+        exit 1
+    fi
+
+    # Any uncommitted changes (staged or unstaged)?
+    if ! git diff --quiet || ! git diff --cached --quiet; then
+        echo
+        print_box \
+            "⚠️   Es gibt noch nicht committete Änderungen!" \
+            "" \
+            "Das Script erzeugt am Ende einen Git-Link mit dem aktuellen" \
+            "Commit-Hash. Wenn ungespeicherte Änderungen existieren," \
+            "würde der Link auf einen veralteten Stand zeigen." \
+            "" \
+            "Bitte erst committen, dann das Script neu starten:" \
+            "  git add ." \
+            "  git commit -m 'deine Nachricht'"
+        echo
+        git status --short
+        echo
+        exit 1
+    fi
+
+    # Untracked files that the user might have forgotten to add?
+    local untracked
+    untracked=$(git ls-files --others --exclude-standard)
+    if [[ -n "$untracked" ]]; then
+        echo
+        echo "  ⚠️   Es gibt ungetrackte Dateien (nicht in .gitignore):"
+        echo "$untracked" | sed 's/^/      /'
+        echo
+        if ! prompt_yes_no "  Trotzdem fortfahren?"; then
+            echo "  Abgebrochen."
+            exit 1
+        fi
+    fi
+
+    echo "  ✅  Working tree ist sauber – weiter geht's."
+    echo
+}
+
+# ---------------------------------------------------------------------------
+# Backup existing copsi/ folder before overwriting
+# copsi → copsi-old, if that exists → copsi-old-1, copsi-old-2, ...
+# ---------------------------------------------------------------------------
+
+backup_existing_copsi() {
+    [[ ! -d "$COPSI_DIR" ]] && return 0
+
+    local backup="copsi-old"
+    if [[ ! -d "$backup" ]]; then
+        mv "$COPSI_DIR" "$backup"
+    else
+        local i=1
+        while [[ -d "copsi-old-${i}" ]]; do
+            (( i++ ))
+        done
+        mv "$COPSI_DIR" "copsi-old-${i}"
+        backup="copsi-old-${i}"
+    fi
+
+    echo "  📦  Vorhandenes copsi/ gesichert als: ${backup}/"
+}
+
+# ---------------------------------------------------------------------------
+# Gather input
+# ---------------------------------------------------------------------------
 
 gather_input() {
     echo
     prompt_value "Wie lautet der Service-Name? (z.B. 'hint'): " service_name
 
     echo
-    prompt_yes_no "Wird PostgreSQL verwendet?" && use_postgres=true || use_postgres=false
-    prompt_yes_no "Wird Kafka verwendet?"      && use_kafka=true    || use_kafka=false
-    prompt_yes_no "Wird OAuth2 (AUTH_URL) benötigt?" && use_auth_url=true || use_auth_url=false
+    prompt_yes_no "Wird PostgreSQL verwendet?"        && use_postgres=true  || use_postgres=false
+    prompt_yes_no "Wird Kafka verwendet?"             && use_kafka=true     || use_kafka=false
+    prompt_yes_no "Wird OAuth2 (AUTH_URL) benötigt?" && use_auth_url=true  || use_auth_url=false
 
     if $use_postgres; then
         prompt_value "PostgreSQL Schema-Name? (z.B. '${service_name}'): " postgres_schema_name "$service_name"
     fi
 }
 
-# Build the configMapGenerator literals block for one environment.
-# Result is stored in $LITERALS (empty string if nothing to add).
+# ---------------------------------------------------------------------------
+# Build configMapGenerator literals per environment
+# ---------------------------------------------------------------------------
 
 build_literals_for_env() {
     local env="$1"
-
-    local auth_url=""
-    if $use_auth_url; then
-        case "$env" in
-            dev)  auth_url="https://employee.login.int.signal-iduna.org/" ;;
-            abn)  auth_url="https://employee.login.abn.signal-iduna.org/" ;;
-            prod) auth_url="https://employee.login.signal-iduna.org/" ;;
-        esac
-    fi
 
     LITERALS="      - SERVICE_NAME=${service_name}"
 
@@ -75,21 +177,27 @@ build_literals_for_env() {
     fi
 
     if $use_auth_url; then
+        local auth_url
+        case "$env" in
+            tst)  auth_url="https://employee.login.int.signal-iduna.org/" ;;
+            abn)  auth_url="https://employee.login.abn.signal-iduna.org/" ;;
+            prod) auth_url="https://employee.login.signal-iduna.org/"     ;;
+        esac
         LITERALS="${LITERALS}
       - AUTH_URL=${auth_url}"
     fi
 }
 
-# Inject literals into kustomization.yaml.
-# Drops the entire configMapGenerator block when LITERALS is empty.
-# Uses a pending-header pattern identical to init-service.sh.
+# ---------------------------------------------------------------------------
+# Inject literals into kustomization.yaml
+# Drops the entire configMapGenerator block when LITERALS is empty
+# ---------------------------------------------------------------------------
 
 process_kustomization_file() {
     local kustomization_file="$1"
     local temp_file
     temp_file=$(mktemp)
-
-    local pending_header=""   # holds buffered lines above <literals-list>
+    local pending_header=""
 
     while IFS= read -r line; do
         if [[ "$line" == *"<literals-list>"* ]]; then
@@ -97,40 +205,33 @@ process_kustomization_file() {
                 echo "$pending_header"
                 echo "$LITERALS"
             fi
-            # Either way: discard placeholder and buffered header
             pending_header=""
             continue
         fi
-
-        # Detect start of the configMapGenerator block
         if [[ "$line" =~ ^configMapGenerator:[[:space:]]*$ ]]; then
             pending_header="$line"
             continue
         fi
-
-        # While we are inside a pending configMapGenerator block,
-        # keep buffering (name:, behavior:, literals:)
         if [[ -n "$pending_header" ]]; then
             pending_header="${pending_header}
 ${line}"
             continue
         fi
-
         echo "$line"
     done < "$kustomization_file" > "$temp_file"
 
     mv "$temp_file" "$kustomization_file"
 }
 
-# Replace <env> and <service-name> in all yaml files under a directory
+# ---------------------------------------------------------------------------
+# Replace placeholders in all yaml files
+# ---------------------------------------------------------------------------
 
 replace_placeholders() {
     local target_dir="$1"
     local env="$2"
-    local files
-    files=$(find "$target_dir" -type f -name "*.yaml")
 
-    for file in $files; do
+    while IFS= read -r -d '' file; do
         if [[ "$OSTYPE" == "darwin"* ]]; then
             sed -i '' "s|<env>|${env}|g"                   "$file"
             sed -i '' "s|<service-name>|${service_name}|g" "$file"
@@ -138,149 +239,92 @@ replace_placeholders() {
             sed -i "s|<env>|${env}|g"                   "$file"
             sed -i "s|<service-name>|${service_name}|g" "$file"
         fi
-    done
+    done < <(find "$target_dir" -type f -name "*.yaml" -print0)
 }
 
-
-# Create one copsi/<env> folder from the blueprint
+# ---------------------------------------------------------------------------
+# Create one copsi/<env> from the blueprint
+# ---------------------------------------------------------------------------
 
 create_env_folder() {
     local env="$1"
     local target_dir="${COPSI_DIR}/${env}"
 
-    if [[ -d "$target_dir" ]]; then
-        echo "  ⏭️  ${target_dir}/ already exists – skipping"
-        return 0
-    fi
-
-    echo "  Processing ${target_dir}/ ..."
-
-    mkdir -p "${COPSI_DIR}"
     cp -r "$BLUEPRINT_DIR" "$target_dir"
-
-    # 1. Replace <env> and <service-name> in all yaml files
     replace_placeholders "$target_dir" "$env"
-
-    # 2. Build env-specific literals and inject them into kustomization.yaml
     build_literals_for_env "$env"
     process_kustomization_file "${target_dir}/kustomization.yaml"
 
-    echo "  ✅ ${target_dir}/"
+    echo "  ✅  ${target_dir}/"
 }
 
-# Find the first copsi/<env> folder that already exists and read its config.
-# Extracts: service_name, use_postgres, postgres_schema_name, use_auth_url
-# Returns 0 if config was read successfully, 1 if nothing exists yet.
+# ---------------------------------------------------------------------------
+# Commit, push and generate git-links for all environments
+# ---------------------------------------------------------------------------
 
-read_config_from_existing() {
-    local existing_kustomization=""
+commit_push_and_generate_links() {
+    echo
+    echo "--- Git Commit & Push ---"
 
+    local commit_msg
+    prompt_value "Commit-Nachricht [feat(${service_name}): add copsi config]: " \
+        commit_msg "feat(${service_name}): add copsi config"
+
+    git add copsi/
+    git commit -m "$commit_msg"
+    git push
+
+    # Read the exact hash after push – this is what the registry will build against
+    local commit_hash
+    commit_hash=$(git rev-parse HEAD)
+    local short_hash="${commit_hash:0:7}"
+
+    echo
+    echo "======================================================================"
+    echo "  ✅ ✅ ✅  Fertig!  ✅ ✅ ✅"
+    echo "======================================================================"
+    echo
+    echo "  Commit : ${commit_hash}"
+    echo
+    echo "Git-Links (nach erfolgreichem Jenkins-Build verwendbar):"
+    echo
     for env in "${ENVS[@]}"; do
-        if [[ -f "${COPSI_DIR}/${env}/kustomization.yaml" ]]; then
-            existing_kustomization="${COPSI_DIR}/${env}/kustomization.yaml"
-            echo "  📖 Lese Konfiguration aus vorhandener Datei: ${existing_kustomization}"
-            break
-        fi
+        echo "  ${env}: https://git.system.local/scm/elpa/${service_name}.git//copsi/${env}?ref=${commit_hash}"
     done
-
-    [[ -z "$existing_kustomization" ]] && return 1
-
-    # SERVICE_NAME
-    service_name=$(grep -oP '(?<=SERVICE_NAME=)\S+' "$existing_kustomization" || true)
-
-    # POSTGRES_SCHEMA_NAME
-    postgres_schema_name=$(grep -oP '(?<=POSTGRES_SCHEMA_NAME=)\S+' "$existing_kustomization" || true)
-    if [[ -n "$postgres_schema_name" ]]; then
-        use_postgres=true
-    else
-        use_postgres=false
-    fi
-
-    # AUTH_URL (presence is enough – the URL is rebuilt per env)
-    local auth_url_found
-    auth_url_found=$(grep -c 'AUTH_URL=' "$existing_kustomization" || true)
-    if [[ "$auth_url_found" -gt 0 ]]; then
-        use_auth_url=true
-    else
-        use_auth_url=false
-    fi
-
-    # kafka: check if kafka-related env var appears in deployment-patch
-    use_kafka=false
-    if [[ -f "${COPSI_DIR}/$(ls ${COPSI_DIR} | head -1)/deployment-patch.yaml" ]]; then
-        if grep -q 'KAFKA' "${COPSI_DIR}/$(ls ${COPSI_DIR} | head -1)/deployment-patch.yaml" 2>/dev/null; then
-            use_kafka=true
-        fi
-    fi
-
-    echo "  ✅ Erkannte Konfiguration:"
-    echo "     SERVICE_NAME        = ${service_name}"
-    echo "     use_postgres        = ${use_postgres}"
-    [[ -n "$postgres_schema_name" ]] && echo "     POSTGRES_SCHEMA_NAME = ${postgres_schema_name}"
-    echo "     use_auth_url        = ${use_auth_url}"
-    echo "     use_kafka           = ${use_kafka}"
-
-    return 0
+    echo
+    print_box \
+        "⏳  WICHTIG: Git-Links erst nach erfolgreichem Build nutzbar!" \
+        "" \
+        "Der Push hat soeben einen Jenkins-Build ausgelöst." \
+        "Das Docker-Image wird erst gebaut und in die Registry gepusht," \
+        "wenn der Build erfolgreich durchgelaufen ist." \
+        "" \
+        "➡  Jenkins-Build abwarten, dann init-service.sh ausführen."
+    echo
 }
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
 
 main() {
-    echo "=== init-copsi.sh – Kustomize Component Generator ==="
+    echo "=== init-copsi.sh ==="
     echo
 
-    if [[ ! -d "$BLUEPRINT_DIR" ]]; then
-        echo "❌  Blueprint-Verzeichnis '$BLUEPRINT_DIR' nicht gefunden."
-        echo "    Stelle sicher, dass du das Script aus dem Root des Service-Repositories ausführst."
-        exit 1
-    fi
+    check_git_clean
 
-    # Count how many env folders are missing
-    missing_envs=()
+    backup_existing_copsi
+    mkdir -p "$COPSI_DIR"
+
+    gather_input
+
+    echo
+    echo "Erstelle copsi-Verzeichnisse..."
     for env in "${ENVS[@]}"; do
-        [[ ! -d "${COPSI_DIR}/${env}" ]] && missing_envs+=("$env")
-    done
-
-    if [[ ${#missing_envs[@]} -eq 0 ]]; then
-        echo "  ✅ Alle copsi-Verzeichnisse (${ENVS[*]}) sind bereits vorhanden. Nichts zu tun."
-        exit 0
-    fi
-
-    echo "  Fehlende Verzeichnisse: ${missing_envs[*]}"
-    echo
-
-    # If some envs already exist, read config from them automatically.
-    # If none exist yet, ask the user.
-    if read_config_from_existing; then
-        echo
-        echo "  ℹ️  Fehlende Verzeichnisse werden automatisch generiert..."
-    else
-        echo "  Keine vorhandenen copsi-Verzeichnisse gefunden – Konfiguration abfragen..."
-        gather_input
-    fi
-
-    echo
-    echo "Erstelle fehlende copsi-Verzeichnisse..."
-    echo
-
-    for env in "${missing_envs[@]}"; do
         create_env_folder "$env"
     done
 
-    echo
-    echo "======================================================================"
-    echo "  ✅ ✅ ✅  Copsi erfolgreich erstellt!  ✅ ✅ ✅"
-    echo "======================================================================"
-    echo
-    echo "Generierte Dateien:"
-    find "${COPSI_DIR}" -name "*.yaml" | sort | sed 's/^/  /'
-    echo
-    echo "Nächste Schritte:"
-    echo "  1. git add copsi/ && git commit -m 'feat: add copsi kustomize components'"
-    echo "  2. git push"
-    echo "  3. git rev-parse HEAD   ← Commit-Hash für den Git-Link im Deploy-Repo"
-    echo
-    echo "Git-Link Vorlage für deploy-repo (init-service.sh):"
-    echo "  https://git.system.local/scm/elpa/${service_name}.git//copsi/<env>?ref=<commit-hash>"
-    echo
+    commit_push_and_generate_links
 }
 
 main
