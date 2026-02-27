@@ -155,7 +155,8 @@ gather_input() {
     prompt_yes_no "Wird OAuth2 (AUTH_URL) benötigt?" && use_auth_url=true  || use_auth_url=false
 
     if $use_postgres; then
-        prompt_value "PostgreSQL Schema-Name? (z.B. '${service_name}'): " postgres_schema_name "$service_name"
+        prompt_value "PostgreSQL Schema-Name für tst (z.B. '${service_name}'): "             postgres_schema_name_tst "$service_name"
+        prompt_value "PostgreSQL Schema-Name für abn/prod (z.B. '${service_name}'): "             postgres_schema_name_prod "$service_name"
     fi
 }
 
@@ -169,6 +170,11 @@ build_literals_for_env() {
     LITERALS="- SERVICE_NAME=${service_name}"
 
     if $use_postgres; then
+        local postgres_schema_name
+        case "$env" in
+            tst)  postgres_schema_name="$postgres_schema_name_tst" ;;
+            abn|prod) postgres_schema_name="$postgres_schema_name_prod" ;;
+        esac
         LITERALS="${LITERALS}
 - POSTGRES_SCHEMA_NAME=${postgres_schema_name}"
     fi
