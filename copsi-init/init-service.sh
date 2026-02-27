@@ -1,32 +1,9 @@
 #!/bin/bash
 set -e
 
-
-# =============================================================================
-# init-service.sh  (copsi-init repository)
-#
-# Registry & image conventions (from si_docker.groovy):
-#
-#   env=tst  → dev.docker.system.local  / elpa-<svc>-tst / <svc>:<tag>
-#              HTTP, no credentials (anonymous)
-#   env=abn  → prod.docker.system.local / elpa-<svc>     / <svc>:<tag>
-#              HTTPS, needs registry credentials → prompts user if needed
-#   env=prod → prod.docker.system.local / elpa-<svc>     / <svc>:<tag>
-#              (image retagged from abn by Jenkins)
-#
-#   image tag  →  <7-char-shortCommitId>.<BUILD_NUMBER>
-#   shortCommitId = first 7 chars of the commit hash in ?ref=
-# =============================================================================
-
-
 OUTPUT_DIR="output"
 
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-
+# ================ Helpers Functions ================
 prompt_yes_no() {
     local prompt="$1"
     local response
@@ -36,14 +13,13 @@ prompt_yes_no() {
             echo "Keine Eingabe. 'nein' wurde angenommen."
             return 1
         fi
-        response="${response,,}"
+        response=$(echo "$response" | tr '[:upper:]' '[:lower:]')
         if   [[ "$response" =~ ^(ja|j|true|y)$ ]];               then return 0
         elif [[ "$response" =~ ^(nein|ne|n|false|jein|jain)$ ]]; then return 1
         else echo "Ungültige Eingabe. Bitte geben Sie 'ja' oder 'nein' ein."
         fi
     done
 }
-
 
 prompt_value() {
     local prompt="$1"
@@ -56,7 +32,6 @@ prompt_value() {
     fi
     eval "$var_name='$value'"
 }
-
 
 select_environment() {
     echo
@@ -72,16 +47,7 @@ select_environment() {
     done
 }
 
-
-
-
-# ---------------------------------------------------------------------------
-# Draws a box around the given lines, auto-fitting to the longest line.
-# Usage: print_box "line1" "line2" ...
-# Empty string "" as argument renders an empty line inside the box.
-# ---------------------------------------------------------------------------
-
-
+# Draws a box around the given lines, auto-fitting to the longest line. -> just for beauty
 print_box() {
     local lines=("$@")
     local max_len=0
@@ -105,50 +71,36 @@ print_box() {
     echo "$bot"
 }
 
+# ================ End Helpers ================
 
-# ---------------------------------------------------------------------------
 # Parse git link
 #
 #   https://git.system.local/scm/elpa/hint.git//copsi/tst?ref=8518f2abc1234
 #   → service_name = hint
 #   → env          = tst
 #   → short_commit = 8518f2a   (always exactly 7 chars)
-# ---------------------------------------------------------------------------
-
-
 parse_git_link() {
     local link="$1"
 
-
-    # Extract service name using bash parameter expansion (no sed/subshell needed)
-    # Step 1: strip everything from '.git' onward  → https://.../elpa/hint
-    # Step 2: strip everything up to the last '/'  → hint
     # Example: https://git.system.local/scm/elpa/hint.git//copsi/tst?ref=abc → hint
     local _strip_git="${link%.git*}"
     service_name="${_strip_git##*/}"
 
-
-    # Extract environment: strip up to '//copsi/' then strip from '?' onward
     # Example: ...//copsi/tst?ref=abc → tst
     local parsed_env _strip_copsi
     _strip_copsi="${link#*//copsi/}"
     parsed_env="${_strip_copsi%%\?*}"
 
-
-    # Extract raw ref/commit hash: strip everything up to 'ref='
-    # Example: ...?ref=16b1a31c5ea7cdfca35082 → 16b1a31c5ea7cdfca35082
     # Trimmed to 7 chars below (shortCommitId convention from si_docker.groovy)
     local raw_ref
     raw_ref="${link##*ref=}"
     short_commit="${raw_ref:0:7}"
-
 
     if [[ -z "$service_name" || -z "$raw_ref" ]]; then
         echo "  ❌  Ungültiger Git-Link. Erwartet:"
         echo "      https://git.system.local/scm/elpa/<service>.git//copsi/<env>?ref=<hash>"
         exit 1
     fi
-
 
     if [[ -n "$parsed_env" ]]; then
         env="$parsed_env"
@@ -159,16 +111,7 @@ parse_git_link() {
     fi
 }
 
-
-# ---------------------------------------------------------------------------
-# Derive image name and registry from env (mirrors si_docker.groovy exactly)
-#
-#   tst  → dev.docker.system.local  / elpa-<svc>-tst / <svc>
-#   abn  → prod.docker.system.local / elpa-<svc>     / <svc>
-#   prod → prod.docker.system.local / elpa-<svc>     / <svc>
-# ---------------------------------------------------------------------------
-
-
+# Derive image name and registry from env (base on image build in si_docker.groovy)
 derive_image_name() {
     case "$env" in
         tst)
@@ -180,7 +123,7 @@ derive_image_name() {
             NAMESPACE="elpa-${service_name}"
             ;;
         dev)
-            # dev builds typically not deployed via this script, but allow it
+            #TODO: remove later, because we will use tst instead
             REGISTRY="dev.docker.system.local"
             NAMESPACE="elpa-${service_name}-dev"
             ;;
@@ -191,18 +134,11 @@ derive_image_name() {
             ;;
     esac
 
-
     image_name="${REGISTRY}/${NAMESPACE}/${service_name}"
     echo "  📦  Image-Name: ${image_name}"
 }
 
-
-# ---------------------------------------------------------------------------
-# Force the user to manually enter image_name and image_tag
-# Called whenever the registry check fails or returns no usable result
-# ---------------------------------------------------------------------------
-
-
+# Force the user to manually enter image_name and image_tag, when smart-finder do not work
 force_manual_image_input() {
     echo
     print_box \
@@ -220,34 +156,14 @@ force_manual_image_input() {
     echo "  ✅  Image-Tag gesetzt: ${image_tag}"
 }
 
-
-
-
-#
-# Tag format: <short_commit>.<build_number>   e.g. 8518f2a.3
-#
-# tst  → HTTP, no auth (as in deprecated imageExistsInRegistry for tst)
-# abn  → HTTPS, try with credentials if provided, else skip
-# prod → same registry as abn, skip check (image is retagged by Jenkins)
-# ---------------------------------------------------------------------------
-
-
-# ---------------------------------------------------------------------------
 # Fetch the Docker Registry tag list for the current image.
-# Uses anonymous:anonymous for both tst and abn/prod registries,
-# mirroring the 'anonymous-docker-registry' Jenkins credential.
-# Falls back to prompted credentials if anonymous access fails.
-# ---------------------------------------------------------------------------
-
-
 fetch_registry_tags() {
     local tags_url="https://${REGISTRY}/v2/${NAMESPACE}/${service_name}/tags/list"
     echo "  🔎  Prüfe Registry: ${tags_url}"
 
-
     local result
-    result=$(curl -s --max-time 5 --insecure -u "anonymous:anonymous"         "$tags_url" 2>/dev/null || true)
-
+    result=$(curl -s --max-time 5 --insecure -u "anonymous:anonymous" \
+        "$tags_url" 2>/dev/null || true)
 
     # If anonymous access was denied, prompt once for credentials
     if echo "$result" | grep -q '"errors"'; then
@@ -257,18 +173,17 @@ fetch_registry_tags() {
         if [[ -n "$reg_user" ]]; then
             read -rsp "      Passwort: " reg_pass
             echo
-            result=$(curl -s --max-time 5 --insecure -u "${reg_user}:${reg_pass}"                 "$tags_url" 2>/dev/null || true)
+            result=$(curl -s --max-time 5 --insecure -u "${reg_user}:${reg_pass}" \
+                "$tags_url" 2>/dev/null || true)
         else
             echo "  ⏭️   Registry-Check übersprungen."
             result=""
         fi
     fi
 
-
     # Return result via global (avoids subshell losing the value)
     REGISTRY_RESPONSE="$result"
 }
-
 
 resolve_image_tag() {
     local matched_tag
@@ -288,7 +203,6 @@ resolve_image_tag() {
         return
     fi
 
-
     # Check for registry error response, e.g. {"errors":[{"code":"UNAUTHORIZED","message":"..."}]}
     if echo "$response" | grep -q '"errors"'; then
         local err_msg
@@ -298,7 +212,6 @@ resolve_image_tag() {
         force_manual_image_input
         return
     fi
-
 
     # Parse tags array: {"name":"...","tags":["8518f2a.1","8518f2a.2",...]}
     # 1. grep -oE '"[^"]+"' → extract every quoted string from JSON
@@ -313,7 +226,6 @@ resolve_image_tag() {
         | sort -t. -k2 -rn \
         | head -1 || true)
 
-
     if [[ -n "$matched_tag" ]]; then
         image_tag="$matched_tag"
         echo "  ✅  Image-Tag gefunden: ${image_tag}"
@@ -323,16 +235,11 @@ resolve_image_tag() {
     fi
 }
 
-
-# ---------------------------------------------------------------------------
 # Gather input
-# ---------------------------------------------------------------------------
-
-
 gather_input() {
-    # Declare variables that are assigned via prompt_value/eval
-    # so shellcheck knows they are intentionally set this way
-    local copsi_git_link
+    # FIX: copsi_git_link must be global (no 'local') so it is accessible in
+    # build_components_block() and main(), which are called from main() not from here.
+    # bash 'local' scope only covers the declaring function and its callees.
     # 1. Git link first → drives service_name, env, short_commit
     echo
     echo "--- Copsi Git-Link ---"
@@ -340,19 +247,15 @@ gather_input() {
     echo
     prompt_value "Git-Link zum Copsi-Component: " copsi_git_link
 
-
     parse_git_link "$copsi_git_link"
-
 
     # 2. Derive image name from si_docker conventions
     echo
     derive_image_name
 
-
     # 3. Resolve image tag via registry (env-specific logic)
     echo
     resolve_image_tag
-
 
     # 4. Infra components
     echo
@@ -361,15 +264,9 @@ gather_input() {
     prompt_yes_no "Wird Kafka verwendet?"      && use_kafka=true    || use_kafka=false
 }
 
-
-# ---------------------------------------------------------------------------
 # Build components block
-# ---------------------------------------------------------------------------
-
-
 build_components_block() {
     local component_lines="  - ${copsi_git_link}"
-
 
     if $use_postgres; then
         component_lines="${component_lines}
@@ -377,49 +274,36 @@ build_components_block() {
   - ../components/postgres"
     fi
 
-
     if $use_kafka; then
         component_lines="${component_lines}
   - ../../base/components/kafka
   - ../components/kafka"
     fi
 
-
     component_lines="${component_lines}
   - ../components/environments
   - ../../base/components/environments"
-
 
     COMPONENTS_BLOCK="components:
 ${component_lines}"
 }
 
-
-# ---------------------------------------------------------------------------
 # Write kustomization.yaml to output/
-# ---------------------------------------------------------------------------
-
-
 write_kustomization() {
     local target_dir="${OUTPUT_DIR}/${service_name}"
     mkdir -p "$target_dir"
     TARGET_FILE="${target_dir}/kustomization.yaml"
 
-
     cat > "$TARGET_FILE" << YAML
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-
 nameSuffix: "-${service_name}"
-
 
 resources:
   - ../../base
 
-
 ${COMPONENTS_BLOCK}
-
 
 images:
   - name: app-image
@@ -430,17 +314,33 @@ YAML
     echo "  📄  Kustomization geschrieben: ${TARGET_FILE}"
 }
 
+# Update only the copsi ref and image tag in an existing kustomization.yaml.
+# All other content (custom patches, extra literals, etc.) is preserved.
+update_existing_kustomization() {
+    local target_file="$1"
+    local new_ref="${copsi_git_link##*ref=}"
 
-# ---------------------------------------------------------------------------
-# Copy generated file into deploy repo and register it
-# ---------------------------------------------------------------------------
+    # Update copsi git-link: replace the old ref= hash with the new one
+    # Update image tag: replace the newTag line
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        sed -i '' "s|//copsi/${env}?ref=[a-f0-9]*|//copsi/${env}?ref=${new_ref}|g" "$target_file"
+        sed -i '' "s|newTag:.*|newTag: ${image_tag}|" "$target_file"
+    else
+        sed -i "s|//copsi/${env}?ref=[a-f0-9]*|//copsi/${env}?ref=${new_ref}|g" "$target_file"
+        sed -i "s|newTag:.*|newTag: ${image_tag}|" "$target_file"
+    fi
 
+    echo "  🔄  Aktualisiert: ref   → ${new_ref}"
+    echo "  🔄  Aktualisiert: newTag → ${image_tag}"
+}
 
+# Copy generated file into deploy repo and register it.
+# If kustomization.yaml already exists, only ref and image tag are updated.
 deploy_to_repo() {
     local deploy_repo="$1"
     local overlay_dir="${deploy_repo}/envs/${env}/${service_name}"
+    local overlay_file="${overlay_dir}/kustomization.yaml"
     local env_kustomization="${deploy_repo}/envs/${env}/kustomization.yaml"
-
 
     if [[ ! -f "$env_kustomization" ]]; then
         echo "  ❌  '${env_kustomization}' nicht gefunden."
@@ -454,14 +354,20 @@ deploy_to_repo() {
         return 1
     fi
 
-
     mkdir -p "$overlay_dir"
-    cp "$TARGET_FILE" "${overlay_dir}/kustomization.yaml"
-    echo "  ✅  Kopiert nach: ${overlay_dir}/kustomization.yaml"
 
+    if [[ -f "$overlay_file" ]]; then
+        # Service already deployed before – preserve manual changes, only update what changed
+        echo "  ♻️   Kustomization existiert bereits – aktualisiere ref und image tag."
+        update_existing_kustomization "$overlay_file"
+    else
+        # First deployment – write the full generated file
+        cp "$TARGET_FILE" "$overlay_file"
+        echo "  ✅  Kopiert nach: ${overlay_file}"
+    fi
 
     local entry="  - ${service_name}"
-    if grep -q "^${entry}\$" "$env_kustomization" 2>/dev/null; then
+    if grep -q "^${entry}$" "$env_kustomization" 2>/dev/null; then
         echo "  ⏭️   '${service_name}' bereits in ${env_kustomization} registriert."
     else
         awk -v res="$entry" '/resources:/{print; print res; next} {print}' \
@@ -471,30 +377,20 @@ deploy_to_repo() {
     fi
 }
 
-
-# ---------------------------------------------------------------------------
-# Main
-# ---------------------------------------------------------------------------
-
-
 main() {
     echo "=== init-service.sh ==="
-
 
     gather_input
     build_components_block
     write_kustomization
-
 
     # copsi-init is always cloned inside elpa-elpa4, so the deploy repo is the parent directory
     local deploy_repo_path
     deploy_repo_path="$(cd .. && pwd)"
     echo "  📁  Deploy-Repo: ${deploy_repo_path}"
 
-
     echo
     deploy_to_repo "$deploy_repo_path"
-
 
     echo
     echo "======================================================================"
@@ -507,10 +403,36 @@ main() {
     echo "  Image    : ${image_name}:${image_tag}"
     echo "  Copsi    : ${copsi_git_link}"
     echo
+
+    # Warn about manual steps that must be done before ArgoCD deploys
+    local kafka_warning=()
+    local deploy_warning=()
+
+    if $use_kafka; then
+        kafka_warning=(
+            "⚠️  KAFKA: Alle Topics von '${service_name}' müssen in"
+            "   kafka/values.yaml registriert werden, bevor der Service"
+            "   deployed wird – sonst schlägt die Kafka-Verbindung fehl."
+            ""
+            "   Datei: ${deploy_repo_path}/kafka/values.yaml"
+        )
+    fi
+
+    deploy_warning=(
+        "⚠️  DEPLOY: Service '${service_name}' muss in der Umgebungs-"
+        "   Kustomization registriert werden (falls nicht automatisch):"
+        ""
+        "   Datei : ${deploy_repo_path}/envs/${env}/kustomization.yaml"
+        "   Eintrag unter resources:"
+        "     - ${service_name}"
+    )
+
+    if $use_kafka; then
+        print_box "${kafka_warning[@]}"
+        echo
+    fi
+    print_box "${deploy_warning[@]}"
+    echo
 }
 
-
 main
-
-
-

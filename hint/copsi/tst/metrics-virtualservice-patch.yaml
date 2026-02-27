@@ -1,7 +1,7 @@
 apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:
-  name: virtualservice-metrics
+  name: virtual-service-metrics
 spec:
   hosts:
     - "tst-hint-metrics-elpa-elpa4.copsinop.de"
@@ -10,9 +10,9 @@ spec:
     - istio-system/mesh-gateway
     - mesh
   http:
-    - name: tst-hint-metrics-route
+    - name: tst-metrics-route-hint
       route:
         - destination:
-            host: tst-hint-metrics-host
+            host: tst-metrics-hint
             port:
               number: 8081

@@ -1,7 +1,7 @@
 apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:
-  name: virtualservice
+  name: virtual-service
 spec:
   hosts:
     - "dev-application-service-elpa-elpa4.copsinop.de"

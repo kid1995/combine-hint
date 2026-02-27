@@ -9,4 +9,9 @@ patches:
   - path: deployment-patch.yaml
     target:
       kind: Deployment      
-
+  - path: service-patch.yaml
+    target: 
+      kind: Service
+  - path: metrics-patch.yaml
+    target: 
+      kind: Service

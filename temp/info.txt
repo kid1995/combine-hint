@@ -1,1 +1,0 @@
-This pod appears to have created one or more iptables rules. IPTables is deprecated and will no longer be available in RHEL 10 and later. You should consider migrating to another API such as nftables or eBPF. See also https://access.redhat.com/solutions/6739041 Example iptables rule seen in this pod: -A PREROUTING -p udp -m udp --sport 53 -j CT --zone 1

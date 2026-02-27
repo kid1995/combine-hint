@@ -1,9 +1,9 @@
 apiVersion: networking.istio.io/v1beta1
 kind: DestinationRule
 metadata:
-  name: hint-dest-rule-metrics
+  name: dest-rule-metrics
 spec:
-  host: prod-hint-metrics-host
+  host: prod-metrics-hint
   trafficPolicy:
     portLevelSettings:
       - port:

@@ -1,10 +1,10 @@
 apiVersion: v1
 data:
-  ABW_AUTH_URL_CRM_ROUTING: https://employee.login.int.signal-iduna.org/
+  ABW_AUTH_URL_CRM_ROUTING: https://employee.login.abn.signal-iduna.org/
   AUTH_URL: https://employee.login.int.signal-iduna.org/
   AUTH_USER: S000325
   AUTH_USERS: S000325, U066096, S001199, S001200, S000676
-  ELPA_URL: https://elpatest.system.local
+  ELPA_URL: https://elpaint.system.local
   ENABLE_JSON_LOGGING: "true"
   JDK_JAVA_OPTIONS: ' -XX:MaxRAMPercentage=50 -XX:InitialRAMPercentage=50 -XX:+UseSerialGC
     -Ddebug -Dspring.profiles.active=KoP'
@@ -30,21 +30,22 @@ data:
   LOG_LEVEL: INFO
   LOG_LEVEL_SI: DEBUG
   LOGBACK_FILE: logback-json.xml
-  POSTGRES_SCHEMA_NAME: hin_develop
+  POSTGRES_SCHEMA_NAME: hint
   POSTGRES_SHOW_SQL: "false"
   POSTGRES_SSL_MODE: prefer
   POSTGRES_URL: jdbc:postgresql://vipsiae11t.system-a.local:5432/elpapgt
   POSTGRES_USER: ZA-SVC-ELPAPG-T
-  SERVICE_NAME: hint-service
+  SERVICE_NAME: hint
 kind: ConfigMap
 metadata:
-  name: dev-backend-cm-hint
+  name: tst-backend-cm-hint
 ---
 apiVersion: v1
 kind: Service
 metadata:
   labels:
     app: metrics
+    environment: dev
   name: dev-metrics-application-service
 spec:
   ports:
@@ -54,25 +55,13 @@ spec:
     targetPort: 8081
   selector:
     app: application-service
+    environment: dev
 ---
 apiVersion: v1
 kind: Service
 metadata:
   labels:
-    app: metrics
-  name: dev-metrics-hint
-spec:
-  ports:
-  - name: http-metrics
-    port: 8081
-    protocol: TCP
-    targetPort: 8081
-  selector:
-    app: hint
----
-apiVersion: v1
-kind: Service
-metadata:
+    environment: dev
   name: dev-service-application-service
 spec:
   ports:
@@ -82,11 +71,31 @@ spec:
     targetPort: 8080
   selector:
     app: application-service
+    environment: dev
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: dev-service-hint
+  labels:
+    app: metrics
+    environment: tst
+  name: tst-metrics-hint
+spec:
+  ports:
+  - name: http-metrics
+    port: 8081
+    protocol: TCP
+    targetPort: 8081
+  selector:
+    app: hint
+    environment: tst
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    environment: tst
+  name: tst-service-hint
 spec:
   ports:
   - appProtocol: http
@@ -95,6 +104,7 @@ spec:
     targetPort: 8080
   selector:
     app: hint
+    environment: tst
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -126,12 +136,13 @@ spec:
     spec:
       containers:
       - env:
+        - name: AUTH_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: PASSWORD
+              name: dev-elpa-user-secret
         - name: DEPLOYMENT_ENV
           value: dev
-        - name: NO_PROXY
-          value: localhost,127.0.0.1,.system.local,.system-a.local,.copsinop.de,.copsi.de,.signal-iduna.org,employee.login.int.signal-iduna.org
-        - name: no_proxy
-          value: localhost,127.0.0.1,.system.local,.system-a.local,.copsinop.de,.copsi.de,.signal-iduna.org,employee.login.int.signal-iduna.org
         - name: K8S_ENVIRONMENT_LABEL
           valueFrom:
             fieldRef:
@@ -154,7 +165,7 @@ spec:
         envFrom:
         - configMapRef:
             name: dev-backend-cm-application-service
-        image: dev.docker.system.local/elpa-application-tst/backend:05e9ee2.1
+        image: dev.docker.system.local/elpa-application-tst/backend:40ae632.2
         livenessProbe:
           failureThreshold: 5
           httpGet:
@@ -202,15 +213,15 @@ kind: Deployment
 metadata:
   labels:
     app: hint
-    environment: dev
-  name: dev-app-hint
+    environment: tst
+  name: tst-app-hint
 spec:
   replicas: 1
   revisionHistoryLimit: 0
   selector:
     matchLabels:
       app: hint
-      environment: dev
+      environment: tst
       message: environments
       sql: postgres
   template:
@@ -220,17 +231,17 @@ spec:
         signal-iduna.de/prometheus.path: /metrics/prometheus
         signal-iduna.de/prometheus.port: "8081"
         signal-iduna.de/prometheus.scrape: "true"
-        traffic.sidecar.istio.io/excludeInboundPorts: 8081,8080
+        traffic.sidecar.istio.io/excludeInboundPorts: "8081"
       labels:
         app: hint
-        environment: dev
+        environment: tst
         message: environments
         sql: postgres
     spec:
       containers:
       - env:
         - name: DEPLOYMENT_ENV
-          value: dev
+          value: tst
         - name: JAVA_TOOL_OPTIONS
           value: -Dorg.apache.kafka.sasl.oauthbearer.allowed.urls=$(KAFKA_OAUTH_TOKEN_ENDPOINT_URL)
         - name: KAFKA_OAUTH_CLIENT_ID
@@ -247,12 +258,12 @@ spec:
           valueFrom:
             configMapKeyRef:
               key: KAFKA_BROKERS
-              name: dev-backend-cm-hint
+              name: tst-backend-cm-hint
         - name: KAFKA_OAUTH_TOKEN_ENDPOINT_URL
           valueFrom:
             configMapKeyRef:
               key: KAFKA_OAUTH_TOKEN_ENDPOINT_URL
-              name: dev-backend-cm-hint
+              name: tst-backend-cm-hint
         - name: POSTGRES_PASSWORD
           valueFrom:
             secretKeyRef:
@@ -262,10 +273,6 @@ spec:
           value: "true"
         - name: FLYWAY_LOCATIONS
           value: db/migration
-        - name: NO_PROXY
-          value: localhost,127.0.0.1,.system.local,.system-a.local,.copsinop.de,.copsi.de,.signal-iduna.org,employee.login.int.signal-iduna.org
-        - name: no_proxy
-          value: localhost,127.0.0.1,.system.local,.system-a.local,.copsinop.de,.copsi.de,.signal-iduna.org,employee.login.int.signal-iduna.org
         - name: K8S_ENVIRONMENT_LABEL
           valueFrom:
             fieldRef:
@@ -293,8 +300,8 @@ spec:
           value: -$(K8S_ENVIRONMENT_LABEL)
         envFrom:
         - configMapRef:
-            name: dev-backend-cm-hint
-        image: dev.docker.system.local/elpa-hint-tst/hint:8518f2a.3
+            name: tst-backend-cm-hint
+        image: dev.docker.system.local/elpa-hint-tst/hint:02572fd.10
         livenessProbe:
           failureThreshold: 5
           httpGet:
@@ -312,10 +319,10 @@ spec:
           timeoutSeconds: 5
         resources:
           limits:
-            cpu: 200m
+            cpu: 400m
             memory: 950Mi
           requests:
-            cpu: 50m
+            cpu: 200m
             memory: 500Mi
         securityContext:
           allowPrivilegeEscalation: false
@@ -340,6 +347,22 @@ spec:
 apiVersion: bitnami.com/v1alpha1
 kind: SealedSecret
 metadata:
+  name: dev-elpa-user-secret
+  namespace: elpa-elpa4
+spec:
+  encryptedData:
+    PASSWORD: AgBDbVt/ooOLEBvYLW+JOqNAjbTU2XOdcGJrIOo93vWADS854aYAf+1cP9azFQwhWkTxxEZUl/qir6dLESNpSakSAviV7KvLwAYzdBJktKzNnH3MOFtyjPbHTP6UzpQzPDw5PEL2bl72VANDjAFteqlnMjgBI9rsyCrqY5VXo8gdzDDVsiUa+Eh2BjRwHMz2QTHG0DbjGEzP8PV6OnAnEfS0f4WU91Nr6o9HEmcHNnix54Z7gvebWnrilKv0mppTB3RhTxIFenXFpWvWlwl1QPS/F/merZHb49j44yc2pR+Cnyp7Tcy/4tSANpbDKkgl8/spyoqiLIVOrHeME3NLXGqm85mE6S5mW1rLGZQV1bY0jBk9TwikeCOc+bmL/ZqxV7GL+ocf637+01zA6bBCemtOsi3Pg5xejRqmWJ+rswAG+8Gr58i59PQCmv4pYugK0DmzituEtFsScaxXkiDzetNPbGM1N/yVsOROha8EgohmvAN9AjoRaNxByl7RRE6WDlPuEqDbOfU5kUH9uMn0aBrMFm4eKlVUq5vbxfxQX2KXUYyTZ0CcPl2i9lzqYQiG0TPaPZFbnQwIDBJfKk/79QaZ/iZSf0Z2UkzgVKzbKzyAsLRqyW1PY/mu9/kEKmOAJfRaP08Sgf3jTbIyCGhNJaQAidG1+xvZGHwkhCJva83uUVLUKncbkUPYNqz6VBxSeDJReH4OpFvMaQ==
+  template:
+    metadata:
+      annotations:
+        sealedsecrets.bitnami.com/managed: "true"
+      name: dev-elpa-user-secret
+      namespace: elpa-elpa4
+    type: Opaque
+---
+apiVersion: bitnami.com/v1alpha1
+kind: SealedSecret
+metadata:
   name: dev-postgresuser-secret
   namespace: elpa-elpa4
 spec:
@@ -358,7 +381,7 @@ kind: DestinationRule
 metadata:
   name: dev-application-service-dest-rule-application-service
 spec:
-  host: dev-application-service
+  host: dev-service-application-service
   trafficPolicy:
     portLevelSettings:
     - port:
@@ -382,9 +405,9 @@ spec:
 apiVersion: networking.istio.io/v1beta1
 kind: DestinationRule
 metadata:
-  name: dev-dest-rule-hint
+  name: tst-dest-rule-hint
 spec:
-  host: dev-service-hint
+  host: tst-service-hint
   trafficPolicy:
     portLevelSettings:
     - port:
@@ -395,9 +418,9 @@ spec:
 apiVersion: networking.istio.io/v1beta1
 kind: DestinationRule
 metadata:
-  name: dev-dest-rule-metrics-hint
+  name: tst-dest-rule-metrics-hint
 spec:
-  host: dev-metrics-hint
+  host: tst-metrics-hint
   trafficPolicy:
     portLevelSettings:
     - port:
@@ -408,7 +431,7 @@ spec:
 apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:
-  name: dev-virtualservice-application-service
+  name: dev-virtual-service-application-service
 spec:
   gateways:
   - istio-system/mesh-gateway
@@ -427,26 +450,7 @@ spec:
 apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:
-  name: dev-virtualservice-hint
-spec:
-  gateways:
-  - istio-system/mesh-gateway
-  - mesh
-  hosts:
-  - dev-hint-elpa-elpa4.copsinop.de
-  - dev-hint.elpa-elpa4.svc.cluster.local
-  http:
-  - name: dev-hint-route
-    route:
-    - destination:
-        host: dev-service-hint
-        port:
-          number: 8080
----
-apiVersion: networking.istio.io/v1beta1
-kind: VirtualService
-metadata:
-  name: dev-virtualservice-metrics-application-service
+  name: dev-virtual-service-metrics-application-service
 spec:
   gateways:
   - istio-system/mesh-gateway
@@ -464,18 +468,38 @@ spec:
 apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:
-  name: dev-virtualservice-metrics-hint
+  name: tst-virtual-service-hint
 spec:
   gateways:
   - istio-system/mesh-gateway
   - mesh
   hosts:
-  - dev-hint-metrics-elpa-elpa4.copsinop.de
-  - dev-hint-metrics.elpa-elpa4.svc.cluster.local
+  - tst-hint-elpa-elpa4.copsinop.de
+  - tst-hint.elpa-elpa4.svc.cluster.local
   http:
-  - route:
+  - name: tst-route-hint
+    route:
     - destination:
-        host: dev-metrics-hint
+        host: tst-service-hint
+        port:
+          number: 8080
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: tst-virtual-service-metrics-hint
+spec:
+  gateways:
+  - istio-system/mesh-gateway
+  - mesh
+  hosts:
+  - tst-hint-metrics-elpa-elpa4.copsinop.de
+  - tst-hint-metrics.elpa-elpa4.svc.cluster.local
+  http:
+  - name: tst-metrics-route-hint
+    route:
+    - destination:
+        host: tst-metrics-hint
         port:
           number: 8081
 ---
@@ -588,6 +612,28 @@ spec:
         cidr: 172.19.211.0/24
     - ipBlock:
         cidr: 172.19.89.0/24
+  podSelector: {}
+  policyTypes:
+  - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-to-websphere
+spec:
+  egress:
+  - ports:
+    - port: 80
+      protocol: TCP
+    - port: 443
+      protocol: TCP
+    to:
+    - ipBlock:
+        cidr: 172.19.124.0/24
+    - ipBlock:
+        cidr: 172.19.132.0/24
+    - ipBlock:
+        cidr: 172.19.226.0/24
   podSelector: {}
   policyTypes:
   - Egress

@@ -1,7 +1,7 @@
 apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:
-  name: virtualservice-metrics
+  name: virtual-service-metrics
 spec:
   hosts:
     - "prod-hint-metrics-elpa-elpa4.copsinop.de"
@@ -10,9 +10,9 @@ spec:
     - istio-system/mesh-gateway
     - mesh
   http:
-    - name: prod-hint-metrics-route
+    - name: prod-metrics-route-hint
       route:
         - destination:
-            host: prod-hint-metrics-host
+            host: prod-metrics-hint
             port:
               number: 8081

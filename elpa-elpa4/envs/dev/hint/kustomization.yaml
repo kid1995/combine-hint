@@ -28,7 +28,7 @@ configMapGenerator:
       - SERVICE_NAME=hint-service
       - POSTGRES_SCHEMA_NAME=hin_develop
       - AUTH_URL=https://employee.login.int.signal-iduna.org/
-      - AUTH_USERS=S000325,The.Kiet.Dang@signal-iduna.de
+      - AUTH_USERS=S000325
       
 
 patches:  

@@ -7,7 +7,7 @@ resources:
   - ../../base
 
 components:
-  - https://git.system.local/scm/elpa/hint.git//copsi/tst?ref=05ec3e1b5519f98de92f57057b2b068829148fe8
+  - https://git.system.local/scm/elpa/hint.git//copsi/tst?ref=02572fda4ee1d90457e567b8f05fd2610ef07ce5
   - ../../base/components/postgres
   - ../components/postgres
   - ../../base/components/kafka
@@ -18,4 +18,4 @@ components:
 images:
   - name: app-image
     newName: dev.docker.system.local/elpa-hint-tst/hint
-    newTag: 05ec3e1.3
+    newTag: 02572fd.10

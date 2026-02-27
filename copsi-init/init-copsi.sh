@@ -5,10 +5,7 @@ BLUEPRINT_DIR="blueprint"
 COPSI_DIR="copsi"
 ENVS=("tst" "abn" "prod")
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
+# ================ Helpers Functions ================
 prompt_yes_no() {
     local prompt="$1"
     local response
@@ -38,13 +35,7 @@ prompt_value() {
     eval "$var_name='$value'"
 }
 
-
-# ---------------------------------------------------------------------------
 # Draws a box around the given lines, auto-fitting to the longest line.
-# Usage: print_box "line1" "line2" ...
-# Empty string "" as argument renders an empty line inside the box.
-# ---------------------------------------------------------------------------
-
 print_box() {
     local lines=("$@")
     local max_len=0
@@ -66,26 +57,38 @@ print_box() {
     echo "$bot"
 }
 
-# ---------------------------------------------------------------------------
-# Pre-flight: ensure working tree is clean before we start
-#
-# Why: the final step reads 'git rev-parse HEAD' to generate the copsi
-# git-links. If uncommitted changes exist the resulting hash would not
-# match the actual pushed state, making the links point to a wrong ref.
-# ---------------------------------------------------------------------------
+# Indents every line of stdin by N spaces.
+# Usage: echo "$LITERALS" | indent_lines 6
+indent_lines() {
+    local n="$1"
+    local pad
+    pad=$(printf '%*s' "$n" '')
+    sed "s/^/${pad}/"
+}
 
+# ================ End Helpers ================
+
+# Pre-flight: ensure working tree is clean before we start
 check_git_clean() {
     echo "--- Git-Status Prüfung ---"
 
+    # FIX: init-copsi.sh runs from inside copsi-init/ (cloned into the service repo).
+    # All git operations must target the parent (service repo), not copsi-init/ itself,
+    # because copsi-init/ has no .git after 'rm -rf .git' in the clone workflow.
+    local repo_dir
+    repo_dir="$(cd .. && pwd)"
+
     # Not inside a git repo at all?
-    if ! git rev-parse --is-inside-work-tree > /dev/null 2>&1; then
+    if ! git -C "$repo_dir" rev-parse --is-inside-work-tree > /dev/null 2>&1; then
         echo "  ❌  Dieses Verzeichnis ist kein Git-Repository."
         echo "      Bitte in das Service-Repository wechseln und erneut starten."
         exit 1
     fi
 
+    echo "  📂  Repo: ${repo_dir}"
+
     # Any uncommitted changes (staged or unstaged)?
-    if ! git diff --quiet || ! git diff --cached --quiet; then
+    if ! git -C "$repo_dir" diff --quiet || ! git -C "$repo_dir" diff --cached --quiet; then
         echo
         print_box \
             "⚠️   Es gibt noch nicht committete Änderungen!" \
@@ -98,14 +101,14 @@ check_git_clean() {
             "  git add ." \
             "  git commit -m 'deine Nachricht'"
         echo
-        git status --short
+        git -C "$repo_dir" status --short
         echo
         exit 1
     fi
 
     # Untracked files that the user might have forgotten to add?
     local untracked
-    untracked=$(git ls-files --others --exclude-standard)
+    untracked=$(git -C "$repo_dir" ls-files --others --exclude-standard)
     if [[ -n "$untracked" ]]; then
         echo
         echo "  ⚠️   Es gibt ungetrackte Dateien (nicht in .gitignore):"
@@ -121,11 +124,8 @@ check_git_clean() {
     echo
 }
 
-# ---------------------------------------------------------------------------
-# Backup existing copsi/ folder before overwriting
+# Backup
 # copsi → copsi-old, if that exists → copsi-old-1, copsi-old-2, ...
-# ---------------------------------------------------------------------------
-
 backup_existing_copsi() {
     [[ ! -d "$COPSI_DIR" ]] && return 0
 
@@ -144,10 +144,7 @@ backup_existing_copsi() {
     echo "  📦  Vorhandenes copsi/ gesichert als: ${backup}/"
 }
 
-# ---------------------------------------------------------------------------
 # Gather input
-# ---------------------------------------------------------------------------
-
 gather_input() {
     echo
     prompt_value "Wie lautet der Service-Name? (z.B. 'hint'): " service_name
@@ -162,18 +159,18 @@ gather_input() {
     fi
 }
 
-# ---------------------------------------------------------------------------
-# Build configMapGenerator literals per environment
-# ---------------------------------------------------------------------------
-
+# Build configMapGenerator literals per environment.
+# Items are stored WITHOUT indentation; the indent is applied once in
+# process_kustomization_file() to avoid fragile space-counting here.
 build_literals_for_env() {
     local env="$1"
 
-    LITERALS="      - SERVICE_NAME=${service_name}"
+    # Plain list entries – no leading spaces
+    LITERALS="- SERVICE_NAME=${service_name}"
 
     if $use_postgres; then
         LITERALS="${LITERALS}
-      - POSTGRES_SCHEMA_NAME=${postgres_schema_name}"
+- POSTGRES_SCHEMA_NAME=${postgres_schema_name}"
     fi
 
     if $use_auth_url; then
@@ -184,26 +181,23 @@ build_literals_for_env() {
             prod) auth_url="https://employee.login.signal-iduna.org/"     ;;
         esac
         LITERALS="${LITERALS}
-      - AUTH_URL=${auth_url}"
+- AUTH_URL=${auth_url}"
     fi
 }
 
-# ---------------------------------------------------------------------------
 # Inject literals into kustomization.yaml
 # Drops the entire configMapGenerator block when LITERALS is empty
-# ---------------------------------------------------------------------------
-
 process_kustomization_file() {
     local kustomization_file="$1"
     local temp_file
     temp_file=$(mktemp)
     local pending_header=""
-
     while IFS= read -r line; do
         if [[ "$line" == *"<literals-list>"* ]]; then
             if [[ -n "$LITERALS" ]]; then
                 echo "$pending_header"
-                echo "$LITERALS"
+                # 6 spaces = 3 levels of 2-space YAML indent (under "literals:")
+                echo "$LITERALS" | indent_lines 6
             fi
             pending_header=""
             continue
@@ -223,10 +217,7 @@ ${line}"
     mv "$temp_file" "$kustomization_file"
 }
 
-# ---------------------------------------------------------------------------
 # Replace placeholders in all yaml files
-# ---------------------------------------------------------------------------
-
 replace_placeholders() {
     local target_dir="$1"
     local env="$2"
@@ -242,10 +233,7 @@ replace_placeholders() {
     done < <(find "$target_dir" -type f -name "*.yaml" -print0)
 }
 
-# ---------------------------------------------------------------------------
 # Create one copsi/<env> from the blueprint
-# ---------------------------------------------------------------------------
-
 create_env_folder() {
     local env="$1"
     local target_dir="${COPSI_DIR}/${env}"
@@ -258,10 +246,7 @@ create_env_folder() {
     echo "  ✅  ${target_dir}/"
 }
 
-# ---------------------------------------------------------------------------
 # Commit, push and generate git-links for all environments
-# ---------------------------------------------------------------------------
-
 commit_push_and_generate_links() {
     echo
     echo "--- Git Commit & Push ---"
@@ -270,13 +255,24 @@ commit_push_and_generate_links() {
     prompt_value "Commit-Nachricht [feat(${service_name}): add copsi config]: " \
         commit_msg "feat(${service_name}): add copsi config"
 
-    git add copsi/
-    git commit -m "$commit_msg"
-    git push
+    # FIX: copsi/ was generated inside copsi-init/ (current working dir).
+    # Move it to the service repo root (parent) before git add,
+    # because copsi-init/ itself is gitignored in the service repo.
+    if [[ -d "../copsi" ]]; then
+        rm -rf "../copsi"
+    fi
+    mv "$COPSI_DIR" "../copsi"
+    echo "  📦  copsi/ → ../copsi/ verschoben"
+
+    # FIX: all git commands use -C .. to target the parent (service repo),
+    # not the current copsi-init/ directory which has no .git.
+    git -C .. add copsi/
+    git -C .. commit -m "$commit_msg"
+    git -C .. push -u origin HEAD
 
     # Read the exact hash after push – this is what the registry will build against
     local commit_hash
-    commit_hash=$(git rev-parse HEAD)
+    commit_hash=$(git -C .. rev-parse HEAD)
     local short_hash="${commit_hash:0:7}"
 
     echo
@@ -303,10 +299,6 @@ commit_push_and_generate_links() {
     echo
 }
 
-# ---------------------------------------------------------------------------
-# Main
-# ---------------------------------------------------------------------------
-
 main() {
     echo "=== init-copsi.sh ==="
     echo
@@ -323,6 +315,12 @@ main() {
     for env in "${ENVS[@]}"; do
         create_env_folder "$env"
     done
+
+    # Copy get-git-links.sh into copsi/ so it stays in the service repo
+    # and can be called after every push to regenerate the git-links
+    cp "$(dirname "$0")/get-git-links.sh" "${COPSI_DIR}/get-git-links.sh"
+    chmod +x "${COPSI_DIR}/get-git-links.sh"
+    echo "  ✅  copsi/get-git-links.sh hinzugefügt"
 
     commit_push_and_generate_links
 }

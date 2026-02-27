@@ -6,8 +6,8 @@ configMapGenerator:
     behavior: merge
     literals:
       - SERVICE_NAME=hint
-     - POSTGRES_SCHEMA_NAME=hint
-     - AUTH_URL=https://employee.login.signal-iduna.org/
+      - POSTGRES_SCHEMA_NAME=hint
+      - AUTH_URL=https://employee.login.signal-iduna.org/
 
 resources:
   - destination-rule.yaml

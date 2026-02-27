@@ -1,7 +1,7 @@
 apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:
-  name: virtualservice
+  name: virtual-service
 spec:
   hosts:
     - "abn-hint-elpa-elpa4.copsinop.de"
@@ -10,9 +10,9 @@ spec:
     - istio-system/mesh-gateway
     - mesh
   http:
-    - name: abn-hint-route
+    - name: abn-route-hint
       route:
         - destination:
-            host: abn-hint-service-host
+            host: abn-service-hint
             port:
               number: 8080

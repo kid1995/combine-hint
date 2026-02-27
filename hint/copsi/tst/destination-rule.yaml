@@ -1,9 +1,9 @@
 apiVersion: networking.istio.io/v1beta1
 kind: DestinationRule
 metadata:
-  name: hint-dest-rule
+  name: dest-rule
 spec:
-  host: tst-hint-service-host
+  host: tst-service-hint
   trafficPolicy:
     portLevelSettings:
       - port:

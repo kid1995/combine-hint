@@ -1,7 +1,7 @@
 apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:
-  name: virtualservice
+  name: virtual-service
 spec:
   hosts:
     - "tst-hint-elpa-elpa4.copsinop.de"
@@ -10,9 +10,9 @@ spec:
     - istio-system/mesh-gateway
     - mesh
   http:
-    - name: tst-hint-route
+    - name: tst-route-hint
       route:
         - destination:
-            host: tst-hint-service-host
+            host: tst-service-hint
             port:
               number: 8080

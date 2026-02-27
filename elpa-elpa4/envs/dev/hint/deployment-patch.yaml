@@ -11,8 +11,7 @@ spec:
   template:
     metadata:        
       annotations:
-        traffic.sidecar.istio.io/excludeInboundPorts: "8081,8080"
-        traffic.sidecar.istio.io/excludeOutboundPorts: "443"   
+        traffic.sidecar.istio.io/excludeInboundPorts: "8081"        
       labels:
         app: hint
     spec:
@@ -23,5 +22,5 @@ spec:
               cpu: 50m          
               memory: 500Mi      
             limits:
-              cpu: 200m
+              cpu: 400m
               memory: 950Mi        
