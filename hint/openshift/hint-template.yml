@@ -143,26 +143,6 @@ objects:
                   value: '-XX:+UseSerialGC -XX:MaxRAMPercentage=50 -XX:InitialRAMPercentage=25 -XX:+UseStringDeduplication'
                 - name: POSTGRES_SCHEMA_NAME
                   value: "${POSTGRES_SCHEMA_NAME}"
-                - name: MONGODB_OPTIONS
-                  valueFrom:
-                    configMapKeyRef:
-                      name: ${BRANCH_NAME}-mongodb
-                      key: MONGODB_OPTIONS
-                - name: MONGODB_HOSTS
-                  valueFrom:
-                    configMapKeyRef:
-                      name: ${BRANCH_NAME}-mongodb
-                      key: MONGODB_HOSTS
-                - name: MONGODB_USER
-                  valueFrom:
-                    secretKeyRef:
-                      name: ${BRANCH_NAME}-mongodb
-                      key: MONGODB_USER
-                - name: MONGODB_PASSWORD
-                  valueFrom:
-                    secretKeyRef:
-                      name: ${BRANCH_NAME}-mongodb
-                      key: MONGODB_PASSWORD
                 - name: KAFKA_PASSWORD
                   valueFrom:
                     secretKeyRef:

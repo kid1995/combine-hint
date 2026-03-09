@@ -1,6 +1,6 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "local>ELPA/renovate-config"
+    "https://git.system.local/projects/ELPA/repos/renovate-config/raw/default.json"
   ]
 }

@@ -29,7 +29,10 @@ management:
           server:
             requests: true
     tags:
-      application: ${spring.application.name}
+      application: ${spring.application.name:Hint-Service}
+      enviroment: ${K8S_ENVIROMENT_LABEL:dev}
+      namespace: ${K8S_NAMESPACE_NAME:elpa-elpa4}
+      pod: ${K8S_POD_NAME:hint-unknown-pod}
   tracing:
     sampling:
       probability: ${MANAGEMENT_TRACING_SAMPLING_PROBABILITY:1.0}
@@ -41,6 +44,12 @@ management:
       export:
         otlp:
           endpoint: ${MANAGEMENT_OTLP_TRACING_EXPORT_URL:http://splunk-otel-collector-agent.splunk-otel-collector.svc.cluster.local:4318/v1/traces}
+    resource-attributes:
+      service.name: ${SERVICE_NAME:hint-service}
+      service.namespace: ${K8S_NAMESPACE_NAME:elpa-elpa4}
+      service.instance.id: ${K8S_POD_NAME:unknown}
+      k8s.pod.uid: ${K8S_POD_UID:hint-unknown-pod}
+      k8s.namespace.name: ${K8S_NAMESPACE_NAME:elpa-elpa4}
   otlp:
     metrics:
       export:
