@@ -1,7 +1,7 @@
 version: '3.8'
 services:
   kafka:
-    image: hub.docker.system.local/apache/kafka:4.1.0
+    image: hub.docker.system.local/apache/kafka:4.2.0
     restart: unless-stopped
     ports:
       - "9092:9092"
@@ -19,19 +19,6 @@ services:
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_NUM_PARTITIONS: 1
       KAFKA_CREATE_TOPICS_ENABLE: "true"
-
-  mongo:
-    image: hub.docker.system.local/mongo:8
-    restart: always
-    ports:
-      - "27017:27017"
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: password
-      MONGO_INITDB_DATABASE: mongodb
-    volumes:
-      - ./mongo/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
-
   postgres:
     image: hub.docker.system.local/postgres:18.0
     container_name: postgres.local

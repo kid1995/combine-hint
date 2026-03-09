@@ -106,12 +106,11 @@ com:
             - /docs/rest
             - /metrics/prometheus
             - /springwolf/**
-            - /metrics
         ops[0]:
           iss: ${AUTH_URL:https://employee.login.int.signal-iduna.org/}
 
 authorization:
-  users: ${AUTH_USERS:S000325,U167653}
+  users: ${AUTH_USERS:S000325}
 
 management:
   otlp:
@@ -187,7 +186,7 @@ logging:
     root: ${LOG_LEVEL:INFO}
     org:
       springframework:
-        security: ERROR
+        security: INFO
       apache:
         kafka: ERROR
     de:

@@ -1,8 +1,6 @@
 #!groovy
 @Library(['si-dp-shared-libs', 'elpa-shared-lib']) _
 import de.signaliduna.TargetSegment
-import de.signaliduna.BitbucketRepo
-import de.signaliduna.CopsiEnvironment
 
 SERVICE_GROUP = "elpa"
 SERVICE_NAME = "hint"
@@ -14,13 +12,6 @@ JAVA_VERSION = "21"
 
 POSTGRES_SCHEMA_PREFIX = 'hin_'
 POSTGRES_DEFAULT_SCHEMA_NAME = 'hint'
-
-// Mongo (Legacy DB)
-DB_VERSION = "6.0"
-DB_BACKUP_COUNT = 3
-DB_BACKUP_SCHEDULE = "0 2 * * *"
-DB_SIZE = "S"
-
 
 BACKEND_DEPLOYMENT_PARAMS = [
     (TargetSegment.tst): [
@@ -50,11 +41,9 @@ node {
     properties([
     	pipelineTriggers(createNightlyBuildTriggers()),
 			parameters([
-				booleanParam(name: 'Release', defaultValue: false, description: 'Release the libs 🚀')
+				booleanParam(name: 'Release', defaultValue: false, description: 'Release the libs 🚀 (Not possible on master)')
 			])
     ])
-
-    def IMG_NAME = ""
 
     si_jenkins.notify createNotifyConfig(), {
         si_git.checkoutBranch(env.BRANCH_NAME, createNotifyConfig())
@@ -71,8 +60,10 @@ node {
         }
 
 				if (!params.Release) {
-					stage("Publish Libraries") {
-						publish(PROJECT_ROOT_FOLDER, JAVA_VERSION)
+					if (!si_git.isMaster()) {
+						stage("Publish Libraries") {
+							publish(PROJECT_ROOT_FOLDER, JAVA_VERSION)
+						}
 					}
 				} else if (si_git.isDevelop()) {
 					// Removes the "-SNAPSHOT" suffix from the `version` property in `gradle.properties` (if so), commits & pushes the change.
@@ -189,7 +180,7 @@ private void deployPROD() {
 
 private void buildDeploy(TargetSegment targetSegment) {
     stage("Build container for $targetSegment") {
-        IMG_NAME=si_docker.buildImage(APP_BACKEND_FOLDER, SERVICE_GROUP, SERVICE_NAME, APP_BACKEND_NAME, targetSegment)
+        si_docker.buildImage(APP_BACKEND_FOLDER, SERVICE_GROUP, SERVICE_NAME, APP_BACKEND_NAME, targetSegment)
     }
     stage("Deploy to $targetSegment") {
         deployApplications(targetSegment)
@@ -197,7 +188,6 @@ private void buildDeploy(TargetSegment targetSegment) {
 }
 
 void deployApplications(TargetSegment targetSegment) {
-	si_mongodb.deployDB(SERVICE_GROUP, SERVICE_NAME, targetSegment, DB_VERSION, DB_BACKUP_COUNT, DB_BACKUP_SCHEDULE, DB_SIZE)
 	def postgresCurrentSchema = TargetSegment.tst.equals(targetSegment)
 		? si_psql.normalizeSchemaName("${POSTGRES_SCHEMA_PREFIX}${si_git.branchName()}")
 		: POSTGRES_DEFAULT_SCHEMA_NAME
@@ -228,22 +218,6 @@ void deployApplications(TargetSegment targetSegment) {
 				'elpapgt',
 				POSTGRES_SCHEMA_PREFIX
 			)
-
-			def featureName = si_git.featureName()
-			def parts = featureName.split('-')
-			def JIRA_TICKET = "${parts[0]}-${parts[1]}"
-			def DEPLOY_REPO = "elpa-elpa4"
-			def FULL_SERVICE_NAME = "${APP_BACKEND_NAME}-service"
-			def SERVICE_SUFFIX = "-${APP_BACKEND_NAME}"
-			BitbucketRepo repo = new BitbucketRepo("SDASVCDEPLOY", DEPLOY_REPO)
-			echo "Built Image: ${IMG_NAME}"
-
-			def pullRequestAttributes = [
-					title: "Autodeploy ${JIRA_TICKET} ${BUILD_NUMBER}",
-					description: "Autodeploy for ${featureName}"
-			]
-			echo "Current Tst Image: ${IMAGE_NAME}"
-      		elpa_copsi.autoDeployFeatBranch(SERVICE_NAME, IMAGE_NAME, "nop")
 		}
 
 		si_openshift.deployApplication(SERVICE_GROUP, SERVICE_NAME, APP_BACKEND_NAME, targetSegment, additionalParams)

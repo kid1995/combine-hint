@@ -1,27 +1,29 @@
 buildscript {
 	repositories {
 		mavenLocal()
-		mavenCentral()
+		maven {
+			url 'https://m2repo.system.local/content/groups/full/'
+		}
 	}
 
 	dependencies {
 		// update requires scheme update in sda-dependencycheck.system.local
-		classpath 'org.postgresql:postgresql:42.7.8'// this is necessary for owasp dependency check
+		classpath 'org.postgresql:postgresql:42.7.10'// this is necessary for owasp dependency check
 	}
 }
 
 plugins {
 	id 'idea'
 	id 'jacoco'
-	id 'org.sonarqube' version '7.2.2.6593'
+	id 'org.sonarqube' version '7.2.3.7755'
 	id 'org.owasp.dependencycheck' version '12.1.6'
-	id 'org.springframework.boot' version '4.0.1'
+	id 'org.springframework.boot' version '4.0.3'
 	id 'io.spring.dependency-management' version '1.1.7'
 }
 
 ext {
-	set('springCloudVersion', "2025.1.0")
-	set('micrometerTracingVersion', "1.6.1")
+	set('springCloudVersion', "2025.1.1")
+	set('jacocoVersion', "0.8.14")
 }
 
 allprojects {
@@ -29,7 +31,9 @@ allprojects {
 
 	repositories {
 		mavenLocal()
-		mavenCentral()
+		maven {
+			url "https://m2repo.system.local/content/groups/full/"
+		}
 	}
 }
 
@@ -49,10 +53,12 @@ subprojects {
 
 	test {
 		useJUnitPlatform()
+		finalizedBy jacocoTestReport// report is always generated after tests run
+		jvmArgs("-XX:+EnableDynamicAgentLoading")
 	}
 
 	jacoco {
-		toolVersion = "0.8.13"
+		toolVersion = jacocoVersion
 		reportsDirectory = layout.buildDirectory.dir("jacoco")
 	}
 
@@ -74,7 +80,7 @@ subprojects {
 				element = 'CLASS'
 				excludes = [
 					'de.signaliduna.elpa.hint.model.*',
-					'de.signaliduna.elpa.hint.adapter.database.model.*',
+					'de.signaliduna.elpa.hint.adapter.database.model.*'
 				]
 				limit {
 					counter = 'BRANCH'
@@ -83,18 +89,6 @@ subprojects {
 				}
 			}
 		}
-	}
-
-	tasks.named('test') {
-		useJUnitPlatform()
-		finalizedBy jacocoTestReport
-		jvmArgs("-XX:+EnableDynamicAgentLoading")
-	}
-
-	tasks.withType(JavaCompile).configureEach {
-		options.compilerArgs += [
-			'-Amapstruct.defaultComponentModel=spring'
-		]
 	}
 
 	tasks.named('check') {
@@ -107,18 +101,14 @@ subprojects {
 		autoUpdate = false
 		failOnError = false
 		suppressionFiles = ["https://git.system.local/projects/SDA/repos/global-cve-suppression/raw/global-suppressed-cves.xml?at=refs%2Fheads%2Fmaster"]
-		data {
-			connectionString = "jdbc:postgresql://vipsiae11p.system.local:5432/depchkp?currentSchema=v12"
-			driver = "org.postgresql.Driver"
-			username = "ZA-SVC-DEPCHK-P"
-			password = "QPmWX.CZ4hbJRtU"
-			directory = rootProject.layout.buildDirectory.dir("owasp-data").get()
-		}
 
-		analyzers {
-			centralEnabled = false
-			nexusEnabled = false
-		}
+		data.connectionString = "jdbc:postgresql://vipsiae11p.system.local:5432/depchkp?currentSchema=v12"
+		data.driver = "org.postgresql.Driver"
+		data.username = "ZA-SVC-DEPCHK-P"
+		data.password = "QPmWX.CZ4hbJRtU"
+		data.directory = rootProject.layout.buildDirectory.dir("owasp-data").get()
+		analyzers.centralEnabled = false
+		analyzers.nexusEnabled = false
 	}
 }
 
@@ -129,7 +119,10 @@ tasks.named('sonarqube') {
 sonarqube {
 	properties {
 		property "sonar.sourceEncoding", "UTF-8"
-		property "sonar.coverage.exclusions", ""
+		property "sonar.coverage.exclusions", [
+			"**/de/signaliduna/elpa/hint/model/**/*",
+			"**/de/signaliduna/elpa/hint/adapter/database/model/**/*"
+		].join(',')
 	}
 }
 
@@ -155,7 +148,7 @@ tasks.register('increasePatchVersion', WriteProperties) {
 	def versionNo = (isSnapshot) ? versionStr.replace(SNAPSHOT_SUFFIX, "") : versionStr
 	def splitVersion = versionNo.split("\\.")
 	def patchVersion = Integer.valueOf(splitVersion[2]).intValue() + 1
-	def newVersion = String.format('%s.%s.%d', splitVersion[0], splitVersion[1], patchVersion) + ((isSnapshot)? SNAPSHOT_SUFFIX : "")
+	def newVersion = String.format('%s.%s.%d', splitVersion[0], splitVersion[1], patchVersion) + ((isSnapshot) ? SNAPSHOT_SUFFIX : "")
 	println('new version: ' + newVersion)
 	property('version', newVersion)
 }
@@ -166,3 +159,4 @@ tasks.register('addSnapshot', WriteProperties) {
 	println('new version: $newVersion')
 	property('version', newVersion)
 }
+
