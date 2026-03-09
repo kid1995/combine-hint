@@ -19,7 +19,7 @@ dependencies {
 	annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
 	// elpa
 	api project(":hint-model")
-	implementation  'de.signaliduna.elpa:jwt-adapter:2.5.0'
+	implementation  'de.signaliduna.elpa:jwt-adapter:2.5.1-SNAPSHOT'
 	// feign und metric
 	implementation 'io.micrometer:micrometer-core'
 	implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
